@@ -771,12 +771,15 @@ def render_multiview_inspection(
     show_wireframe: bool = False,
     blueprint_name: Optional[str] = None,
     suspended: Optional[List[str]] = None,
+    mode: str = "quad",
+    include_overlays: bool = False,
 ) -> list:
-    """MANDATORY VISUAL QUALITY GATE: Renders an annotated 2x2 Quad-View (FRONT, RIGHT, TOP, ISOMETRIC) with quadrant labels, RGB axis legend, and red-flagged objects from the audit."""
+    """Deterministic inspection render: quad (FRONT/RIGHT/TOP ortho + ISO perspective) or a single mode (front, side, top, iso, silhouette, wireframe, normals, uv_checker). Returns the image plus camera, resolution, background, render_id and audit metadata. include_overlays draws the assembly bounding box and reports dimensions in metadata."""
     res = send_blender_command("render_multiview_inspection", {
         "object_names": object_names, "resolution": resolution,
         "show_wireframe": show_wireframe, "blueprint_name": blueprint_name,
         "return_base64": True, "suspended": suspended,
+        "mode": mode, "include_overlays": include_overlays,
     })
     img_b64 = res.pop("image_data", None)
     text_summary = json.dumps(res, indent=2)

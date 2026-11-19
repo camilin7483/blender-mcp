@@ -462,6 +462,68 @@ def main() -> None:
         if not audit["requirements"]["topology"]["passed"]:
             fail("report topology policy did not pass")
 
+        # --- deterministic inspection renders ---
+        clear_scene()
+        render_cube = make_cube("RenderCube", 1.0)
+        render_cube.location = (0.0, 0.0, 0.5)
+        original_material = bpy.data.materials.new("OriginalMaterial")
+        render_cube.data.materials.append(original_material)
+        bpy.context.view_layer.update()
+        old_engine = bpy.context.scene.render.engine
+        old_camera = bpy.context.scene.camera
+        render_dir = tempfile.mkdtemp(prefix="blendermcp_render_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = render_dir
+        try:
+            quad = server.render_multiview_inspection(
+                object_names=["RenderCube"],
+                resolution=96,
+                mode="quad",
+                include_overlays=True,
+                return_base64=False,
+            )
+            if not quad.get("success"):
+                fail("quad inspection did not succeed")
+            if bpy.context.scene.render.engine != old_engine:
+                fail("inspection render did not restore the render engine")
+            if bpy.context.scene.camera != old_camera:
+                fail("inspection render did not restore the scene camera")
+            if render_cube.data.materials[0] != original_material:
+                fail("inspection render did not restore object materials")
+            if not os.path.exists(quad["quad_image_path"]):
+                fail("quad inspection image was not written")
+            metadata = quad["metadata"]
+            if metadata["resolution"] != [96, 96]:
+                fail(f"unexpected render resolution: {metadata['resolution']}")
+            if len(metadata["views"]) != 4:
+                fail(f"unexpected view count: {len(metadata['views'])}")
+            if [view["camera_type"] for view in metadata["views"][:3]] != [
+                "ORTHO", "ORTHO", "ORTHO"
+            ]:
+                fail("FRONT/RIGHT/TOP are not orthographic")
+            if metadata["views"][3]["camera_type"] != "PERSP":
+                fail("ISO view is not perspective")
+            if not metadata["render_id"] or not metadata["deterministic_settings"]:
+                fail("render metadata is missing deterministic settings")
+            if metadata["overlays"]["bounding_box"] is not True:
+                fail("bounding box overlay was not requested")
+
+            normals = server.render_multiview_inspection(
+                object_names=["RenderCube"], resolution=64, mode="normals",
+                return_base64=False,
+            )
+            if not os.path.exists(normals["quad_image_path"]):
+                fail("normals inspection image was not written")
+
+            wireframe = server.render_multiview_inspection(
+                object_names=["RenderCube"], resolution=64, mode="wireframe",
+                return_base64=False,
+            )
+            if not os.path.exists(wireframe["quad_image_path"]):
+                fail("wireframe inspection image was not written")
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(render_dir, ignore_errors=True)
+
     except SystemExit:
         raise
     except Exception:

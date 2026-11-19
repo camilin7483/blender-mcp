@@ -13,6 +13,9 @@ All notable changes to this repository are documented here.
   `contacts`, `collisions`, `symmetry` and structured `failures`, while
   preserving the legacy `critical_issues`, `warnings`, `joints` and
   `llm_fix_commands` views.
+- Deterministic inspection renders: orthographic FRONT/RIGHT/TOP, fixed ISO
+  perspective, `silhouette`/`wireframe`/`normals`/`uv_checker` modes,
+  reproducible output directories, camera metadata and optional AABB overlay.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
 - Contract test that verifies 1:1 parity between the 53 FastMCP tools and the
@@ -34,6 +37,9 @@ All notable changes to this repository are documented here.
   dimensions, ground contact, normalized scale, surface intersections and
   optional symmetry now block `passed`; topology is report-only unless
   `topology_policy="strict"`.
+- `render_multiview_inspection` uses orthographic FRONT/RIGHT/TOP cameras,
+  writes under `<output>/inspection/<render_id>/`, returns camera metadata
+  and accepts `mode` plus `include_overlays`.
 
 ### Security
 

@@ -14,7 +14,9 @@ The tagged baseline had optional authentication. This branch adds a
 per-install token file (0600), routes commands through a main-thread queue,
 disables `execute_code` by default and audits evaluated geometry with a
 requirements-first contract. Collision claims now come from BVH intersection;
-AABB is broad-phase only. See [`SECURITY.md`](SECURITY.md) and
+AABB is broad-phase only. Inspection renders use documented orthographic
+cameras for FRONT/RIGHT/TOP, a fixed ISO perspective camera, reproducible
+output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
 [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Documentation
@@ -36,6 +38,9 @@ AABB is broad-phase only. See [`SECURITY.md`](SECURITY.md) and
 - **Full Blender API Access** — Create objects, materials, cameras, lights, animations, and more
 - **Poly Haven Integration** — Download free HDRI, texture, and 3D model assets directly into your scene
 - **AI-Powered Generation** — Text-to-3D via Rodin API, texture generation via Replicate
+- **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
+  silhouette, wireframe, normals and UV checker modes, with camera metadata
+  and a reproducible output hash.
 - **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
 ## How It Works

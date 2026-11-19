@@ -16,6 +16,7 @@ import json
 import time
 import math
 import hmac
+import hashlib
 import ipaddress
 import secrets
 import shutil
@@ -3713,129 +3714,525 @@ class BlenderMCPServer:
         blueprint_name: Optional[str] = None,
         return_base64: bool = True,
         suspended: Optional[List[str]] = None,
+        mode: str = "quad",
+        include_overlays: bool = False,
     ) -> Dict[str, Any]:
-        """Renderiza una hoja 2x2 multi-vista (FRONT, RIGHT, TOP, ISOMETRIC) e incluye la auditoría matemática."""
+        """Render deterministic inspection views with documented cameras and metadata."""
         bpy.context.view_layer.update()
-        audit = self.audit_3d_model(object_names=object_names, blueprint_name=blueprint_name,
-                                    suspended=suspended)
-        aabb = audit.get("assembly_world_aabb", [[-1, -1, 0], [1, 1, 2]])
-
-        cx = (aabb[0][0] + aabb[1][0]) / 2.0
-        cy = (aabb[0][1] + aabb[1][1]) / 2.0
-        cz = (aabb[0][2] + aabb[1][2]) / 2.0
-        sz = max(max(aabb[1][i] - aabb[0][i] for i in range(3)), 0.5)
-        dist = sz * 2.3
-
-        # Configurar Cámara
-        cam_data = bpy.data.cameras.new("InspectionCam")
-        cam_data.lens = 50.0
-        cam_obj = bpy.data.objects.new("InspectionCam", cam_data)
-        bpy.context.collection.objects.link(cam_obj)
-        old_cam = bpy.context.scene.camera
-        bpy.context.scene.camera = cam_obj
-
-        # Guardar configuración previa de render
-        render = bpy.context.scene.render
-        old_rx, old_ry = render.resolution_x, render.resolution_y
-        render.resolution_x = resolution
-        render.resolution_y = resolution
-        render.film_transparent = False
-
-        views = [
-            ("FRONT", Vector((cx, cy - dist, cz)), Euler((math.radians(90), 0, 0), "XYZ")),
-            ("RIGHT", Vector((cx + dist, cy, cz)), Euler((math.radians(90), 0, math.radians(90)), "XYZ")),
-            ("TOP", Vector((cx, cy, cz + dist)), Euler((0, 0, 0), "XYZ")),
-            ("ISO", Vector((cx + dist * 0.707, cy - dist * 0.707, cz + dist * 0.6)), Euler((math.radians(60), 0, math.radians(45)), "XYZ")),
+        resolution = max(64, min(int(resolution), 2048))
+        audit = self.audit_3d_model(
+            object_names=object_names,
+            blueprint_name=blueprint_name,
+            suspended=suspended,
+        )
+        aabb = audit.get("assembly_world_aabb", [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+        center = Vector((
+            (aabb[0][0] + aabb[1][0]) / 2.0,
+            (aabb[0][1] + aabb[1][1]) / 2.0,
+            (aabb[0][2] + aabb[1][2]) / 2.0,
+        ))
+        extents = [
+            max(aabb[1][axis] - aabb[0][axis], 0.001)
+            for axis in range(3)
         ]
+        size = max(max(extents), 0.5)
+        distance = size * 3.0 + 1.0
+        perspective_distance = max(size * 2.2, 1.0)
 
-        tmp_dir = tempfile.mkdtemp()
-        img_paths = []
+        views = {
+            "front": {
+                "name": "FRONT",
+                "label": "Top-Left: FRONT (-Y)",
+                "camera_type": "ORTHO",
+                "position": center + Vector((0.0, -distance, 0.0)),
+                "rotation": Euler((math.radians(90), 0.0, 0.0), "XYZ"),
+                "ortho_scale": max(extents[0], extents[2]) * 1.2,
+                "lens": None,
+            },
+            "side": {
+                "name": "RIGHT",
+                "label": "Top-Right: RIGHT (+X)",
+                "camera_type": "ORTHO",
+                "position": center + Vector((distance, 0.0, 0.0)),
+                "rotation": Euler((math.radians(90), 0.0, math.radians(90)), "XYZ"),
+                "ortho_scale": max(extents[1], extents[2]) * 1.2,
+                "lens": None,
+            },
+            "top": {
+                "name": "TOP",
+                "label": "Bottom-Left: TOP (+Z)",
+                "camera_type": "ORTHO",
+                "position": center + Vector((0.0, 0.0, distance)),
+                "rotation": Euler((0.0, 0.0, 0.0), "XYZ"),
+                "ortho_scale": max(extents[0], extents[1]) * 1.2,
+                "lens": None,
+            },
+            "iso": {
+                "name": "ISO",
+                "label": "Bottom-Right: ISOMETRIC (3/4)",
+                "camera_type": "PERSP",
+                "position": center + Vector((
+                    perspective_distance * 0.707,
+                    -perspective_distance * 0.707,
+                    perspective_distance * 0.6,
+                )),
+                "rotation": Euler((math.radians(60), 0.0, math.radians(45)), "XYZ"),
+                "ortho_scale": None,
+                "lens": 50.0,
+            },
+        }
+
+        allowed_modes = {
+            "quad", "front", "side", "top", "iso",
+            "silhouette", "wireframe", "normals", "uv_checker",
+        }
+        if mode not in allowed_modes:
+            raise ValueError(f"Invalid mode '{mode}'. Allowed: {sorted(allowed_modes)}")
+
+        if mode == "quad":
+            selected_views = [views["front"], views["side"], views["top"], views["iso"]]
+        elif mode in ("front", "side", "top", "iso"):
+            selected_views = [views[mode]]
+        else:
+            selected_views = [views["iso"]]
+
+        shading_kind = {
+            "quad": "gray",
+            "front": "gray",
+            "side": "gray",
+            "top": "gray",
+            "iso": "gray",
+            "silhouette": "white",
+            "wireframe": "white",
+            "normals": "normals",
+            "uv_checker": "checker",
+        }[mode]
+
+        settings_key = {
+            "mode": mode,
+            "resolution": resolution,
+            "views": [
+                {
+                    "name": view["name"],
+                    "camera_type": view["camera_type"],
+                    "position": list(view["position"]),
+                    "rotation": list(view["rotation"]),
+                    "ortho_scale": view["ortho_scale"],
+                    "lens": view["lens"],
+                }
+                for view in selected_views
+            ],
+            "aabb": aabb,
+            "overlays": include_overlays,
+            "show_wireframe": show_wireframe,
+            "engine": "BLENDER_EEVEE_NEXT",
+        }
+        render_id = hashlib.sha256(
+            json.dumps(settings_key, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()[:16]
+        output_root = os.path.abspath(os.path.expanduser(
+            os.environ.get("BLENDER_MCP_OUTPUT_DIR") or default_output_dir()
+        ))
+        output_dir = os.path.join(output_root, "inspection", render_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        scene = bpy.context.scene
+        render = scene.render
+        view_layer = scene.view_layers[0]
+        old_state = {
+            "camera": scene.camera,
+            "engine": render.engine,
+            "resolution_x": render.resolution_x,
+            "resolution_y": render.resolution_y,
+            "resolution_percentage": render.resolution_percentage,
+            "film_transparent": render.film_transparent,
+            "filepath": render.filepath,
+            "file_format": render.image_settings.file_format,
+            "color_mode": render.image_settings.color_mode,
+            "compression": render.image_settings.compression,
+            "material_override": view_layer.material_override,
+            "world": scene.world,
+            "view_transform": scene.view_settings.view_transform,
+            "look": scene.view_settings.look,
+            "exposure": scene.view_settings.exposure,
+            "gamma": scene.view_settings.gamma,
+            "eevee_samples": getattr(scene.eevee, "taa_render_samples", None),
+        }
+
+        cam_data = bpy.data.cameras.new("InspectionCam")
+        cam_obj = bpy.data.objects.new("InspectionCam", cam_data)
+        scene.collection.objects.link(cam_obj)
+        scene.camera = cam_obj
+        cam_data.clip_start = 0.001
+        cam_data.clip_end = max(100.0, distance * 8.0)
+
+        created_lights: List[bpy.types.Object] = []
+        created_materials: List[bpy.types.Material] = []
+        hidden_lights: List[bpy.types.Object] = []
+        wireframe_copies: List[bpy.types.Object] = []
+        hidden_objects: List[bpy.types.Object] = []
+        overlay_obj: Optional[bpy.types.Object] = None
+        inspection_world: Optional[bpy.types.World] = None
 
         try:
-            for idx, (vname, pos, rot) in enumerate(views):
-                cam_obj.location = pos
-                cam_obj.rotation_euler = rot
-                bpy.context.view_layer.update()
-                path = osp.join(tmp_dir, f"view_{idx}.png")
-                render.filepath = path
-                bpy.ops.render.render(write_still=True)
-                img_paths.append(path)
-
-            # Coser la imagen Quad 2x2 en Blender BMesh Image Buffer
-            quad_img = bpy.data.images.new("QuadView", width=resolution * 2, height=resolution * 2)
-            quad_pixels = [0.0] * (resolution * 2 * resolution * 2 * 4)
-
-            for idx, p in enumerate(img_paths):
-                loaded = bpy.data.images.load(p)
-                pix = list(loaded.pixels)
-                row_offset = (1 if idx < 2 else 0) * resolution
-                col_offset = (0 if idx % 2 == 0 else 1) * resolution
-
-                for y in range(resolution):
-                    for x in range(resolution):
-                        src_i = (y * resolution + x) * 4
-                        dst_i = ((row_offset + y) * (resolution * 2) + (col_offset + x)) * 4
-                        quad_pixels[dst_i:dst_i+4] = pix[src_i:src_i+4]
-                bpy.data.images.remove(loaded)
-
-            quad_img.pixels = quad_pixels
-            out_quad_path = osp.join(tmp_dir, "quad_inspection.png")
-            quad_img.filepath_raw = out_quad_path
-            quad_img.file_format = "PNG"
-            quad_img.save()
-            bpy.data.images.remove(quad_img)
-
-            # Annotated labels + axis legend so weak LLMs know which quadrant is which.
-            flagged = sorted(set(re.findall(r"'([^']+)'", " ".join(audit.get("critical_issues", [])))))
-            axis_legend = {"X": "red", "Y": "green", "Z": "blue"}
-            labels = [
-                "Top-Left: FRONT (-Y) | X=red, Y=green, Z=blue",
-                "Top-Right: RIGHT (+X) | X=red, Y=green, Z=blue",
-                "Bottom-Left: TOP (+Z) | X=red, Y=green, Z=blue",
-                "Bottom-Right: ISOMETRIC (3/4) | X=red, Y=green, Z=blue",
-            ]
+            render.engine = "BLENDER_EEVEE_NEXT"
+            if old_state["eevee_samples"] is not None:
+                scene.eevee.taa_render_samples = 16
+            render.resolution_x = resolution
+            render.resolution_y = resolution
+            render.resolution_percentage = 100
+            render.film_transparent = False
+            render.image_settings.file_format = "PNG"
+            render.image_settings.color_mode = "RGB"
+            render.image_settings.compression = 15
             with suppress(Exception):
-                from PIL import Image as _PILImage, ImageDraw as _PILDraw
-                im = _PILImage.open(out_quad_path).convert("RGB")
-                dr = _PILDraw.Draw(im)
-                w, h = im.size
-                titles = ["FRONT -Y", "RIGHT +X", "TOP +Z", "ISO 3/4"]
-                for idx, title in enumerate(titles):
-                    x0 = (idx % 2) * (w // 2)
-                    y0 = 0 if idx < 2 else (h // 2)
-                    dr.rectangle([x0 + 4, y0 + 4, x0 + 190, y0 + 26], fill=(0, 0, 0))
-                    dr.text((x0 + 10, y0 + 8), title, fill=(255, 255, 255))
-                if not audit.get("passed", True):
-                    dr.rectangle([0, 0, w - 1, h - 1], outline=(255, 0, 0), width=10)
-                    msg = f"ISSUES: {len(audit.get('critical_issues', []))} flagged={','.join(flagged[:4])}"[:90]
-                    dr.rectangle([4, h - 30, 4 + 12 * len(msg), h - 6], fill=(0, 0, 0))
-                    dr.text((10, h - 26), msg, fill=(255, 80, 80))
-                im.save(out_quad_path, "PNG")
+                scene.view_settings.view_transform = "Standard"
+                scene.view_settings.look = "None"
+                scene.view_settings.exposure = 0.0
+                scene.view_settings.gamma = 1.0
+
+            for obj in list(scene.objects):
+                if obj.type == "LIGHT" and not obj.hide_render:
+                    obj.hide_render = True
+                    hidden_lights.append(obj)
+
+            inspection_world = bpy.data.worlds.new("InspectionWorld")
+            inspection_world.use_nodes = True
+            background = inspection_world.node_tree.nodes["Background"]
+            background.inputs[0].default_value = (0.02, 0.02, 0.02, 1.0)
+            background.inputs[1].default_value = 0.35
+            scene.world = inspection_world
+
+            def make_material(kind: str) -> bpy.types.Material:
+                material = bpy.data.materials.new(f"Inspection_{kind}")
+                material.use_nodes = True
+                nodes = material.node_tree.nodes
+                links = material.node_tree.links
+                nodes.clear()
+                output = nodes.new("ShaderNodeOutputMaterial")
+                if kind == "gray":
+                    shader = nodes.new("ShaderNodeBsdfPrincipled")
+                    shader.inputs["Base Color"].default_value = (0.55, 0.57, 0.60, 1.0)
+                    shader.inputs["Roughness"].default_value = 0.55
+                    links.new(shader.outputs[0], output.inputs[0])
+                elif kind == "white":
+                    shader = nodes.new("ShaderNodeEmission")
+                    shader.inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
+                    links.new(shader.outputs[0], output.inputs[0])
+                elif kind == "normals":
+                    geometry = nodes.new("ShaderNodeNewGeometry")
+                    vector_math = nodes.new("ShaderNodeVectorMath")
+                    vector_math.operation = "MULTIPLY_ADD"
+                    vector_math.inputs[1].default_value = (0.5, 0.5, 0.5)
+                    vector_math.inputs[2].default_value = (0.5, 0.5, 0.5)
+                    shader = nodes.new("ShaderNodeEmission")
+                    links.new(geometry.outputs["Normal"], vector_math.inputs[0])
+                    links.new(vector_math.outputs[0], shader.inputs["Color"])
+                    links.new(shader.outputs[0], output.inputs[0])
+                elif kind == "checker":
+                    coordinates = nodes.new("ShaderNodeTexCoord")
+                    checker = nodes.new("ShaderNodeTexChecker")
+                    checker.inputs["Scale"].default_value = 8.0
+                    checker.inputs["Color1"].default_value = (0.85, 0.20, 0.20, 1.0)
+                    checker.inputs["Color2"].default_value = (0.10, 0.20, 0.85, 1.0)
+                    shader = nodes.new("ShaderNodeEmission")
+                    links.new(coordinates.outputs["UV"], checker.inputs["Vector"])
+                    links.new(checker.outputs[0], shader.inputs["Color"])
+                    links.new(shader.outputs[0], output.inputs[0])
+                else:
+                    raise ValueError(f"Unknown inspection material '{kind}'")
+                created_materials.append(material)
+                return material
+
+            materials = {
+                "gray": make_material("gray"),
+                "white": make_material("white"),
+                "normals": make_material("normals"),
+                "checker": make_material("checker"),
+            }
+
+            saved_materials: List[Tuple[bpy.types.Object, List[Optional[bpy.types.Material]]]] = []
+            current_material: Optional[bpy.types.Material] = None
+
+            def restore_materials() -> None:
+                nonlocal current_material
+                for obj, slots in reversed(saved_materials):
+                    try:
+                        obj.data.materials.clear()
+                        for slot in slots:
+                            obj.data.materials.append(slot)
+                    except ReferenceError:
+                        continue
+                saved_materials.clear()
+                current_material = None
+
+            def apply_material(material: bpy.types.Material) -> None:
+                nonlocal current_material
+                if current_material is material:
+                    return
+                restore_materials()
+                current_material = material
+                for obj in list(scene.objects):
+                    if obj.type != "MESH":
+                        continue
+                    slots = [slot.material for slot in obj.material_slots]
+                    saved_materials.append((obj, slots))
+                    if obj.data.materials:
+                        for index in range(len(obj.data.materials)):
+                            obj.data.materials[index] = material
+                    else:
+                        obj.data.materials.append(material)
+
+            key_light: Optional[bpy.types.Object] = None
+
+            def ensure_key_light() -> bpy.types.Object:
+                nonlocal key_light
+                if key_light is None:
+                    light_data = bpy.data.lights.new("InspectionSun", "SUN")
+                    light_data.energy = 2.5
+                    light_data.angle = math.radians(3.0)
+                    key_light = bpy.data.objects.new("InspectionSun", light_data)
+                    scene.collection.objects.link(key_light)
+                    created_lights.append(key_light)
+                return key_light
+
+            if include_overlays:
+                mesh = bpy.data.meshes.new("InspectionBBox")
+                bm = bmesh.new()
+                bmesh.ops.create_cube(bm, size=1.0)
+                bm.to_mesh(mesh)
+                bm.free()
+                overlay_obj = bpy.data.objects.new("InspectionBBox", mesh)
+                scene.collection.objects.link(overlay_obj)
+                overlay_obj.location = center
+                overlay_obj.scale = (
+                    max(extents[0], 0.001),
+                    max(extents[1], 0.001),
+                    max(extents[2], 0.001),
+                )
+                modifier = overlay_obj.modifiers.new("InspectionWireframe", "WIREFRAME")
+                modifier.thickness = max(size * 0.003, 0.001)
+                modifier.use_replace = True
+                modifier.use_boundary = True
+
+            def make_wireframe_copies() -> None:
+                for obj in list(scene.objects):
+                    if obj.type != "MESH" or obj.hide_render or obj.name.startswith("Inspection"):
+                        continue
+                    copy = obj.copy()
+                    copy.data = obj.data.copy()
+                    scene.collection.objects.link(copy)
+                    modifier = copy.modifiers.new("InspectionWireframe", "WIREFRAME")
+                    modifier.thickness = max(size * 0.004, 0.001)
+                    modifier.use_replace = True
+                    modifier.use_boundary = True
+                    obj.hide_render = True
+                    hidden_objects.append(obj)
+                    wireframe_copies.append(copy)
+
+            def clear_wireframe_copies() -> None:
+                restore_materials()
+                for copy in list(wireframe_copies):
+                    data = copy.data
+                    bpy.data.objects.remove(copy, do_unlink=True)
+                    if data.users == 0:
+                        bpy.data.meshes.remove(data)
+                wireframe_copies.clear()
+                for obj in hidden_objects:
+                    obj.hide_render = False
+                hidden_objects.clear()
+
+            view_metadata: List[Dict[str, Any]] = []
+
+            def render_view(view: Dict[str, Any], kind: str, filename: str) -> str:
+                cam_data.type = view["camera_type"]
+                if view["camera_type"] == "ORTHO":
+                    cam_data.ortho_scale = view["ortho_scale"]
+                else:
+                    cam_data.lens = view["lens"]
+                cam_obj.location = view["position"]
+                cam_obj.rotation_euler = view["rotation"]
+                bpy.context.view_layer.update()
+
+                background.inputs[1].default_value = 0.35 if kind == "gray" else 0.0
+                if kind == "gray":
+                    light = ensure_key_light()
+                    direction = (center - cam_obj.location).normalized()
+                    light.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+
+                apply_material(materials[kind])
+                view_layer.material_override = None
+                filepath = os.path.join(output_dir, filename)
+                render.filepath = filepath
+                bpy.ops.render.render(write_still=True)
+                view_metadata.append({
+                    "name": view["name"],
+                    "label": view["label"],
+                    "camera_type": view["camera_type"],
+                    "location": [round(float(value), 6) for value in cam_obj.location],
+                    "rotation_euler": [round(float(value), 6) for value in cam_obj.rotation_euler],
+                    "ortho_scale": view["ortho_scale"],
+                    "lens": view["lens"],
+                    "engine": render.engine,
+                    "shading": kind,
+                    "overlay": bool(include_overlays),
+                    "file": filepath,
+                })
+                return filepath
+
+            def stitch_quad(paths: List[str]) -> str:
+                quad = bpy.data.images.new(
+                    "QuadView", width=resolution * 2, height=resolution * 2
+                )
+                pixels = [0.0] * (resolution * 2 * resolution * 2 * 4)
+                for index, path in enumerate(paths):
+                    loaded = bpy.data.images.load(path)
+                    source = list(loaded.pixels)
+                    row_offset = (1 if index < 2 else 0) * resolution
+                    column_offset = (0 if index % 2 == 0 else 1) * resolution
+                    row_length = resolution * 4
+                    for row in range(resolution):
+                        source_start = row * row_length
+                        destination_start = (
+                            (row_offset + row) * (resolution * 2) + column_offset
+                        ) * 4
+                        pixels[destination_start:destination_start + row_length] = source[
+                            source_start:source_start + row_length
+                        ]
+                    bpy.data.images.remove(loaded)
+                quad.pixels = pixels
+                quad_path = os.path.join(output_dir, "quad_inspection.png")
+                quad.filepath_raw = quad_path
+                quad.file_format = "PNG"
+                quad.save()
+                bpy.data.images.remove(quad)
+                return quad_path
+
+            if mode == "quad":
+                image_paths = [
+                    render_view(view, "gray", f"{view['name'].lower()}.png")
+                    for view in selected_views
+                ]
+                quad_path = stitch_quad(image_paths)
+            elif mode == "wireframe":
+                make_wireframe_copies()
+                try:
+                    quad_path = render_view(selected_views[0], "white", "wireframe.png")
+                finally:
+                    clear_wireframe_copies()
+            else:
+                quad_path = render_view(selected_views[0], shading_kind, f"{mode}.png")
+
+            wireframe_path = None
+            if show_wireframe and mode == "quad":
+                make_wireframe_copies()
+                try:
+                    wireframe_path = render_view(views["iso"], "white", "wireframe.png")
+                finally:
+                    clear_wireframe_copies()
 
             b64_data = ""
-            if return_base64 and osp.exists(out_quad_path):
+            if return_base64 and os.path.exists(quad_path):
                 import base64
-                with open(out_quad_path, "rb") as f:
-                    b64_data = base64.b64encode(f.read()).decode("utf-8")
+                with open(quad_path, "rb") as handle:
+                    b64_data = base64.b64encode(handle.read()).decode("utf-8")
 
-            res = {
+            view_labels = [view["label"] for view in selected_views]
+            if mode != "quad":
+                view_labels = [f"{mode.upper()} inspection view"]
+            metadata = {
+                "render_id": render_id,
+                "mode": mode,
+                "resolution": [resolution, resolution],
+                "views": view_metadata,
+                "background": {
+                    "engine": "world",
+                    "color": [0.02, 0.02, 0.02],
+                    "strength": 0.35 if shading_kind == "gray" else 0.0,
+                },
+                "assembly_world_aabb": aabb,
+                "units": audit.get("dimensions", {}).get("units", {}),
+                "overlays": {
+                    "bounding_box": bool(include_overlays),
+                    "dimensions": "metadata" if include_overlays else False,
+                    "anchors": False,
+                    "contacts": False,
+                    "collisions": False,
+                },
+                "deterministic_settings": True,
+                "pixel_identity": "same_blender_build_and_gpu",
+                "blender_version": bpy.app.version_string,
+                "output_dir": output_dir,
+            }
+
+            result = {
                 "success": True,
                 "audit": audit,
-                "quad_image_path": out_quad_path,
-                "views": ["Top-Left: FRONT (-Y)", "Top-Right: RIGHT (+X)", "Bottom-Left: TOP (+Z)", "Bottom-Right: ISOMETRIC (3/4)"],
-                "labels": labels,
-                "axis_legend": axis_legend,
-                "flagged_objects": flagged,
+                "quad_image_path": quad_path,
+                "image_path": quad_path,
+                "views": view_labels,
+                "labels": view_labels,
+                "axis_legend": {"X": "red", "Y": "green", "Z": "blue"},
+                "flagged_objects": sorted(set(
+                    re.findall(r"'([^']+)'", " ".join(audit.get("critical_issues", [])))
+                )),
+                "metadata": metadata,
             }
+            if wireframe_path:
+                result["wireframe_image_path"] = wireframe_path
             if b64_data:
-                res["image_data"] = b64_data
-            return res
-
+                result["image_data"] = b64_data
+            return result
         finally:
-            bpy.data.objects.remove(cam_obj, do_unlink=True)
-            bpy.data.cameras.remove(cam_data)
-            bpy.context.scene.camera = old_cam
-            render.resolution_x, render.resolution_y = old_rx, old_ry
+            if view_layer:
+                view_layer.material_override = old_state["material_override"]
+            restore_materials()
+            for copy in list(wireframe_copies):
+                data = copy.data
+                bpy.data.objects.remove(copy, do_unlink=True)
+                if data.users == 0:
+                    bpy.data.meshes.remove(data)
+            for obj in hidden_objects:
+                obj.hide_render = False
+            for obj in hidden_lights:
+                obj.hide_render = False
+            for obj in created_lights:
+                data = obj.data
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if data.users == 0:
+                    bpy.data.lights.remove(data)
+            for material in created_materials:
+                if material.users == 0:
+                    bpy.data.materials.remove(material)
+            if overlay_obj is not None:
+                data = overlay_obj.data
+                bpy.data.objects.remove(overlay_obj, do_unlink=True)
+                if data.users == 0:
+                    bpy.data.meshes.remove(data)
+            scene.world = old_state["world"]
+            if inspection_world is not None and inspection_world.users == 0:
+                bpy.data.worlds.remove(inspection_world)
+            scene.camera = old_state["camera"]
+            render.engine = old_state["engine"]
+            render.resolution_x = old_state["resolution_x"]
+            render.resolution_y = old_state["resolution_y"]
+            render.resolution_percentage = old_state["resolution_percentage"]
+            render.film_transparent = old_state["film_transparent"]
+            render.filepath = old_state["filepath"]
+            render.image_settings.file_format = old_state["file_format"]
+            render.image_settings.color_mode = old_state["color_mode"]
+            render.image_settings.compression = old_state["compression"]
+            with suppress(Exception):
+                scene.view_settings.view_transform = old_state["view_transform"]
+                scene.view_settings.look = old_state["look"]
+                scene.view_settings.exposure = old_state["exposure"]
+                scene.view_settings.gamma = old_state["gamma"]
+            if old_state["eevee_samples"] is not None:
+                scene.eevee.taa_render_samples = old_state["eevee_samples"]
+            if cam_obj is not None:
+                bpy.data.objects.remove(cam_obj, do_unlink=True)
+            if cam_data is not None and cam_data.users == 0:
+                bpy.data.cameras.remove(cam_data)
 
     def setup_studio_lighting(self, intensity_multiplier: float = 1.0, confirm: bool = False) -> Dict[str, Any]:
         """Crea un esquema de iluminación de estudio de 3 puntos (Key, Fill, Rim)."""

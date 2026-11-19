@@ -69,6 +69,22 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
   `topology_policy="strict"`.
 - AABB is never the sole proof of collision.
 
+### Visual inspection
+
+- `render_multiview_inspection()` uses documented cameras: FRONT, RIGHT and
+  TOP are orthographic with an ortho scale derived from the evaluated
+  assembly AABB; ISO is a 50 mm perspective camera at a fixed angle.
+- Every view uses a fixed inspection world, fixed lights and fixed render
+  settings (EEVEE, 16 samples, PNG, Standard view transform).
+- Outputs go to `BLENDER_MCP_OUTPUT_DIR/inspection/<render_id>/`, where
+  `render_id` is a SHA-256 hash of cameras, resolution, AABB and overlays.
+  `metadata.views` records camera type, location, rotation, ortho scale or
+  lens, engine, shading and file.
+- Modes: `quad`, `front`, `side`, `top`, `iso`, `silhouette`, `wireframe`,
+  `normals`, `uv_checker`. `include_overlays` adds an AABB wireframe and
+  reports dimensions in metadata.
+- Pixel identity is only claimed for the same Blender build and GPU.
+
 ### Known architectural debt
 
 - Two unversioned sources of truth before the `v3.0.0-baseline` tag.

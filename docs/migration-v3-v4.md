@@ -19,6 +19,7 @@ release candidate.
 | Destructive tools | Run immediately | Require `confirm=true`; dry-run otherwise | `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` for legacy automation |
 | Output paths | Any path | Confined to `BLENDER_MCP_OUTPUT_DIR` | `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation |
 | Downloads | Provider URL followed | HTTPS allowlist, private-IP block, size caps, safe ZIP | No legacy bypass |
+| Render | Perspective quad in a temp dir | Ortho FRONT/RIGHT/TOP + ISO, modes, metadata, hash output dir | Same `quad_image_path`; new `mode`/`include_overlays` |
 | Tool discovery | All 53 tools always | Profiles: `core`, `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `full` | `full` preserves the v3 surface |
 | Blender support | 4.5.4 tested | 4.5 LTS required, 5.2 LTS secondary | ADR-0002 |
 
@@ -35,7 +36,9 @@ release candidate.
 4. Review calls to `clear_scene`, `delete_object`, `boolean_operation` and
    `rollback_checkpoint`. Add `confirm=true` or use the dry-run response.
 5. Move exports under `BLENDER_MCP_OUTPUT_DIR`, or set
-   `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation.
+   `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation. Inspection renders
+   also write under that directory (`inspection/<render_id>/`); update scripts
+   that read the old temporary path.
 6. Re-run your scenes through `audit_3d_model`. New metrics and failures are
    additive; a previously passing scene may now fail if it relied on the old
    AABB collision heuristic or on blueprint warnings that never affected
