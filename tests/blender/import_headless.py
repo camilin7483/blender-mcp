@@ -607,6 +607,91 @@ def main() -> None:
         if not mirror_audit["requirements"]["normalized_scale"]["passed"]:
             fail("mirror negative scale failed normalized_scale")
 
+        # --- constraint validation ---
+        clear_scene()
+        constraint_base = make_cube("ConstraintBase", 1.0)
+        constraint_base.location = (0.0, 0.0, 0.5)
+        constraint_top = make_cube("ConstraintTop", 0.2)
+        constraint_top.location = (0.0, 0.0, 1.1)
+        constraint_inside = make_cube("ConstraintInside", 0.2)
+        constraint_inside.location = (0.0, 0.0, 0.5)
+        bpy.context.view_layer.update()
+
+        constraints = [
+            {
+                "type": "mate", "a": "ConstraintTop", "b": "ConstraintBase",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+                "gap": 0.0, "tolerance": 0.001,
+            },
+            {
+                "type": "align", "a": "ConstraintTop", "b": "ConstraintBase",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+                "tolerance": 0.001,
+            },
+            {
+                "type": "distance", "a": "ConstraintTop", "b": "ConstraintBase",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+                "distance": 0.0, "tolerance": 0.001,
+            },
+            {
+                "type": "offset", "a": "ConstraintTop", "b": "ConstraintBase",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+                "offset": [0.0, 0.0, 0.0], "tolerance": 0.001,
+            },
+            {
+                "type": "flush", "a": "ConstraintTop", "b": "ConstraintBase",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+                "tolerance": 0.001,
+            },
+            {
+                "type": "parallel", "a": "ConstraintBase", "a_anchor": "TOP_CENTER",
+                "b": "ConstraintTop", "b_anchor": "BOTTOM_CENTER",
+                "tolerance": 0.001,
+            },
+            {
+                "type": "perpendicular", "a": "ConstraintBase", "a_anchor": "TOP_CENTER",
+                "b": "ConstraintBase", "b_anchor": "RIGHT_CENTER",
+                "tolerance": 0.001,
+            },
+            {
+                "type": "center", "objects": ["ConstraintTop", "ConstraintBase"],
+                "axes": ["X", "Y"], "tolerance": 0.001,
+            },
+            {
+                "type": "ground_contact",
+                "objects": ["ConstraintBase", "ConstraintTop"],
+                "tolerance": 0.005,
+            },
+            {
+                "type": "no_intersection",
+                "objects": ["ConstraintTop", "ConstraintBase"],
+                "tolerance": 0.001,
+            },
+            {
+                "type": "surface_contact", "a": "ConstraintTop", "b": "ConstraintBase",
+                "tolerance": 0.001,
+            },
+            {
+                "type": "inside", "inner": "ConstraintInside", "outer": "ConstraintBase",
+                "tolerance": 0.001,
+            },
+        ]
+        constraint_result = server.validate_constraints(constraints)
+        if not constraint_result["passed"]:
+            fail(f"constraint validation failed: {constraint_result['results']}")
+
+        failed_constraint = server.validate_constraints([{
+            "type": "distance", "a": "ConstraintTop", "b": "ConstraintBase",
+            "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+            "distance": 1.0, "tolerance": 0.001,
+        }])
+        if failed_constraint["passed"] or failed_constraint["failed_count"] != 1:
+            fail(f"constraint validator accepted a wrong distance: {failed_constraint}")
+
+        unknown_constraint = server.validate_constraints([{"type": "does_not_exist"}])
+        if unknown_constraint["passed"] or not unknown_constraint["results"][0].get("error"):
+            fail(f"constraint validator accepted an unknown type: {unknown_constraint}")
+
         # --- deterministic inspection renders ---
         clear_scene()
         render_cube = make_cube("RenderCube", 1.0)

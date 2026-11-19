@@ -21,6 +21,10 @@ All notable changes to this repository are documented here.
   socket (empty), bone and custom anchors. `list_semantic_anchors` and
   `anchor_operation` cover align, mate, offset, orient_normal, distribute and
   mirror.
+- Read-only constraint validator: mate, align, flush, center, offset,
+  distance, parallel, perpendicular, ground_contact, symmetry,
+  no_intersection, inside and surface_contact, with structured expected/
+  actual/tolerance/method results.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
   registration through `BLENDER_MCP_PROFILE`; unknown names fail open.

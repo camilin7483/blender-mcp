@@ -1970,6 +1970,7 @@ class BlenderMCPServer:
             "snap_to_semantic_anchor": lambda p: self.snap_to_semantic_anchor(**p),
             "list_semantic_anchors": lambda p: self.list_semantic_anchors(**p),
             "anchor_operation": lambda p: self.anchor_operation(**p),
+            "validate_constraints": lambda p: self.validate_constraints(**p),
             "orient_and_face_towards": lambda p: self.orient_and_face_towards(**p),
             "spawn_corner_supports": lambda p: self.spawn_corner_supports(**p),
             "symmetry_mirror": lambda p: self.symmetry_mirror(**p),
@@ -2471,6 +2472,322 @@ class BlenderMCPServer:
             f"Unknown anchor operation '{operation}'. Valid: align, mate, offset, "
             "orient_normal, distribute, mirror."
         )
+
+    def validate_constraints(self, constraints: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Validate assembly constraints without changing the scene."""
+        results: List[Dict[str, Any]] = []
+        for index, constraint in enumerate(constraints or []):
+            if not isinstance(constraint, dict):
+                results.append({
+                    "index": index,
+                    "type": "unknown",
+                    "passed": False,
+                    "error": "constraint must be an object",
+                })
+                continue
+            ctype = str(constraint.get("type", "")).strip().lower()
+            try:
+                results.append(self._evaluate_constraint(index, ctype, constraint))
+            except Exception as exc:
+                results.append({
+                    "index": index,
+                    "type": ctype,
+                    "passed": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+        passed_count = sum(1 for result in results if result.get("passed"))
+        return {
+            "passed": bool(results) and passed_count == len(results),
+            "count": len(results),
+            "passed_count": passed_count,
+            "failed_count": len(results) - passed_count,
+            "results": results,
+        }
+
+    def _evaluate_constraint(
+        self,
+        index: int,
+        ctype: str,
+        constraint: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        tolerance = float(constraint.get("tolerance", 0.001))
+
+        def get_object(name: Any) -> bpy.types.Object:
+            obj = bpy.data.objects.get(str(name)) if name else None
+            if not obj:
+                raise ValueError(f"Object '{name}' not found")
+            return obj
+
+        def get_anchor(
+            name: Any,
+            anchor: Any,
+            default: str,
+        ) -> SemanticAnchor:
+            obj = get_object(name)
+            return AnchorService.get(obj, str(anchor or default))
+
+        def result(
+            passed: bool,
+            expected: Any,
+            actual: Any,
+            method: str,
+            objects: List[str],
+            details: Optional[Dict[str, Any]] = None,
+        ) -> Dict[str, Any]:
+            return {
+                "index": index,
+                "type": ctype,
+                "passed": bool(passed),
+                "objects": objects,
+                "expected": expected,
+                "actual": actual,
+                "tolerance": tolerance,
+                "method": method,
+                "details": details or {},
+            }
+
+        if ctype in (
+            "mate", "align", "distance", "offset",
+            "flush", "parallel", "perpendicular",
+        ):
+            a_name = constraint.get("a") or constraint.get("part")
+            b_name = constraint.get("b") or constraint.get("target")
+            part_anchor = get_anchor(a_name, constraint.get("a_anchor"), "CENTER")
+            target_anchor = get_anchor(b_name, constraint.get("b_anchor"), "TOP_CENTER")
+            part_position = Vector(part_anchor.position)
+            target_position = Vector(target_anchor.position)
+            part_normal = Vector(part_anchor.normal)
+            target_normal = Vector(target_anchor.normal)
+            objects = [part_anchor.object_name, target_anchor.object_name]
+
+            if ctype == "mate":
+                gap = float(constraint.get("gap", 0.0))
+                expected_position = target_position + target_normal * gap
+                distance = (part_position - expected_position).length
+                normal_dot = part_normal.dot(-target_normal)
+                passed = distance <= tolerance and normal_dot >= 0.999
+                return result(
+                    passed,
+                    {"position": [round(float(v), 6) for v in expected_position], "normal_dot": -1.0},
+                    {"position": [round(float(v), 6) for v in part_position], "normal_dot": round(float(normal_dot), 6), "distance": round(float(distance), 6)},
+                    "semantic_anchor_mate",
+                    objects,
+                    {"details": {"gap": gap}},
+                )
+            if ctype == "align":
+                distance = (part_position - target_position).length
+                return result(
+                    distance <= tolerance,
+                    [round(float(v), 6) for v in target_position],
+                    [round(float(v), 6) for v in part_position],
+                    "semantic_anchor_align",
+                    objects,
+                    {"details": {"distance": round(float(distance), 6)}},
+                )
+            if ctype == "distance":
+                expected_distance = float(constraint.get("distance", 0.0))
+                actual_distance = (part_position - target_position).length
+                return result(
+                    abs(actual_distance - expected_distance) <= tolerance,
+                    expected_distance,
+                    round(float(actual_distance), 6),
+                    "semantic_anchor_distance",
+                    objects,
+                )
+            if ctype == "offset":
+                offset = Vector(constraint.get("offset", (0.0, 0.0, 0.0)))
+                actual_offset = part_position - target_position
+                delta = (actual_offset - offset).length
+                return result(
+                    delta <= tolerance,
+                    [round(float(v), 6) for v in offset],
+                    [round(float(v), 6) for v in actual_offset],
+                    "semantic_anchor_offset",
+                    objects,
+                    {"details": {"delta": round(float(delta), 6)}},
+                )
+            if ctype == "flush":
+                normal_dot = abs(part_normal.dot(target_normal))
+                plane_distance = abs((part_position - target_position).dot(target_normal))
+                return result(
+                    normal_dot >= 0.999 and plane_distance <= tolerance,
+                    {"normal_dot": 1.0, "plane_distance": 0.0},
+                    {"normal_dot": round(float(normal_dot), 6), "plane_distance": round(float(plane_distance), 6)},
+                    "semantic_anchor_flush",
+                    objects,
+                )
+            if ctype == "parallel":
+                normal_dot = abs(part_normal.dot(target_normal))
+                return result(
+                    normal_dot >= 1.0 - tolerance,
+                    1.0,
+                    round(float(normal_dot), 6),
+                    "semantic_anchor_parallel",
+                    objects,
+                )
+            normal_dot = abs(part_normal.dot(target_normal))
+            return result(
+                normal_dot <= tolerance,
+                0.0,
+                round(float(normal_dot), 6),
+                "semantic_anchor_perpendicular",
+                objects,
+            )
+
+        if ctype == "center":
+            names = constraint.get("objects") or [
+                constraint.get("a"), constraint.get("b")
+            ]
+            objects = [get_object(name) for name in names if name]
+            if len(objects) < 2:
+                raise ValueError("center needs at least two objects")
+            axes = [str(axis).upper() for axis in constraint.get("axes", ["X", "Y"])]
+            snapshots = [GeometryService.snapshot(obj) for obj in objects]
+            centers = [
+                [
+                    (snapshot.world_aabb[0][axis] + snapshot.world_aabb[1][axis]) / 2.0
+                    for axis in range(3)
+                ]
+                for snapshot in snapshots
+            ]
+            deltas = []
+            for center in centers[1:]:
+                for axis in axes:
+                    axis_index = {"X": 0, "Y": 1, "Z": 2}.get(axis)
+                    if axis_index is None:
+                        raise ValueError(f"Invalid center axis '{axis}'")
+                    deltas.append(abs(center[axis_index] - centers[0][axis_index]))
+            maximum = max(deltas) if deltas else 0.0
+            return result(
+                maximum <= tolerance,
+                {"axes": axes, "max_delta": 0.0},
+                {"axes": axes, "max_delta": round(float(maximum), 6)},
+                "evaluated_aabb_center",
+                [obj.name for obj in objects],
+            )
+
+        if ctype == "ground_contact":
+            names = constraint.get("objects") or [constraint.get("a")]
+            objects = [get_object(name) for name in names if name]
+            snapshots = [GeometryService.snapshot(obj) for obj in objects]
+            ground = GeometryService.ground_contact(snapshots, tolerance)
+            return result(
+                ground["passed"],
+                0.0,
+                ground["min_z"],
+                ground["method"],
+                [obj.name for obj in objects],
+                {"details": ground},
+            )
+
+        if ctype == "symmetry":
+            names = constraint.get("objects") or []
+            objects = [get_object(name) for name in names if name]
+            axis = str(constraint.get("axis", "X")).upper()
+            plane = float(constraint.get("plane", 0.0))
+            symmetry = GeometryService.symmetry_error(
+                objects, axis=axis, plane=plane, tolerance=tolerance
+            )
+            return result(
+                symmetry["passed"],
+                0.0,
+                symmetry["max_error"],
+                symmetry["method"],
+                [obj.name for obj in objects],
+                {"details": symmetry},
+            )
+
+        if ctype in ("no_intersection", "surface_contact"):
+            if ctype == "no_intersection":
+                names = constraint.get("objects") or []
+                objects = [get_object(name) for name in names if name]
+                if len(objects) < 2:
+                    raise ValueError("no_intersection needs at least two objects")
+            else:
+                objects = [
+                    get_object(constraint.get("a")),
+                    get_object(constraint.get("b")),
+                ]
+            snapshots = {
+                obj.name: GeometryService.snapshot(obj) for obj in objects
+            }
+            graph = GeometryService.contact_graph(objects, tolerance)
+            if ctype == "no_intersection":
+                violations = []
+                for pair in graph["pairs"]:
+                    if not pair["surface_intersection"]:
+                        continue
+                    if not self._is_face_contact(
+                        snapshots[pair["a"]].world_aabb,
+                        snapshots[pair["b"]].world_aabb,
+                    ):
+                        violations.append(pair)
+                return result(
+                    not violations,
+                    "no interpenetration",
+                    {"violations": len(violations)},
+                    "bvh_overlap_face_contact",
+                    [obj.name for obj in objects],
+                    {"details": {"collisions": violations}},
+                )
+
+            pair = next(
+                (
+                    item for item in graph["pairs"]
+                    if {item["a"], item["b"]} == {objects[0].name, objects[1].name}
+                ),
+                None,
+            )
+            if pair is None:
+                passed = False
+                actual = {"min_distance": None}
+            elif pair["surface_intersection"]:
+                passed = self._is_face_contact(
+                    snapshots[pair["a"]].world_aabb,
+                    snapshots[pair["b"]].world_aabb,
+                )
+                actual = pair
+            else:
+                passed = pair["min_distance"] <= tolerance
+                actual = pair
+            return result(
+                passed,
+                f"surface distance <= {tolerance}",
+                actual,
+                "bvh_overlap_or_nearest",
+                [obj.name for obj in objects],
+                {"details": pair or {}},
+            )
+
+        if ctype == "inside":
+            inner = get_object(constraint.get("inner") or constraint.get("a"))
+            outer = get_object(constraint.get("outer") or constraint.get("b"))
+            inner_snapshot = GeometryService.snapshot(inner)
+            outer_snapshot = GeometryService.snapshot(outer)
+            outside_vertices = 0
+            maximum_excess = 0.0
+            for vertex in inner_snapshot.vertices_world:
+                for axis in range(3):
+                    low = outer_snapshot.world_aabb[0][axis] - tolerance
+                    high = outer_snapshot.world_aabb[1][axis] + tolerance
+                    if vertex[axis] < low:
+                        outside_vertices += 1
+                        maximum_excess = max(maximum_excess, low - vertex[axis])
+                    elif vertex[axis] > high:
+                        outside_vertices += 1
+                        maximum_excess = max(maximum_excess, vertex[axis] - high)
+            return result(
+                outside_vertices == 0,
+                "all vertices inside the outer AABB",
+                {
+                    "outside_vertices": outside_vertices,
+                    "max_excess": round(float(maximum_excess), 6),
+                },
+                "evaluated_aabb_containment",
+                [inner.name, outer.name],
+            )
+
+        raise ValueError(f"Unknown constraint type '{ctype}'")
 
     def orient_and_face_towards(
         self,

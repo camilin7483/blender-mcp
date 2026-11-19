@@ -13,7 +13,8 @@ The only baseline facts currently measured are:
 - 53 add-on handlers with 1:1 name parity (see
   `tests/contracts/test_tool_parity.py`).
 
-These are baseline measurements, not improvements.
+These are baseline measurements, not improvements. The current branch
+registers 56 tools; remeasure schema size before publishing any comparison.
 
 ## BlenderMCP-Bench
 

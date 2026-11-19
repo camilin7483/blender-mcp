@@ -326,6 +326,14 @@ def anchor_operation(
 
 
 @mcp.tool()
+def validate_constraints(constraints: List[Dict[str, Any]]) -> str:
+    """Validate assembly constraints without changing the scene: mate, align, flush, center, offset, distance, parallel, perpendicular, ground_contact, symmetry, no_intersection, inside and surface_contact. Each result includes expected, actual, tolerance, method and details."""
+    return json.dumps(send_blender_command("validate_constraints", {
+        "constraints": constraints,
+    }), indent=2)
+
+
+@mcp.tool()
 def orient_and_face_towards(
     object_name: str,
     look_at_target: Any,
@@ -996,6 +1004,7 @@ PROFILE_EXTRAS = {
         "create_floorplan_walls", "cut_wall_opening", "create_parametric_roof",
         "create_staircase", "create_building_shell", "array_grid_on_surface",
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
+        "validate_constraints",
     },
     "materials": {
         "create_material", "assign_material",
@@ -1017,6 +1026,7 @@ PROFILE_EXTRAS = {
         "list_modeling_blueprints", "get_modeling_blueprint",
         "audit_3d_model", "render_multiview_inspection",
         "list_semantic_anchors", "repair_mesh_geometry", "ground_model",
+        "validate_constraints",
     },
     "export": {
         "export_scene", "generate_game_ready_asset",
