@@ -44,6 +44,7 @@ AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
 TOKEN_FILE_ENV_VAR = "BLENDER_MCP_TOKEN_FILE"
 ALLOW_NO_AUTH_ENV_VAR = "BLENDER_MCP_ALLOW_NO_AUTH"
 EXECUTE_CODE_ENV_VAR = "BLENDER_MCP_ALLOW_EXECUTE_CODE"
+ALLOW_UNSAFE_OPS_ENV_VAR = "BLENDER_MCP_ALLOW_UNSAFE_OPS"
 TOKEN_FILE_NAME = "token"
 
 # Protocol limits. A single JSON message or response larger than these is
@@ -2848,8 +2849,16 @@ class BlenderMCPServer:
             bpy.context.scene.camera = old_cam
             render.resolution_x, render.resolution_y = old_rx, old_ry
 
-    def setup_studio_lighting(self, intensity_multiplier: float = 1.0) -> Dict[str, Any]:
+    def setup_studio_lighting(self, intensity_multiplier: float = 1.0, confirm: bool = False) -> Dict[str, Any]:
         """Crea un esquema de iluminación de estudio de 3 puntos (Key, Fill, Rim)."""
+        existing_lights = [o.name for o in bpy.context.scene.objects if o.type == "LIGHT"]
+        dry = self._confirm_or_dry_run("setup_studio_lighting", confirm, {
+            "remove_lights": existing_lights,
+            "create_lights": ["Key_Light", "Fill_Light", "Rim_Light"],
+        })
+        if dry:
+            return dry
+
         for o in list(bpy.context.scene.objects):
             if o.type == "LIGHT":
                 bpy.data.objects.remove(o, do_unlink=True)
@@ -2903,10 +2912,13 @@ class BlenderMCPServer:
 
         return {"success": True, "object": obj.name, "world_aabb": self._get_aabb(obj) if obj.type == "MESH" else None}
 
-    def delete_object(self, name: str) -> Dict[str, Any]:
+    def delete_object(self, name: str, confirm: bool = False) -> Dict[str, Any]:
         obj = bpy.data.objects.get(name)
         if not obj:
             return {"success": False, "message": f"Object '{name}' not found"}
+        dry = self._confirm_or_dry_run("delete_object", confirm, {"object": obj.name, "type": obj.type})
+        if dry:
+            return dry
         bpy.data.objects.remove(obj, do_unlink=True)
         return {"success": True, "deleted": name}
 
@@ -2968,7 +2980,16 @@ class BlenderMCPServer:
             obj.data.materials.append(mat)
         return {"success": True, "object": obj.name, "assigned_material": mat.name}
 
-    def clear_scene(self, keep_cameras_and_lights: bool = False) -> Dict[str, Any]:
+    def clear_scene(self, keep_cameras_and_lights: bool = False, confirm: bool = False) -> Dict[str, Any]:
+        targets = [
+            obj.name
+            for obj in bpy.context.scene.objects
+            if not (keep_cameras_and_lights and obj.type in ("CAMERA", "LIGHT"))
+        ]
+        dry = self._confirm_or_dry_run("clear_scene", confirm, {"objects": targets})
+        if dry:
+            return dry
+
         count = 0
         for obj in list(bpy.context.scene.objects):
             if keep_cameras_and_lights and obj.type in ("CAMERA", "LIGHT"):
@@ -3007,6 +3028,19 @@ class BlenderMCPServer:
         addon = bpy.context.preferences.addons.get(__name__)
         return bool(addon and getattr(addon.preferences, "allow_execute_code", False))
 
+    def _confirm_or_dry_run(self, operation: str, confirm: bool, details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Return a dry-run payload unless the caller confirmed the operation."""
+        if confirm or os.environ.get(ALLOW_UNSAFE_OPS_ENV_VAR) == "1":
+            return None
+        return {
+            "success": False,
+            "dry_run": True,
+            "requires_confirmation": True,
+            "operation": operation,
+            "message": f"Re-run with confirm=true to execute {operation}.",
+            "details": details,
+        }
+
     def create_checkpoint(self, name: str = "step", max_checkpoints: int = 10) -> Dict[str, Any]:
         safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(name or "step"))
         cp_path = osp.join(self.checkpoint_dir, f"cp_{safe_name}.blend")
@@ -3025,11 +3059,19 @@ class BlenderMCPServer:
                     os.unlink(old_cp["filepath"])
         return {"success": True, "checkpoint": self.checkpoints[safe_name]}
 
-    def rollback_checkpoint(self, name: str = "step") -> Dict[str, Any]:
+    def rollback_checkpoint(self, name: str = "step", confirm: bool = False) -> Dict[str, Any]:
         safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(name or "step"))
         cp = self.checkpoints.get(safe_name)
         if not cp or not osp.exists(cp["filepath"]):
             return {"error": f"Checkpoint '{safe_name}' not found. Available: {list(self.checkpoints.keys())}"}
+        dry = self._confirm_or_dry_run("rollback_checkpoint", confirm, {
+            "checkpoint": safe_name,
+            "filepath": cp["filepath"],
+            "object_count": cp.get("object_count"),
+            "warning": "Unsaved changes in the current file will be lost.",
+        })
+        if dry:
+            return dry
         bpy.ops.wm.open_mainfile(filepath=cp["filepath"])
         with suppress(Exception):
             bpy.context.scene.blendermcp_server_running = self.running

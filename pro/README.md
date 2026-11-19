@@ -59,6 +59,7 @@ This table was built with the metric `table` blueprint and passed `audit_3d_mode
 | `BLENDER_AUTH_TOKEN` | Blender and the MCP bridge | Override the token value. Supply the same value to both processes. |
 | `BLENDER_MCP_ALLOW_NO_AUTH` | Blender and the MCP bridge | Unsafe: disable local authentication. Use only for a trusted local process that cannot read the token file. |
 | `BLENDER_MCP_ALLOW_EXECUTE_CODE` | Blender | Enable `execute_code`. Prefer the add-on preference; this variable is for automation. |
+| `BLENDER_MCP_ALLOW_UNSAFE_OPS` | Blender | Skip the dry-run for `clear_scene`, `delete_object`, `rollback_checkpoint` and `setup_studio_lighting`. Unsafe; use only for trusted automation. |
 | `BLENDER_HOST`, `BLENDER_PORT` | MCP bridge | Socket destination. The add-on listens on `localhost:9876` in a standard installation. |
 | `SKETCHFAB_API_TOKEN` | Blender | Required by the Sketchfab download tool. |
 

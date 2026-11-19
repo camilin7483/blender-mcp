@@ -775,9 +775,11 @@ def render_multiview_inspection(
 
 
 @mcp.tool()
-def setup_studio_lighting(intensity_multiplier: float = 1.0) -> str:
-    """Create a balanced 3-point studio lighting rig (Key, Fill, Rim)."""
-    return json.dumps(send_blender_command("setup_studio_lighting", {"intensity_multiplier": intensity_multiplier}), indent=2)
+def setup_studio_lighting(intensity_multiplier: float = 1.0, confirm: bool = False) -> str:
+    """Create a balanced 3-point studio lighting rig (Key, Fill, Rim). Replaces existing lights; returns a dry-run unless confirm=true."""
+    return json.dumps(send_blender_command("setup_studio_lighting", {
+        "intensity_multiplier": intensity_multiplier, "confirm": confirm,
+    }), indent=2)
 
 
 # ==============================================================================
@@ -800,9 +802,9 @@ def transform_object(
 
 
 @mcp.tool()
-def delete_object(name: str) -> str:
-    """Delete an object by name."""
-    return json.dumps(send_blender_command("delete_object", {"name": name}), indent=2)
+def delete_object(name: str, confirm: bool = False) -> str:
+    """Delete an object by name. Returns a dry-run unless confirm=true."""
+    return json.dumps(send_blender_command("delete_object", {"name": name, "confirm": confirm}), indent=2)
 
 
 @mcp.tool()
@@ -834,9 +836,11 @@ def assign_material(object_name: str, material_name: str) -> str:
 
 
 @mcp.tool()
-def clear_scene(keep_cameras_and_lights: bool = False) -> str:
-    """Remove objects from scene (optionally keeping cameras and lights)."""
-    return json.dumps(send_blender_command("clear_scene", {"keep_cameras_and_lights": keep_cameras_and_lights}), indent=2)
+def clear_scene(keep_cameras_and_lights: bool = False, confirm: bool = False) -> str:
+    """Remove objects from scene (optionally keeping cameras and lights). Returns a dry-run unless confirm=true."""
+    return json.dumps(send_blender_command("clear_scene", {
+        "keep_cameras_and_lights": keep_cameras_and_lights, "confirm": confirm,
+    }), indent=2)
 
 
 @mcp.tool()
@@ -860,9 +864,9 @@ def create_checkpoint(name: str = "step") -> str:
 
 
 @mcp.tool()
-def rollback_checkpoint(name: str = "step") -> str:
-    """Roll back the scene to a previously saved checkpoint."""
-    return json.dumps(send_blender_command("rollback_checkpoint", {"name": name}), indent=2)
+def rollback_checkpoint(name: str = "step", confirm: bool = False) -> str:
+    """Roll back the scene to a previously saved checkpoint. Returns a dry-run unless confirm=true."""
+    return json.dumps(send_blender_command("rollback_checkpoint", {"name": name, "confirm": confirm}), indent=2)
 
 
 @mcp.tool()

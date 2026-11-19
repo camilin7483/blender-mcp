@@ -30,6 +30,10 @@ All notable changes to this repository are documented here.
   escape hatch.
 - `execute_code` is disabled by default. Enable it in the add-on preferences
   or with `BLENDER_MCP_ALLOW_EXECUTE_CODE=1`.
+- `clear_scene`, `delete_object`, `rollback_checkpoint` and
+  `setup_studio_lighting` return a dry-run unless called with `confirm=true`.
+  `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` preserves the old behavior for trusted
+  automation.
 - Batched requests are parsed incrementally instead of being dropped, and
   request/response sizes are bounded.
 - Commands are routed through a main-thread queue with one persistent timer,
