@@ -2,3 +2,22 @@
 __pycache__/
 .DS_Store
 thumbs.db
+
+# Local environments and build output
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Generated artifacts
+out/
+pro/out/
+*.blend1
+*.log
+
+# Agent scratch space
+.opencode/
