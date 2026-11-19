@@ -19,6 +19,7 @@ release candidate.
 | `execute_code` | Enabled and unauthenticated | Disabled by default; explicit opt-in | `BLENDER_MCP_ALLOW_EXECUTE_CODE=1` restores the old behavior for trusted local use |
 | Destructive tools | Run immediately | Require `confirm=true`; dry-run otherwise | `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` for legacy automation |
 | Output paths | Any path | Confined to `BLENDER_MCP_OUTPUT_DIR` | `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation |
+| Export | Format-only write | `godot`/`unity`/`unreal`/`generic-gltf` profiles validate and reimport | `force=True` bypasses validation errors |
 | Downloads | Provider URL followed | HTTPS allowlist, private-IP block, size caps, safe ZIP | No legacy bypass |
 | Render | Perspective quad in a temp dir | Ortho FRONT/RIGHT/TOP + ISO, modes, metadata, hash output dir | Same `quad_image_path`; new `mode`/`include_overlays` |
 | Tool discovery | All tools always | `BLENDER_MCP_PROFILE`: `core` (13), `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`, `full` (55) | `full` preserves the v3 surface; unknown profiles fail open |

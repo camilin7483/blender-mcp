@@ -22,11 +22,13 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 | MCP bridge | `pro/mcp_server.py` | Registers 55 FastMCP tools; serializes each call to a socket command; returns JSON text. |
 | Socket transport | `pro/mcp_server.py` | New connection per command; 60 s / 180 s timeouts; JSON response parsing. |
 | Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; validates optional token; rate-limits. |
-| Main-thread dispatcher | `pro/blender_mcp.py` | Registers a timer per request; waits for completion; returns the response. |
+| Main-thread dispatcher | `pro/blender_mcp.py` | Persistent queue drained by one timer; background and worker starts fail fast. |
 | Command table | `pro/blender_mcp.py` | Maps command names to `BlenderMCPServer` methods. |
-| Geometry helpers | `pro/blender_mcp.py` | Evaluated AABB, world-space BVH, surface gap, contact heuristics. |
-| Audit | `pro/blender_mcp.py` | Ground, scale, overlap and parent-child floating checks. |
-| Rendering | `pro/blender_mcp.py` | Four-view inspection sheet and three-point lighting. |
+| Geometry service | `pro/blender_mcp.py` | Evaluated snapshots, world BVH, contact graph, topology, symmetry, tolerances. |
+| Anchors | `pro/blender_mcp.py` | Center/face/surface/edge/corner/socket/bone/custom anchors and operations. |
+| Audit | `pro/blender_mcp.py` | Collects metrics, evaluates requirements, computes the score, sets `passed` last. |
+| Rendering | `pro/blender_mcp.py` | Deterministic inspection cameras, modes, metadata and optional AABB overlay. |
+| Export | `pro/blender_mcp.py` | Game profiles, scene validation, file write and reimport dimension check. |
 | Asset downloads | `pro/blender_mcp.py` | Poly Haven and Sketchfab search/download/import. |
 | Add-on UI | `pro/blender_mcp.py` | Start/stop operators and sidebar panel. |
 

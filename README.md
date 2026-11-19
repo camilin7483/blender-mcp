@@ -41,6 +41,9 @@ output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
 - **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
   silhouette, wireframe, normals and UV checker modes, with camera metadata
   and a reproducible output hash.
+- **Game-ready export** — `godot`, `unity`, `unreal` and `generic-gltf`
+  profiles validate scale, materials, UVs, armatures, actions, LOD and
+  collision meshes, then reimport the file and compare dimensions.
 - **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
 ## Tool profiles

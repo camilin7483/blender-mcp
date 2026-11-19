@@ -281,6 +281,56 @@ def main() -> None:
             os.environ.pop("BLENDER_MCP_ALLOW_ANY_PATH", None)
             shutil.rmtree(any_dir, ignore_errors=True)
 
+        # --- export profiles, validation and reimport ---
+        profile_dir = tempfile.mkdtemp(prefix="blendermcp_profiles_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = profile_dir
+        try:
+            for item in list(bpy.context.scene.objects):
+                if item.type == "MESH":
+                    bpy.data.objects.remove(item, do_unlink=True)
+            profile_cube = make_cube("ProfileCube", 0.5)
+            profile_cube.location = (0.0, 0.0, 0.25)
+            profile_cube.data.uv_layers.new(name="UVMap")
+            profile_material = bpy.data.materials.new("ProfileMaterial")
+            profile_material.use_nodes = True
+            profile_cube.data.materials.append(profile_material)
+            bpy.context.view_layer.update()
+
+            godot = server.export_scene("godot_cube.glb", format="GLB", profile="godot")
+            if not godot.get("success") or not godot.get("reimport", {}).get("checked"):
+                fail(f"godot export/reimport failed: {godot}")
+            if not godot["reimport"].get("passed"):
+                fail(f"godot reimport did not match dimensions: {godot['reimport']}")
+            if godot.get("file_size", 0) <= 0:
+                fail("godot export wrote an empty file")
+
+            unreal = server.export_scene("unreal_cube.fbx", format="FBX", profile="unreal")
+            if not unreal.get("success") or not unreal.get("reimport", {}).get("checked"):
+                fail(f"unreal export/reimport failed: {unreal}")
+
+            try:
+                server.export_scene("bad.glb", format="GLB", profile="unreal")
+            except ValueError:
+                pass
+            else:
+                fail("unreal accepted a GLB format")
+
+            profile_cube.scale = (1.0, 2.0, 1.0)
+            bpy.context.view_layer.update()
+            blocked = server.export_scene(
+                "blocked.glb", format="GLB", profile="generic-gltf"
+            )
+            if blocked.get("success") or blocked["validation"]["passed"]:
+                fail(f"validation did not block a non-uniform scale: {blocked}")
+            forced = server.export_scene(
+                "forced.glb", format="GLB", profile="generic-gltf", force=True
+            )
+            if not forced.get("success"):
+                fail(f"force=True did not export: {forced}")
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(profile_dir, ignore_errors=True)
+
         # --- evaluated geometry engine ---
         for item in list(bpy.context.scene.objects):
             bpy.data.objects.remove(item, do_unlink=True)

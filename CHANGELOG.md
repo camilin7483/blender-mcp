@@ -24,6 +24,9 @@ All notable changes to this repository are documented here.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
   registration through `BLENDER_MCP_PROFILE`; unknown names fail open.
+- Game-ready export profiles (`godot`, `unity`, `unreal`, `generic-gltf`)
+  validate scale, materials, UVs, armatures, actions, LOD and collision
+  meshes, then reimport the file into the scene and compare dimensions.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
 - Contract test that verifies 1:1 parity between the 53 FastMCP tools and the

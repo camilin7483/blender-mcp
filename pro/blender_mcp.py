@@ -4947,29 +4947,325 @@ class BlenderMCPServer:
             count += 1
         return {"success": True, "removed_count": count}
 
-    def export_scene(self, filepath: str, format: str = "GLB") -> Dict[str, Any]:
-        fmt = str(format).upper()
+    def _validate_export(self, profile: str) -> Dict[str, Any]:
+        meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+        armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
+        errors: List[Dict[str, Any]] = []
+        warnings: List[str] = []
+        if not meshes:
+            errors.append({
+                "rule": "mesh_objects",
+                "expected": ">=1",
+                "actual": 0,
+                "method": "scene_inventory",
+            })
+        material_names = set()
+        uv_objects = 0
+        for obj in meshes:
+            absolute_scale = [abs(float(value)) for value in obj.scale]
+            if any(value <= 1e-6 for value in absolute_scale):
+                errors.append({
+                    "rule": "zero_scale",
+                    "object": obj.name,
+                    "expected": ">0",
+                    "actual": [round(float(value), 6) for value in obj.scale],
+                    "method": "object_scale",
+                })
+            if len({round(value, 4) for value in absolute_scale}) > 1:
+                errors.append({
+                    "rule": "non_uniform_scale",
+                    "object": obj.name,
+                    "expected": "uniform |scale|",
+                    "actual": [round(float(value), 6) for value in obj.scale],
+                    "method": "object_scale",
+                })
+            if any(abs(value - 1.0) > 1e-4 for value in absolute_scale):
+                warnings.append(
+                    f"UNAPPLIED_SCALE {obj.name}: "
+                    f"{[round(float(value), 6) for value in obj.scale]}"
+                )
+            if obj.data.uv_layers:
+                uv_objects += 1
+            else:
+                warnings.append(f"NO_UV {obj.name}")
+            if not obj.data.materials:
+                warnings.append(f"NO_MATERIAL {obj.name}")
+            for slot in obj.material_slots:
+                material = slot.material
+                if not material:
+                    continue
+                material_names.add(material.name)
+                if not material.use_nodes:
+                    continue
+                for node in material.node_tree.nodes:
+                    if (
+                        node.type == "TEX_IMAGE"
+                        and node.image
+                        and not node.image.filepath
+                        and not node.image.packed_file
+                    ):
+                        warnings.append(
+                            f"MISSING_TEXTURE {obj.name}/{material.name}"
+                        )
+
+        lod_objects = sorted(
+            obj.name
+            for obj in meshes
+            if "_lod" in obj.name.lower() or re.search(r"_LOD\d", obj.name, re.IGNORECASE)
+        )
+        collision_objects = sorted(
+            obj.name
+            for obj in meshes
+            if "colonly" in obj.name.lower()
+            or obj.name.lower().startswith("ucx_")
+            or "_collision" in obj.name.lower()
+        )
+        if not lod_objects:
+            warnings.append("NO_LOD_OBJECTS")
+        if not collision_objects:
+            warnings.append("NO_COLLISION_OBJECTS")
+        if not armatures:
+            warnings.append("NO_SKELETON")
+        if armatures and not bpy.data.actions:
+            warnings.append("NO_ANIMATIONS")
+
+        checks = {
+            "mesh_objects": len(meshes),
+            "materials": sorted(material_names),
+            "uv_objects": uv_objects,
+            "armatures": len(armatures),
+            "actions": len(bpy.data.actions),
+            "lod_objects": lod_objects,
+            "collision_objects": collision_objects,
+            "profile": profile,
+        }
+        return {
+            "passed": not errors,
+            "profile": profile,
+            "errors": errors,
+            "warnings": warnings,
+            "checks": checks,
+        }
+
+    def _reimport_check(self, path: str, fmt: str, profile: str) -> Dict[str, Any]:
+        if fmt not in ("GLB", "GLTF", "FBX"):
+            return {"checked": False, "reason": f"no importer for {fmt}"}
+
+        before_objects = set(bpy.data.objects)
+        before_actions = set(bpy.data.actions)
+        before_active = bpy.context.view_layer.objects.active
+        source_aabb = None
+        source_dimensions = None
+        import_scale = 1.0
+        try:
+            source_meshes = [
+                obj for obj in bpy.context.scene.objects if obj.type == "MESH"
+            ]
+            if source_meshes:
+                minimum = [float("inf")] * 3
+                maximum = [float("-inf")] * 3
+                for obj in source_meshes:
+                    snapshot = GeometryService.snapshot(obj)
+                    for axis in range(3):
+                        minimum[axis] = min(minimum[axis], snapshot.world_aabb[0][axis])
+                        maximum[axis] = max(maximum[axis], snapshot.world_aabb[1][axis])
+                source_aabb = [minimum, maximum]
+
+            try:
+                if fmt in ("GLB", "GLTF"):
+                    bpy.ops.import_scene.gltf(filepath=path)
+                else:
+                    import_scale = 0.01 if profile == "unreal" else 1.0
+                    bpy.ops.import_scene.fbx(filepath=path, global_scale=import_scale)
+            except Exception as exc:
+                return {
+                    "checked": False,
+                    "reason": f"importer failed: {type(exc).__name__}: {exc}",
+                }
+
+            new_objects = [obj for obj in bpy.data.objects if obj not in before_objects]
+            new_meshes = [obj for obj in new_objects if obj.type == "MESH"]
+            if not new_meshes:
+                return {
+                    "checked": True,
+                    "passed": False,
+                    "reason": "no meshes reimported",
+                }
+
+            minimum = [float("inf")] * 3
+            maximum = [float("-inf")] * 3
+            for obj in new_meshes:
+                snapshot = GeometryService.snapshot(obj)
+                for axis in range(3):
+                    minimum[axis] = min(minimum[axis], snapshot.world_aabb[0][axis])
+                    maximum[axis] = max(maximum[axis], snapshot.world_aabb[1][axis])
+            dimensions = [
+                maximum[axis] - minimum[axis]
+                for axis in range(3)
+            ]
+            delta = None
+            tolerance = None
+            if source_aabb is not None:
+                source_dimensions = [
+                    source_aabb[1][axis] - source_aabb[0][axis]
+                    for axis in range(3)
+                ]
+                delta = max(
+                    abs(dimensions[axis] - source_dimensions[axis])
+                    for axis in range(3)
+                )
+                tolerance = max(0.01, max(source_dimensions) * 0.01)
+            materials = len({
+                slot.material.name
+                for obj in new_meshes
+                for slot in obj.material_slots
+                if slot.material
+            })
+            armatures = len([obj for obj in new_objects if obj.type == "ARMATURE"])
+            new_actions = [
+                action for action in bpy.data.actions if action not in before_actions
+            ]
+            passed = delta is not None and tolerance is not None and delta <= tolerance
+            return {
+                "checked": True,
+                "passed": passed,
+                "objects": len(new_objects),
+                "meshes": len(new_meshes),
+                "materials": materials,
+                "armatures": armatures,
+                "actions": len(new_actions),
+                "dimensions": [round(float(value), 6) for value in dimensions],
+                "source_dimensions": (
+                    [round(float(value), 6) for value in source_dimensions]
+                    if source_aabb is not None
+                    else None
+                ),
+                "dimension_delta": round(float(delta), 6) if delta is not None else None,
+                "tolerance": round(float(tolerance), 6) if tolerance is not None else None,
+                "import_scale": import_scale,
+            }
+        finally:
+            for obj in [item for item in bpy.data.objects if item not in before_objects]:
+                data = obj.data
+                obj_type = obj.type
+                bpy.data.objects.remove(obj, do_unlink=True)
+                if data is not None and data.users == 0:
+                    if obj_type == "MESH":
+                        bpy.data.meshes.remove(data)
+                    elif obj_type == "ARMATURE":
+                        bpy.data.armatures.remove(data)
+            for action in [item for item in bpy.data.actions if item not in before_actions]:
+                with suppress(Exception):
+                    bpy.data.actions.remove(action)
+            for mesh in [item for item in bpy.data.meshes if item.users == 0]:
+                bpy.data.meshes.remove(mesh)
+            for material in [item for item in bpy.data.materials if item.users == 0]:
+                bpy.data.materials.remove(material)
+            bpy.context.view_layer.objects.active = before_active
+
+    def export_scene(
+        self,
+        filepath: str,
+        format: Optional[str] = None,
+        profile: str = "generic-gltf",
+        force: bool = False,
+        verify_reimport: bool = True,
+    ) -> Dict[str, Any]:
+        """Export with a game profile, validate the scene and reimport when possible."""
+        profile_key = str(profile).strip().lower().replace("_", "-")
+        profiles = {
+            "godot": {"formats": ("GLB", "GLTF"), "default": "GLB"},
+            "unity": {"formats": ("GLB", "GLTF"), "default": "GLB"},
+            "unreal": {"formats": ("FBX",), "default": "FBX"},
+            "generic-gltf": {"formats": ("GLB", "GLTF", "OBJ"), "default": "GLB"},
+        }
+        if profile_key not in profiles:
+            raise ValueError(
+                f"Unsupported export profile '{profile}'. Valid: {sorted(profiles)}"
+            )
+        fmt = str(format).upper() if format else profiles[profile_key]["default"]
+        if fmt not in profiles[profile_key]["formats"]:
+            raise ValueError(
+                f"Profile '{profile_key}' supports {profiles[profile_key]['formats']}; "
+                f"got '{fmt}'."
+            )
+
         allowed = {
             "GLB": {".glb"},
             "GLTF": {".gltf"},
             "FBX": {".fbx"},
             "OBJ": {".obj"},
         }
-        if fmt not in allowed:
-            raise ValueError(f"Unsupported export format '{format}'. Valid: {sorted(allowed)}")
-
         path = resolve_output_path(filepath, allowed[fmt])
         directory = os.path.dirname(path)
         if directory:
             os.makedirs(directory, exist_ok=True)
 
+        validation = self._validate_export(profile_key)
+        if not validation["passed"] and not force:
+            return {
+                "success": False,
+                "filepath": path,
+                "format": fmt,
+                "profile": profile_key,
+                "validation": validation,
+            }
+
         if fmt in ("GLB", "GLTF"):
-            bpy.ops.export_scene.gltf(filepath=path, export_format="GLB" if fmt == "GLB" else "GLTF_SEPARATE")
+            bpy.ops.export_scene.gltf(
+                filepath=path,
+                export_format="GLB" if fmt == "GLB" else "GLTF_SEPARATE",
+                export_apply=True,
+                export_yup=True,
+                export_normals=True,
+                export_tangents=True,
+                export_texcoords=True,
+                export_materials="EXPORT",
+                export_animations=True,
+                export_skins=True,
+                export_lights=False,
+                export_cameras=False,
+                export_extras=True,
+            )
         elif fmt == "FBX":
-            bpy.ops.export_scene.fbx(filepath=path)
+            bpy.ops.export_scene.fbx(
+                filepath=path,
+                use_selection=False,
+                apply_scale_options="FBX_SCALE_ALL",
+                global_scale=100.0 if profile_key == "unreal" else 1.0,
+                axis_forward="-Z",
+                axis_up="Y",
+                bake_anim=True,
+                add_leaf_bones=False,
+                use_mesh_modifiers=True,
+            )
         elif fmt == "OBJ":
             bpy.ops.wm.obj_export(filepath=path)
-        return {"success": True, "filepath": path, "format": fmt}
+
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            return {
+                "success": False,
+                "filepath": path,
+                "format": fmt,
+                "profile": profile_key,
+                "validation": validation,
+                "error": "export did not write a file",
+            }
+
+        reimport = (
+            self._reimport_check(path, fmt, profile_key)
+            if verify_reimport
+            else {"checked": False, "reason": "disabled"}
+        )
+        return {
+            "success": True,
+            "filepath": path,
+            "format": fmt,
+            "profile": profile_key,
+            "file_size": os.path.getsize(path),
+            "validation": validation,
+            "reimport": reimport,
+        }
 
     def execute_code(self, code: str, auto_audit: bool = True, blueprint_name: Optional[str] = None) -> Dict[str, Any]:
         if not self._execute_code_allowed():

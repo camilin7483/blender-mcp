@@ -11,8 +11,8 @@ Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene 
 | Precision assembly | Metric blueprints, parametric parts, semantic anchors, surface placement, and symmetry |
 | Modeling and rigging | Revolved profiles, curve sweeps, lofts, deformation, mesh fusion, and humanoid auto-rigging |
 | Architecture | Floorplan walls, fitted openings, roofs, stairs, building shells, and façade arrays |
-| Inspection and recovery | Grounding, contact and overlap audits, mesh repair, four-angle renders, and scene checkpoints |
-| Materials, assets, and export | Procedural materials, Poly Haven search and import, Sketchfab search and download, collision hulls, and GLB, glTF, FBX, or OBJ export |
+| Inspection and recovery | Requirements-first audit, evaluated geometry, contact graph, topology, semantic anchors, deterministic multi-view renders, mesh repair, and scene checkpoints |
+| Materials, assets, and export | Procedural materials, Poly Haven search and import, Sketchfab search and download, collision hulls, and game-profile export (`godot`, `unity`, `unreal`, `generic-gltf`) with validation and reimport |
 | Network visualization | Build a 3D room with devices and cables from Packet Tracer TopologyPlan JSON |
 
 See the [changelog](CHANGELOG.md) and [Precision 3D Modeling Protocol](MODELING_SYSTEM_PROMPT.md) for the modeling workflow and migration details.
