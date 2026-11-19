@@ -1744,7 +1744,6 @@ class BlenderMCPServer:
                 delta[i] = -d
         return math.sqrt(gap_sq), [round(x, 5) for x in delta]
 
-    @classmethod
     @staticmethod
     def _is_face_contact(aabb_a: List[List[float]], aabb_b: List[List[float]],
                          tol: float = 0.002) -> bool:
@@ -4909,7 +4908,7 @@ class BlenderMCPServer:
             "aabb": aabb,
             "overlays": include_overlays,
             "show_wireframe": show_wireframe,
-            "engine": "BLENDER_EEVEE_NEXT",
+            "engine": "eevee",
         }
         render_id = hashlib.sha256(
             json.dumps(settings_key, sort_keys=True, default=str).encode("utf-8")
@@ -4958,8 +4957,15 @@ class BlenderMCPServer:
         overlay_obj: Optional[bpy.types.Object] = None
         inspection_world: Optional[bpy.types.World] = None
 
+        def restore_materials() -> None:
+            """Replaced after the inspection materials are created."""
+            return
+
         try:
-            render.engine = "BLENDER_EEVEE_NEXT"
+            try:
+                render.engine = "BLENDER_EEVEE_NEXT"
+            except TypeError:
+                render.engine = "BLENDER_EEVEE"
             if old_state["eevee_samples"] is not None:
                 scene.eevee.taa_render_samples = 16
             render.resolution_x = resolution

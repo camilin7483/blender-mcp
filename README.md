@@ -16,8 +16,8 @@ disables `execute_code` by default and audits evaluated geometry with a
 requirements-first contract. Collision claims now come from BVH intersection;
 AABB is broad-phase only. Inspection renders use documented orthographic
 cameras for FRONT/RIGHT/TOP, a fixed ISO perspective camera, reproducible
-output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
-[`ARCHITECTURE.md`](ARCHITECTURE.md).
+output paths and camera metadata. Tested with Blender 4.5.4 and 5.2.4 LTS.
+See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Documentation
 

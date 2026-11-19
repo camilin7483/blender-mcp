@@ -23,9 +23,64 @@ jobs:
       - run: python -m pytest tests/contracts tests/unit -q
       - run: python -m ruff check tests scripts bench
 
+  blender-cross-platform:
+    name: Blender headless (${{ matrix.os }}, experimental)
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: blender-5.2.4-windows-x64.zip
+            sha: bbd78f8931dc940444da4ff2983374930f9f5c092ae0e330588e9760bb9d967c
+          - os: macos-14
+            artifact: blender-5.2.4-macos-arm64.dmg
+            sha: e73d564f97061b2496ccc5a0bd738937d2d3d0acae23621a00bbc7534dfd135f
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify Blender
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\blender.zip"
+          Invoke-WebRequest -Uri "https://download.blender.org/release/Blender5.2/${{ matrix.artifact }}" -OutFile $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "${{ matrix.sha }}") { throw "Blender checksum mismatch" }
+          Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP
+      - name: Run Blender headless (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP\blender-5.2.4-windows-x64\blender.exe" -b --factory-startup --python tests/blender/import_headless.py
+      - name: Download and verify Blender (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/blender.dmg" "https://download.blender.org/release/Blender5.2/${{ matrix.artifact }}"
+          echo "${{ matrix.sha }}  $RUNNER_TEMP/blender.dmg" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/blender-mount"
+          hdiutil attach "$RUNNER_TEMP/blender.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/blender-mount"
+      - name: Run Blender headless (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          "$RUNNER_TEMP/blender-mount/Blender.app/Contents/MacOS/Blender" -b --factory-startup --python tests/blender/import_headless.py
+      - name: Detach Blender (macOS)
+        if: runner.os == 'macOS'
+        run: hdiutil detach "$RUNNER_TEMP/blender-mount"
+
   blender:
-    name: Blender 4.5.4 LTS (Linux)
+    name: Blender ${{ matrix.version }} LTS (Linux)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: "4.5.4"
+            dir: "blender-4.5.4-linux-x64"
+            sha: "2e6ef8e99fc36327270429ddc8e7bad2859dd878a5a137d2e0bf0f02f6792505"
+          - version: "5.2.4"
+            dir: "blender-5.2.4-linux-x64"
+            sha: "2fd14c50987426897ba60237ee996edf2b4151f4b1a72a460ca20be58c1d2d86"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,28 +90,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6 libglu1-mesa
-      - name: Download Blender 4.5.4
+      - name: Download Blender ${{ matrix.version }}
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/blender.tar.xz" https://download.blender.org/release/Blender4.5/blender-4.5.4-linux-x64.tar.xz
-          echo "2e6ef8e99fc36327270429ddc8e7bad2859dd878a5a137d2e0bf0f02f6792505  $RUNNER_TEMP/blender.tar.xz" | sha256sum -c -
+          curl -fsSL -o "$RUNNER_TEMP/blender.tar.xz" "https://download.blender.org/release/Blender${BLENDER_SERIES}/blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          echo "${BLENDER_SHA}  $RUNNER_TEMP/blender.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/blender.tar.xz" -C "$RUNNER_TEMP"
+        env:
+          BLENDER_VERSION: ${{ matrix.version }}
+          BLENDER_SERIES: ${{ startsWith(matrix.version, '4.') && '4.5' || '5.2' }}
+          BLENDER_SHA: ${{ matrix.sha }}
       - name: Install bridge dependency
         run: python -m pip install -r pro/requirements.txt
       - name: Run real Blender tests
         env:
-          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
+          BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
         run: ./scripts/run_blender_tests.sh
       - name: Run BlenderMCP-Bench
         env:
-          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
-        run: ./scripts/run_bench.sh --runs 1 --output bench/results/ci
+          BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
+        run: ./scripts/run_bench.sh --runs 1 --output bench/results/ci-${{ matrix.version }}
       - uses: actions/upload-artifact@v4
         with:
-          name: blender-mcp-bench
-          path: bench/results/ci
+          name: blender-mcp-bench-${{ matrix.version }}
+          path: bench/results/ci-${{ matrix.version }}
       - name: Build and validate extension
         env:
-          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
+          BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
         run: |
           ./scripts/build_extension.sh
           "$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.0.0.zip

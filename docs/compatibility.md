@@ -5,12 +5,12 @@
 | Component | Baseline tested | Notes |
 |---|---|---|
 | Blender | **4.5.4 LTS** | Real GUI/headless tests on Linux x64. Released 2025-07-15; supported until 2027-07. Required gate for v4. GitHub Actions workflow pins the Linux tarball by SHA256. |
-| Blender | 5.2 LTS | Released 2026-07-14; supported until 2028-07. Not installed in the baseline environment. CI target; add when a portable build is pinned with SHA256. If the add-on cannot support both, 4.5 LTS remains the gate and the decision is recorded in ADR-0002. |
+| Blender | 5.2 LTS | **5.2.4 LTS** tested locally (headless and GUI). CI matrix includes 5.2.4 Linux with a pinned SHA256. |
 | Host Python | 3.10+ | `pro/mcp_server.py` runs outside Blender. Baseline host: Python 3.14.10. |
 | Blender Python | Bundled with Blender 4.5 (3.11) | The add-on runs inside Blender, not in the host venv. |
 | `mcp` | `1.30.0` | Pinned in `pro/requirements.txt`. |
 | OS | Linux x64 | Baseline: Arch Linux, Blender 4.5.4, `xvfb-run` for GUI tests. |
-| OS | Windows / macOS | Python contract/unit tests run in the CI matrix. Blender headless jobs are not yet validated; see the CI workflow. |
+| OS | Windows / macOS | Python contract/unit tests run in the CI matrix. Blender 5.2 headless jobs are experimental (`continue-on-error`); not a required gate until validated. |
 
 ## Execution modes
 
