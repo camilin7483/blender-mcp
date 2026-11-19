@@ -1,6 +1,6 @@
 # Blender MCP Pro changelog
 
-## 3.0.0
+## [3.0.0] - 2026-11-18
 
 ### Added
 
@@ -16,8 +16,6 @@
 - Removed six duplicate MCP tool registrations, clearing the startup warnings while preserving each tool’s name, parameters, and behavior.
 - The sidebar now shows the live server status after automatic startup. The Start button can retry after a port conflict.
 
-### Migration from the legacy add-on
+### Upgrade
 
-- Pro is installed separately and uses the **MCP Pro** sidebar. Disable the legacy add-on before enabling Pro, and point your MCP client at `pro/mcp_server.py`. Existing legacy clients can continue using the original add-on at the repository root.
-- Pro uses a different command schema and optional shared-token configuration. Existing direct socket clients should stay on the legacy add-on until adapted to the Pro protocol.
-- Rodin/Hyper3D, Hunyuan3D, and the legacy viewport screenshot command remain available in the original add-on. Pro includes Poly Haven and Sketchfab asset tools and a four-view inspection workflow.
+- Install `blender_mcp_pro.py` and point the MCP client to `mcp_server.py` in the extracted release. The Pro bridge has its own command schema.
