@@ -642,6 +642,33 @@ def auto_rig_humanoid(
     }), indent=2)
 
 
+@mcp.tool()
+def create_armature(
+    name: str,
+    bones: List[Dict[str, Any]],
+    bind_mesh: Optional[str] = None,
+) -> str:
+    """Create a named armature from bones [{name, head, tail, parent?}], optionally binding a mesh with automatic weights."""
+    return json.dumps(send_blender_command("create_armature", {
+        "name": name, "bones": bones, "bind_mesh": bind_mesh,
+    }), indent=2)
+
+
+@mcp.tool()
+def keyframe_object(
+    object_name: str,
+    data_path: str = "location",
+    frame: int = 1,
+    value: Optional[Any] = None,
+    index: int = -1,
+) -> str:
+    """Set an optional property value and insert a keyframe on an object. Returns the action, keyframe count and frame range."""
+    return json.dumps(send_blender_command("keyframe_object", {
+        "object_name": object_name, "data_path": data_path,
+        "frame": frame, "value": value, "index": index,
+    }), indent=2)
+
+
 # ==============================================================================
 # 5. PARAMETRIC ARCHITECTURE & BUILDINGS
 # ==============================================================================
@@ -1033,11 +1060,12 @@ PROFILE_EXTRAS = {
     },
     "animation": {
         "create_articulation_joint", "auto_rig_humanoid",
-        "orient_and_face_towards",
+        "orient_and_face_towards", "keyframe_object",
     },
     "rigging": {
         "fuse_organic_parts", "create_skeleton_skin_mesh",
         "auto_rig_humanoid", "create_articulation_joint",
+        "create_armature",
     },
     "geometry_nodes": {
         "deform_object", "create_loft_surface", "array_grid_on_surface",

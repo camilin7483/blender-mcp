@@ -1,0 +1,11 @@
+{
+  "assigned": true,
+  "metallic": {
+    "target": 0.8,
+    "tolerance": 0.001
+  },
+  "roughness": {
+    "target": 0.2,
+    "tolerance": 0.001
+  }
+}

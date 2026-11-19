@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "collisions": 0,
+  "contacts": {
+    "min": 1
+  }
+}

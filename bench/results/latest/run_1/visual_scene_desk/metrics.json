@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "visual_scenes",
+  "duration_ms": 17.405,
+  "error": null,
+  "expected": {
+    "collisions": 0,
+    "contacts": {
+      "min": 1
+    },
+    "passed": true
+  },
+  "failures": [],
+  "observed": {
+    "collisions": 0,
+    "contacts": 15,
+    "passed": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "visual_scene_desk"
+}

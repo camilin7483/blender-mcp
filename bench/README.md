@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **8/8 tasks passed** in every run.
+- **14/14 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -26,9 +26,15 @@ same scenarios.
 | export | godot GLB + reimport | reimport matches dimensions |
 | anchors | cube top-center | position `[0,0,1]`, source |
 | constraints | desk ground + no-intersection | all constraints pass |
+| materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
+| geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
+| repair | non-uniform scale | normalized scale |
+| visual_scenes | desk + monitor | no collisions, contacts found |
+| animation | two keyframes | action, frame range 1–20 |
+| rigging | two-bone armature | bone count and parent |
 
-Not yet covered: materials, Geometry Nodes, animation, rigging and open visual
-scenes. Do not claim those categories until tasks and raw results exist.
+All 11 requested categories are covered; inspection, anchors and constraints
+are additional tasks. External comparison is still not performed.
 
 ## Reproduce
 

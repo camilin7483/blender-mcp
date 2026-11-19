@@ -1,0 +1,18 @@
+{
+  "object_count": 1,
+  "dimensions_mm": {
+    "width": {
+      "target": 1000,
+      "tolerance": 1
+    },
+    "depth": {
+      "target": 1000,
+      "tolerance": 1
+    },
+    "height": {
+      "target": 1000,
+      "tolerance": 1
+    }
+  },
+  "passed": true
+}

@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "geometry_nodes",
+  "duration_ms": 1.097,
+  "error": null,
+  "expected": {
+    "dimensions_mm": {
+      "depth": {
+        "target": 1000,
+        "tolerance": 1
+      },
+      "height": {
+        "target": 1000,
+        "tolerance": 1
+      },
+      "width": {
+        "target": 1000,
+        "tolerance": 1
+      }
+    },
+    "object_count": 1,
+    "passed": true
+  },
+  "failures": [],
+  "observed": {
+    "dimensions_mm": {
+      "depth": 1000.0,
+      "height": 1000.0,
+      "width": 1000.0
+    },
+    "object_count": 1,
+    "passed": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "geometry_nodes_cube"
+}

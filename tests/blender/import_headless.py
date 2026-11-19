@@ -778,6 +778,34 @@ def main() -> None:
                 f"{bracket.get('audit', {}).get('failures')} {bracket.get('constraints')}"
             )
 
+        # --- animation and rigging primitives ---
+        clear_scene()
+        anim_cube = make_cube("AnimCube", 0.5)
+        anim_cube.location = (0.0, 0.0, 0.0)
+        server.keyframe_object("AnimCube", "location", 1, [0.0, 0.0, 0.0])
+        second_keyframe = server.keyframe_object(
+            "AnimCube", "location", 20, [1.0, 0.0, 0.0]
+        )
+        if not anim_cube.animation_data or not anim_cube.animation_data.action:
+            fail("keyframe_object did not create an action")
+        if second_keyframe["keyframe_count"] < 6:
+            fail(f"keyframe count is wrong: {second_keyframe}")
+        if second_keyframe["frame_range"] != [1.0, 20.0]:
+            fail(f"keyframe frame range is wrong: {second_keyframe}")
+
+        rig = server.create_armature("BenchRig", [
+            {"name": "Root", "head": [0.0, 0.0, 0.0], "tail": [0.0, 0.0, 0.5]},
+            {
+                "name": "Tip", "head": [0.0, 0.0, 0.5], "tail": [0.0, 0.0, 1.0],
+                "parent": "Root",
+            },
+        ])
+        armature = bpy.data.objects.get("BenchRig")
+        if rig["bone_count"] != 2 or not armature:
+            fail(f"armature creation failed: {rig}")
+        if armature.data.bones["Tip"].parent is None or armature.data.bones["Tip"].parent.name != "Root":
+            fail("armature parent relationship is wrong")
+
         # --- deterministic inspection renders ---
         clear_scene()
         render_cube = make_cube("RenderCube", 1.0)

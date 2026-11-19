@@ -28,9 +28,11 @@ All notable changes to this repository are documented here.
 - Declarative assemblies: `create_assembly` builds from a spec (desk template
   from `dimensions_mm` or explicit components), stores the spec on a root
   empty, and `update_assembly` deep-merges changes and rebuilds.
-- BlenderMCP-Bench runner with 8 deterministic tasks (primitives, dimensions,
-  assemblies, topology, inspection, export, anchors, constraints), published
-  raw artifacts in `bench/results/latest/` and 3 local runs at 8/8.
+- Animation and rigging primitives: `keyframe_object` and `create_armature`
+  with optional automatic weights.
+- BlenderMCP-Bench runner with 14 deterministic tasks covering all 11 requested
+  categories (plus inspection, anchors and constraints), published raw
+  artifacts in `bench/results/latest/` and 3 local runs at 14/14.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
   portability, CI matrix for 4.5.4 and 5.2.4.
 - Release checklist documenting the remaining stable-release gates.

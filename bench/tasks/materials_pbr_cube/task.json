@@ -1,0 +1,5 @@
+{
+  "category": "materials",
+  "runner": "pbr_material",
+  "description": "Create a Principled material, assign it and verify metallic/roughness."
+}

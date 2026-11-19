@@ -14,18 +14,18 @@ The only baseline facts currently measured are:
   `tests/contracts/test_tool_parity.py`).
 
 These are baseline measurements, not improvements. The current branch
-registers 58 tools; remeasure schema size before publishing any comparison.
+registers 60 tools; remeasure schema size before publishing any comparison.
 
 ## Published baseline
 
 A first local run is published in `bench/results/latest/`:
 
 - Blender 4.5.4 LTS, Linux x64, 3 runs.
-- 8/8 tasks passed in every run.
+- 14/14 tasks passed in every run.
 - `summary.json` contains medians and per-run results; `trace.jsonl` contains
   the per-task trace; `run_1/` contains `.blend`, `.glb` and render artifacts.
 - No external comparison has been performed. Categories not covered yet:
-  materials, Geometry Nodes, animation, rigging and open visual scenes.
+  All 11 requested categories are covered by at least one task.
 
 These are functional measurements, not evidence of superiority.
 

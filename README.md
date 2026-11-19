@@ -5,7 +5,7 @@
 ## Editions
 
 - **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
-- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 58-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
+- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 60-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
 
@@ -42,6 +42,7 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
   silhouette, wireframe, normals and UV checker modes, with camera metadata
   and a reproducible output hash.
+- **Benchmarked workflows** — 14 deterministic tasks across all 11 requested categories, with published raw artifacts.
 - **Game-ready export** — `godot`, `unity`, `unreal` and `generic-gltf`
   profiles validate scale, materials, UVs, armatures, actions, LOD and
   collision meshes, then reimport the file and compare dimensions.
@@ -52,6 +53,9 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Declarative assemblies** — `create_assembly` builds a desk from
   `dimensions_mm` or any explicit component list; `update_assembly` merges a
   patch and rebuilds without duplicating objects.
+- **Animation and rigging primitives** — `keyframe_object` inserts property
+  keyframes; `create_armature` builds named bones with parent relationships and
+  optional automatic weights.
 - **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
 ## Tool profiles
@@ -59,7 +63,7 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
 tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
 `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
-and `full` (default, 58 tools). `execute_code` is full-only and remains
+and `full` (default, 60 tools). `execute_code` is full-only and remains
 disabled in the add-on by default. Unknown profile names fail open to
 `full`. Profiles filter bridge registration only; the add-on keeps every
 handler.

@@ -1,0 +1,5 @@
+{
+  "category": "animation",
+  "runner": "animation_keyframes",
+  "description": "Insert two location keyframes and verify the action and frame range."
+}

@@ -7,7 +7,7 @@ environment.
 ## Required gate
 
 - [x] Every FastMCP tool has a matching add-on handler.
-- [x] Required parameters match 1:1 (58 tools; `tests/contracts/test_tool_parity.py`).
+- [x] Required parameters match 1:1 (60 tools; `tests/contracts/test_tool_parity.py`).
 - [x] Every tool has a docstring and a profile assignment.
 - [x] `bpy` command execution runs on Blender's main thread; background start
       fails fast.
@@ -34,7 +34,7 @@ environment.
 - [~] Windows/macOS Blender headless jobs are experimental and not a required
       gate.
 - [ ] External benchmark comparison against another server.
-- [ ] Full 11-category benchmark suite (currently 8 categories).
+- [x] 11-category benchmark suite (14 tasks; 3 local runs at 14/14).
 - [ ] Behavioral tests for every legacy tool (schema parity is covered;
       behavior is targeted).
 - [ ] Stable release approval after the open items close.

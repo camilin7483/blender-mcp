@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "repair",
+  "duration_ms": 3.094,
+  "error": null,
+  "expected": {
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "scale_passed": true
+  },
+  "failures": [],
+  "observed": {
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "scale_passed": true
+  },
+  "passed": true,
+  "run": 3,
+  "task": "repair_nonuniform_scale"
+}

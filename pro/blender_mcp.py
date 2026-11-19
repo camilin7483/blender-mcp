@@ -1987,6 +1987,8 @@ class BlenderMCPServer:
             "fuse_organic_parts": lambda p: self.fuse_organic_parts(**p),
             "create_skeleton_skin_mesh": lambda p: self.create_skeleton_skin_mesh(**p),
             "auto_rig_humanoid": lambda p: self.auto_rig_humanoid(**p),
+            "create_armature": lambda p: self.create_armature(**p),
+            "keyframe_object": lambda p: self.keyframe_object(**p),
             # Parametric Architecture & Buildings
             "create_floorplan_walls": lambda p: self.create_floorplan_walls(**p),
             "cut_wall_opening": lambda p: self.cut_wall_opening(**p),
@@ -3693,6 +3695,113 @@ class BlenderMCPServer:
                 bpy.ops.object.parent_set(type="ARMATURE_AUTO")
 
         return {"success": True, "armature": arm_obj.name, "target_mesh": mesh_obj.name, "weights_bound": bind_automatic_weights}
+
+    def create_armature(
+        self,
+        name: str,
+        bones: List[Dict[str, Any]],
+        bind_mesh: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a named armature from bone definitions, optionally binding a mesh."""
+        if not bones:
+            raise ValueError("create_armature needs at least one bone")
+        arm_data = bpy.data.armatures.new(f"{name}_Data")
+        arm_obj = bpy.data.objects.new(name, arm_data)
+        bpy.context.collection.objects.link(arm_obj)
+        bpy.context.view_layer.objects.active = arm_obj
+        arm_obj.select_set(True)
+        bpy.ops.object.mode_set(mode="EDIT")
+        created = {}
+        try:
+            for index, bone in enumerate(bones):
+                if not isinstance(bone, dict):
+                    raise ValueError(f"Bone {index} must be an object")
+                bone_name = str(bone.get("name") or f"Bone_{index + 1}")
+                edit_bone = arm_data.edit_bones.new(bone_name)
+                edit_bone.head = Vector(bone.get("head", [0.0, 0.0, 0.0]))
+                edit_bone.tail = Vector(bone.get("tail", [0.0, 0.0, 1.0]))
+                created[bone_name] = edit_bone
+            for index, bone in enumerate(bones):
+                bone_name = str(bone.get("name") or f"Bone_{index + 1}")
+                parent_name = bone.get("parent")
+                if parent_name and parent_name in created:
+                    created[bone_name].parent = created[parent_name]
+        finally:
+            bpy.ops.object.mode_set(mode="OBJECT")
+
+        weights_bound = False
+        if bind_mesh:
+            mesh_obj = bpy.data.objects.get(bind_mesh)
+            if not mesh_obj or mesh_obj.type != "MESH":
+                raise ValueError(f"Mesh object '{bind_mesh}' not found")
+            bpy.ops.object.select_all(action="DESELECT")
+            mesh_obj.select_set(True)
+            arm_obj.select_set(True)
+            bpy.context.view_layer.objects.active = arm_obj
+            with suppress(Exception):
+                bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+                weights_bound = True
+
+        return {
+            "success": True,
+            "armature": arm_obj.name,
+            "bone_count": len(arm_data.bones),
+            "bones": [bone.name for bone in arm_data.bones],
+            "target_mesh": bind_mesh,
+            "weights_bound": weights_bound,
+        }
+
+    def keyframe_object(
+        self,
+        object_name: str,
+        data_path: str = "location",
+        frame: int = 1,
+        value: Optional[Any] = None,
+        index: int = -1,
+    ) -> Dict[str, Any]:
+        """Set a property value (optional) and insert a keyframe on an object."""
+        obj = bpy.data.objects.get(object_name)
+        if not obj:
+            raise ValueError(f"Object '{object_name}' not found")
+        if value is not None:
+            if data_path in ("location", "rotation_euler", "scale"):
+                setattr(obj, data_path, Vector(value))
+            else:
+                setattr(obj, data_path, value)
+        obj.keyframe_insert(
+            data_path=str(data_path),
+            frame=int(frame),
+            index=int(index),
+        )
+        action = obj.animation_data.action if obj.animation_data else None
+        keyframe_count = 0
+        if action is not None:
+            try:
+                keyframe_count = sum(
+                    len(curve.keyframe_points) for curve in action.fcurves
+                )
+            except Exception:
+                with suppress(Exception):
+                    keyframe_count = sum(
+                        len(curve.keyframe_points)
+                        for layer in action.layers
+                        for strip in layer.strips
+                        for bag in strip.channelbags
+                        for curve in bag.fcurves
+                    )
+        return {
+            "success": True,
+            "object": obj.name,
+            "data_path": str(data_path),
+            "frame": int(frame),
+            "action": action.name if action else None,
+            "keyframe_count": keyframe_count,
+            "frame_range": (
+                [float(value) for value in action.frame_range]
+                if action is not None
+                else None
+            ),
+        }
 
     # ==========================================================================
     # 5. PARAMETRIC ARCHITECTURE & BUILDINGS
