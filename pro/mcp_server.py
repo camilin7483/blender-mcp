@@ -18,7 +18,42 @@ logger = logging.getLogger("blender_mcp_server")
 
 BLENDER_HOST = os.getenv("BLENDER_HOST", "localhost")
 BLENDER_PORT = int(os.getenv("BLENDER_PORT", "9876"))
-BLENDER_AUTH_TOKEN = os.getenv("BLENDER_AUTH_TOKEN", "")
+AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
+TOKEN_FILE_ENV_VAR = "BLENDER_MCP_TOKEN_FILE"
+ALLOW_NO_AUTH_ENV_VAR = "BLENDER_MCP_ALLOW_NO_AUTH"
+TOKEN_FILE_NAME = "token"
+
+
+def default_token_path() -> str:
+    """Shared token path. Keep in sync with pro/blender_mcp.py."""
+    override = os.getenv(TOKEN_FILE_ENV_VAR, "")
+    if override:
+        return os.path.expanduser(override)
+    if os.name == "nt":
+        base = os.getenv("APPDATA", os.path.expanduser("~"))
+    else:
+        base = os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    return os.path.join(base, "blender-mcp", TOKEN_FILE_NAME)
+
+
+def _load_auth_token() -> str:
+    env_token = os.getenv(AUTH_TOKEN_ENV_VAR, "")
+    if env_token:
+        return env_token
+    try:
+        with open(default_token_path(), "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        return ""
+
+
+BLENDER_AUTH_TOKEN = _load_auth_token()
+
+
+def _current_auth_token() -> str:
+    """Re-read the token file if the bridge started before Blender."""
+    return BLENDER_AUTH_TOKEN or _load_auth_token()
+
 
 # A single response larger than this is rejected instead of growing an
 # unbounded buffer. Base64 inspection images are the largest normal payload.
@@ -101,9 +136,15 @@ def send_blender_command(
 ) -> Dict[str, Any]:
     """Sends a JSON command to the Blender MCP Socket Server on localhost:9876."""
     request_id = uuid.uuid4().hex
+    token = _current_auth_token()
+    if not token and os.getenv(ALLOW_NO_AUTH_ENV_VAR) != "1":
+        raise RuntimeError(
+            f"No Blender auth token. Start Blender once to create {default_token_path()}, "
+            f"or set {AUTH_TOKEN_ENV_VAR}. Set {ALLOW_NO_AUTH_ENV_VAR}=1 only for trusted local use."
+        )
     payload: Dict[str, Any] = {"type": cmd_type, "params": params or {}, "request_id": request_id}
-    if BLENDER_AUTH_TOKEN:
-        payload["auth_token"] = BLENDER_AUTH_TOKEN
+    if token:
+        payload["auth_token"] = token
 
     eff_timeout = timeout or (180.0 if cmd_type in HEAVY_TIMEOUT_COMMANDS else 60.0)
 

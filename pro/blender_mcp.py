@@ -15,6 +15,8 @@ import re
 import json
 import time
 import math
+import hmac
+import secrets
 import socket
 import select
 import queue
@@ -39,6 +41,9 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 9876
 BUFFER_SIZE = 65536
 AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
+TOKEN_FILE_ENV_VAR = "BLENDER_MCP_TOKEN_FILE"
+ALLOW_NO_AUTH_ENV_VAR = "BLENDER_MCP_ALLOW_NO_AUTH"
+TOKEN_FILE_NAME = "token"
 
 # Protocol limits. A single JSON message or response larger than these is
 # rejected instead of growing an unbounded buffer.
@@ -61,6 +66,62 @@ class PendingRequest:
     request_id: Any
     response: Optional[Dict[str, Any]] = None
     done: threading.Event = field(default_factory=threading.Event)
+
+
+def default_token_path() -> str:
+    """Shared token path. Keep in sync with pro/mcp_server.py."""
+    override = os.environ.get(TOKEN_FILE_ENV_VAR, "")
+    if override:
+        return os.path.expanduser(override)
+    if os.name == "nt":
+        base = os.environ.get("APPDATA", os.path.expanduser("~"))
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    return os.path.join(base, "blender-mcp", TOKEN_FILE_NAME)
+
+
+def load_or_create_auth_token() -> str:
+    """Return the local auth token, creating a 0600 file on first start.
+
+    Priority: explicit no-auth mode, BLENDER_AUTH_TOKEN, token file, new token.
+    An empty return value means authentication is intentionally disabled.
+    """
+    if os.environ.get(ALLOW_NO_AUTH_ENV_VAR) == "1":
+        return ""
+    env_token = os.environ.get(AUTH_TOKEN_ENV_VAR, "")
+    if env_token:
+        return env_token
+
+    path = default_token_path()
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            token = handle.read().strip()
+        if token:
+            with suppress(Exception):
+                os.chmod(path, 0o600)
+            return token
+    except OSError:
+        pass
+
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    with suppress(Exception):
+        os.chmod(directory, 0o700)
+
+    token = secrets.token_hex(32)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        with open(path, "r", encoding="utf-8") as handle:
+            existing = handle.read().strip()
+        if existing:
+            return existing
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(token + "\n")
+    with suppress(Exception):
+        os.chmod(path, 0o600)
+    return token
 
 HEAVY_COMMANDS = {
     "execute_code",
@@ -241,6 +302,7 @@ class BlenderMCPServer:
         self.client_slots = threading.BoundedSemaphore(MAX_CLIENTS)
         self.main_thread_timer_registered = False
         self.last_dispatch_thread: Optional[str] = None
+        self.auth_token: Optional[str] = None
         self._main_thread_timer = self._drain_main_thread_queue
 
     def start(self):
@@ -251,6 +313,14 @@ class BlenderMCPServer:
             return False
         if threading.current_thread() is not threading.main_thread():
             print("[BlenderMCP-Pro] start() must be called from Blender's main thread.")
+            return False
+        try:
+            self.auth_token = load_or_create_auth_token()
+        except OSError as exc:
+            print(f"[BlenderMCP-Pro] Cannot create or read the auth token: {exc}")
+            return False
+        if not self.auth_token and os.environ.get(ALLOW_NO_AUTH_ENV_VAR) != "1":
+            print("[BlenderMCP-Pro] Refusing to start without authentication. Set BLENDER_MCP_ALLOW_NO_AUTH=1 only for trusted local use.")
             return False
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -276,6 +346,10 @@ class BlenderMCPServer:
             self.stop()
             return False
         print(f"[BlenderMCP-Pro] Server listening on {self.host}:{self.port}")
+        if self.auth_token:
+            print(f"[BlenderMCP-Pro] Auth token file: {default_token_path()}")
+        else:
+            print("[BlenderMCP-Pro] WARNING: authentication disabled by BLENDER_MCP_ALLOW_NO_AUTH=1")
         return True
 
     def stop(self):
@@ -454,9 +528,13 @@ class BlenderMCPServer:
                         continue
 
                     request_id = msg.get("request_id")
-                    expected_token = os.environ.get(AUTH_TOKEN_ENV_VAR, "")
-                    if expected_token and msg.get("auth_token") != expected_token:
-                        send_response({"status": "error", "message": "Authentication failed: invalid token"}, request_id)
+                    expected_token = self.auth_token or ""
+                    if expected_token:
+                        if not hmac.compare_digest(str(msg.get("auth_token", "")), expected_token):
+                            send_response({"status": "error", "message": "Authentication failed: invalid or missing token"}, request_id)
+                            return
+                    elif os.environ.get(ALLOW_NO_AUTH_ENV_VAR) != "1":
+                        send_response({"status": "error", "message": "Server has no auth token; refusing request"}, request_id)
                         return
 
                     cmd_type = msg.get("type", "")

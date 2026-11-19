@@ -6,10 +6,12 @@ The `v3.0.0-baseline` tag is a **development baseline, not a hardened
 release**. This document describes the threat model and the mitigations that
 v4 must implement. It does not certify the current code as safe.
 
-The baseline is known to have open P0 issues: `execute_code` is unrestricted,
-authentication is optional, the socket protocol has no message-size limit,
-downloads accept provider-controlled URLs, and ZIP extraction is unsafe. See
-the audit in the repository history and the migration plan.
+The tagged `v3.0.0-baseline` had optional authentication. This branch closes
+that gap: the add-on creates a per-install token file (0600) on first start and
+the bridge reads it. The remaining open P0s are `execute_code` (still
+unrestricted), unsafe ZIP extraction, unvalidated download URLs and the
+AABB-only collision decision. See the audit in the repository history and the
+migration plan.
 
 ## Trust boundaries
 
@@ -33,18 +35,21 @@ extension, a compromised MCP client, or a prompt-injected agent can all reach
 |---|---|---|---|---|
 | Prompt injection | Untrusted text in a scene, filename, asset description or tool result instructs the model to call destructive tools. | No distinction between data and instructions. Destructive tools run directly. | Tool descriptions mark data as untrusted; destructive tools require explicit confirmation; policy checks before execution. | A user can still approve a malicious action. |
 | Tool poisoning | A malicious MCP server or tool description impersonates a trusted tool or hides instructions. | The bridge exposes a fixed local tool set; no provenance checks on external tools. | Pin the tool set, sign/verify releases, show tool provenance, reject unknown tool descriptions in clients. | Client-side trust remains. |
-| Confused deputy | The add-on has more privileges than the caller and executes a request on the caller's behalf. | The socket has no per-client authorization; any local client can call any tool. | Per-session token, capability scopes, explicit user consent for privileged operations. | Local user session compromise. |
+| Confused deputy | The add-on has more privileges than the caller and executes a request on the caller's behalf. | A per-install token is required by default; there are no per-tool scopes yet. | Per-session token, capability scopes, explicit user consent for privileged operations. | Local user session compromise. |
 | SSRF | A crafted asset URL or provider response points to `127.0.0.1`, link-local, metadata services or an internal host. | Provider URLs are followed without host or IP validation. | HTTPS-only allowlist, DNS resolution and private/link-local/loopback blocking, redirect re-validation, pinned IP per connection. | DNS rebinding needs pinned resolution; document residual risk. |
-| Token theft | `BLENDER_AUTH_TOKEN` or the Sketchfab token is read from env, logs, process listings or a world-readable file. | Token is optional and passed in plaintext JSON; no file permissions policy. | Token file mode 0600, constant-time comparison, never log tokens, rotate on start, redact errors. | Same-user process can read the file. |
-| Arbitrary code execution | `execute_code` calls `exec()` with full builtins. | Enabled by default and unauthenticated. | Disabled by default; explicit preference/env opt-in; structured refusal; no hidden execution path. | An opted-in user grants full Blender Python access. |
+| Token theft | `BLENDER_AUTH_TOKEN` or the Sketchfab token is read from env, logs, process listings or a world-readable file. | Token file is 0600; passed in plaintext JSON over loopback; env override supported. | Token file mode 0600, constant-time comparison, never log tokens, rotate on start, redact errors. | Same-user process can read the file. |
+| Arbitrary code execution | `execute_code` calls `exec()` with full builtins. | Enabled by default; authentication is now required. The opt-in gate is the next fix. | Disabled by default; explicit preference/env opt-in; structured refusal; no hidden execution path. | An opted-in user grants full Blender Python access. |
 | Data exfiltration | A tool reads scene data, files or tokens and sends them to a remote host. | `execute_code` and download tools can read files and make network calls. | Output sandbox, no arbitrary file reads, network allowlist, audit log, user confirmation for exports. | A user-approved export can still leak data. |
 | Destructive scene operations | `clear_scene`, `delete_object`, `boolean_operation`, `rollback_checkpoint` mutate or replace the scene. | No confirmation or dry-run. | `confirm` flag, dry-run preview, checkpoint before mutation, undo integration where possible. | Confirmed destructive calls still destroy data. |
 | Malicious asset files | A `.blend`, `.glb`, texture or archive exploits the importer, contains a zip-slip path, or fills the disk. | `zipfile.extractall()` without validation; no size limits. | Safe extraction (resolve, reject `..`, absolute paths, symlinks), uncompressed-size and file-count caps, importer sandboxing where available. | Importer vulnerabilities remain. |
 | Malicious paths | `export_scene`, checkpoint names or download IDs escape the output directory. | Arbitrary paths accepted; `uid`/`asset_id` interpolated into temp names. | Resolve and confine to `BLENDER_MCP_OUTPUT_DIR`; reject traversal and symlinks; sanitize IDs; extension allowlist. | A user-approved path outside the sandbox. |
 | DNS rebinding | A hostname resolves to a public IP during validation and to a private IP at connect time. | No DNS validation at all. | Resolve once, reject private ranges, connect to the validated IP, re-validate redirects. | A compromised resolver or OS-level attack. |
-| Supply chain | A compromised `mcp` package, Blender build, add-on zip or GitHub Action runs with the user's privileges. | `mcp==1.30.0` only in the README; no hashes, no pinned CI actions. | Pin dependencies and Actions by commit, publish hashes, sign releases, reproducible build, dependency review. | Upstream compromise before pinning. |
+| Supply chain | A compromised `mcp` package, Blender build, add-on zip or GitHub Action runs with the user's privileges. | `mcp==1.30.0` is pinned in `pro/requirements.txt`; no hashes, no pinned CI actions yet. | Pin dependencies and Actions by commit, publish hashes, sign releases, reproducible build, dependency review. | Upstream compromise before pinning. |
 
 ## Secure defaults for v4
+
+Implemented in this branch: per-install token file and main-thread queue. The
+rest are planned.
 
 - Authentication enabled by default with a per-install token file (0600).
 - `execute_code` disabled unless explicitly enabled in add-on preferences or
@@ -57,6 +62,19 @@ extension, a compromised MCP client, or a prompt-injected agent can all reach
 - The bridge binds to loopback and refuses non-loopback hosts by default.
 - Every privileged call is logged with a request ID and a redacted argument
   summary.
+
+## Token file
+
+- Default: `$XDG_CONFIG_HOME/blender-mcp/token` on Linux/macOS, or
+  `%APPDATA%\blender-mcp\token` on Windows. `XDG_CONFIG_HOME` defaults to
+  `~/.config`.
+- Override the path with `BLENDER_MCP_TOKEN_FILE` on both sides.
+- Override the value with `BLENDER_AUTH_TOKEN` on both sides.
+- The add-on creates the file with mode 0600 and the directory with 0700.
+- Rotate by deleting the file and restarting Blender. The bridge rereads the
+  file when its cached token is empty; restart the bridge to pick up a rotation.
+- `BLENDER_MCP_ALLOW_NO_AUTH=1` disables authentication on both sides. Use it
+  only for a trusted local process that cannot read the token file.
 
 ## Reporting a vulnerability
 

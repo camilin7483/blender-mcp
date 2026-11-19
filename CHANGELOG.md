@@ -24,10 +24,17 @@ All notable changes to this repository are documented here.
 
 ### Security
 
-- No v4 security fix is included in this baseline. The open P0s are tracked in
-  `SECURITY.md` and the v4 plan: optional auth, unrestricted `execute_code`,
-  unsafe ZIP extraction, unvalidated download URLs and AABB-only collision
-  decisions.
+- Local authentication is enabled by default. The add-on creates a per-install
+  token file (0600) and the bridge reads it; `BLENDER_AUTH_TOKEN` still
+  overrides the file. `BLENDER_MCP_ALLOW_NO_AUTH=1` is the explicit unsafe
+  escape hatch.
+- Batched requests are parsed incrementally instead of being dropped, and
+  request/response sizes are bounded.
+- Commands are routed through a main-thread queue with one persistent timer,
+  removing the unsupported `bpy.app.timers.register()` call from socket
+  threads.
+- Still open: unrestricted `execute_code`, unsafe ZIP extraction, unvalidated
+  download URLs and the AABB-only collision decision. See `SECURITY.md`.
 
 ## 3.0.0 - 2026-11-18
 

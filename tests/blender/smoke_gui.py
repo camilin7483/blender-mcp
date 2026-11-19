@@ -1,4 +1,4 @@
-"""GUI smoke test: socket round-trip, request IDs and batched messages.
+"""GUI smoke test: auth, request IDs, batched messages and main-thread dispatch.
 
 Run with:
     xvfb-run -a blender --factory-startup --python tests/blender/smoke_gui.py
@@ -11,8 +11,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
+import stat
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -24,12 +27,19 @@ import bpy  # noqa: E402
 
 import blender_mcp as bm  # noqa: E402
 
+TOKEN_DIR = tempfile.mkdtemp(prefix="blendermcp_auth_")
+TOKEN_PATH = os.path.join(TOKEN_DIR, "token")
+os.environ["BLENDER_MCP_TOKEN_FILE"] = TOKEN_PATH
+
 state: dict[str, object] = {}
 server = bm.BlenderMCPServer(port=0)
 
 
-def _request(request_id: str, command: str = "get_scene_info") -> str:
-    return json.dumps({"type": command, "params": {}, "request_id": request_id})
+def _request(request_id: str, command: str = "get_scene_info", token: str | None = None) -> str:
+    payload: dict[str, object] = {"type": command, "params": {}, "request_id": request_id}
+    if token:
+        payload["auth_token"] = token
+    return json.dumps(payload)
 
 
 def _read_messages(sock: socket.socket, count: int, timeout: float = 10.0) -> list[dict]:
@@ -52,18 +62,23 @@ def _read_messages(sock: socket.socket, count: int, timeout: float = 10.0) -> li
     return messages
 
 
-def client(port: int) -> None:
+def client(port: int, token: str) -> None:
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
-            sock.sendall((_request("smoke-single") + "\n").encode("utf-8"))
+            sock.sendall((_request("smoke-bad", token="wrong-token") + "\n").encode("utf-8"))
+            messages = _read_messages(sock, 1)
+            state["bad_auth"] = messages[0] if len(messages) == 1 else {"missing": True}
+
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall((_request("smoke-single", token=token) + "\n").encode("utf-8"))
             messages = _read_messages(sock, 1)
             state["single"] = messages[0] if len(messages) == 1 else {"missing": True}
 
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             batch = (
-                _request("smoke-batch-a")
+                _request("smoke-batch-a", token=token)
                 + "\n"
-                + _request("smoke-batch-b", "list_objects")
+                + _request("smoke-batch-b", "list_objects", token=token)
                 + "\n"
             )
             sock.sendall(batch.encode("utf-8"))
@@ -74,6 +89,15 @@ def client(port: int) -> None:
 
 def finish() -> None:
     checks: list[str] = []
+
+    bad = state.get("bad_auth")
+    if not isinstance(bad, dict) or bad.get("missing"):
+        checks.append(f"no bad-auth response (client_error={state.get('client_error')!r})")
+    else:
+        if bad.get("status") != "error":
+            checks.append(f"bad-auth status={bad.get('status')!r}")
+        if "Authentication" not in str(bad.get("message", "")):
+            checks.append(f"bad-auth message={bad.get('message')!r}")
 
     single = state.get("single")
     if not isinstance(single, dict) or single.get("missing"):
@@ -107,6 +131,8 @@ def finish() -> None:
     if server.main_thread_timer_registered:
         checks.append("main-thread timer was not unregistered")
 
+    shutil.rmtree(TOKEN_DIR, ignore_errors=True)
+
     if checks:
         print("BLENDER_GUI_TEST_FAIL: " + "; ".join(checks))
     else:
@@ -134,6 +160,23 @@ def main() -> None:
         print("BLENDER_GUI_TEST_FAIL: server did not start")
         bpy.ops.wm.quit_blender()
         return
+    if not server.auth_token:
+        print("BLENDER_GUI_TEST_FAIL: server started without an auth token")
+        server.stop()
+        bpy.ops.wm.quit_blender()
+        return
+    if not os.path.exists(TOKEN_PATH):
+        print("BLENDER_GUI_TEST_FAIL: token file was not created")
+        server.stop()
+        bpy.ops.wm.quit_blender()
+        return
+    if os.name != "nt":
+        mode = stat.S_IMODE(os.stat(TOKEN_PATH).st_mode)
+        if mode & 0o077:
+            print(f"BLENDER_GUI_TEST_FAIL: token file mode {oct(mode)} is too open")
+            server.stop()
+            bpy.ops.wm.quit_blender()
+            return
     if not server.main_thread_timer_registered:
         print("BLENDER_GUI_TEST_FAIL: persistent main-thread timer not registered")
         server.stop()
@@ -141,7 +184,7 @@ def main() -> None:
         return
 
     port = server.server_socket.getsockname()[1]
-    threading.Thread(target=client, args=(port,), daemon=True).start()
+    threading.Thread(target=client, args=(port, server.auth_token), daemon=True).start()
     time.sleep(0.1)
     bpy.app.timers.register(finish, first_interval=5.0)
 

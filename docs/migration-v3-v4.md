@@ -14,7 +14,7 @@ release candidate.
 | Response shape | JSON text with free-form keys | Same keys plus `requirements`, `metrics`, `failures`, `warnings` | Old keys preserved during migration |
 | Audit | `passed` computed before blueprint | `passed` computed last; structured failures | `critical_issues` and `warnings` remain as derived views |
 | Protocol | `{"type","params","auth_token"}` | Adds `protocol_version`, `request_id`; newline framing | v3 messages accepted by a compatibility parser |
-| Auth | Optional `BLENDER_AUTH_TOKEN` | Per-install token file (0600), enabled by default | `BLENDER_AUTH_TOKEN` overrides the file |
+| Auth | Optional `BLENDER_AUTH_TOKEN` | Per-install token file (0600), enabled by default; default path `$XDG_CONFIG_HOME/blender-mcp/token` | `BLENDER_AUTH_TOKEN` overrides the file; `BLENDER_MCP_ALLOW_NO_AUTH=1` is the unsafe legacy bypass |
 | `execute_code` | Enabled and unauthenticated | Disabled by default; explicit opt-in | `BLENDER_MCP_ALLOW_EXECUTE_CODE=1` restores the old behavior for trusted local use |
 | Destructive tools | Run immediately | Require `confirm=true`; dry-run otherwise | `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` for legacy automation |
 | Output paths | Any path | Confined to `BLENDER_MCP_OUTPUT_DIR` | `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation |

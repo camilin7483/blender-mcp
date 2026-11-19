@@ -10,10 +10,11 @@
 ## Status
 
 The `v3.0.0-baseline` tag is a development baseline, not a hardened release.
-Authentication is optional, `execute_code` is unrestricted by default, and the
-collision audit still uses AABB as a final proof. The v4 work closes these
-issues; see [`SECURITY.md`](SECURITY.md) and
-[`ARCHITECTURE.md`](ARCHITECTURE.md).
+The tagged baseline had optional authentication. This branch adds a
+per-install token file (0600) and routes commands through a main-thread queue.
+`execute_code` is still unrestricted and the collision audit still uses AABB as
+a final proof. The v4 work closes these issues; see [`SECURITY.md`](SECURITY.md)
+and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Documentation
 
