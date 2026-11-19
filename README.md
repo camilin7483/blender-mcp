@@ -2,6 +2,8 @@
 
 **Blender MCP** is a Blender add-on that enables AI-powered 3D content creation through the **Model Context Protocol (MCP)**. It connects Blender to AI coding assistants like Claude, OpenCode, Cursor, and other MCP-compatible tools, allowing you to control Blender using natural language.
 
+**Blender MCP Pro v3.0** is available as a separate add-on with a bundled MCP bridge, metric modeling tools, and four-view scene inspection. Choose the [Pro installation guide](pro/README.md) for the new workflow. The guide below covers the original add-on.
+
 ## Features
 
 - **Natural Language Control** — Create, modify, and manipulate 3D scenes using plain English
