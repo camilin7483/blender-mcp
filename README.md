@@ -5,7 +5,7 @@
 ## Editions
 
 - **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
-- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 56-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
+- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 58-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
 
@@ -48,6 +48,9 @@ output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
   center, offset, distance, parallel, perpendicular, ground contact,
   symmetry, no-intersection, inside and surface contact, with structured
   expected/actual/tolerance/method results.
+- **Declarative assemblies** — `create_assembly` builds a desk from
+  `dimensions_mm` or any explicit component list; `update_assembly` merges a
+  patch and rebuilds without duplicating objects.
 - **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
 ## Tool profiles
@@ -55,7 +58,7 @@ output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
 Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
 tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
 `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
-and `full` (default, 56 tools). `execute_code` is full-only and remains
+and `full` (default, 58 tools). `execute_code` is full-only and remains
 disabled in the add-on by default. Unknown profile names fail open to
 `full`. Profiles filter bridge registration only; the add-on keeps every
 handler.

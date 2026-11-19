@@ -692,6 +692,92 @@ def main() -> None:
         if unknown_constraint["passed"] or not unknown_constraint["results"][0].get("error"):
             fail(f"constraint validator accepted an unknown type: {unknown_constraint}")
 
+        # --- declarative assemblies ---
+        clear_scene()
+        desk_spec = {
+            "name": "ParamDesk",
+            "type": "desk",
+            "dimensions_mm": {"width": 1600, "depth": 800, "height": 750},
+            "materials": {
+                "top": [0.45, 0.30, 0.20],
+                "legs": [0.20, 0.20, 0.20],
+            },
+            "constraints": [
+                {
+                    "type": "ground_contact",
+                    "objects": ["Leg_FL", "Leg_FR", "Leg_BL", "Leg_BR"],
+                    "tolerance": 0.005,
+                },
+                {
+                    "type": "no_intersection",
+                    "objects": ["Top", "Leg_FL"],
+                    "tolerance": 0.001,
+                },
+            ],
+        }
+        desk = server.create_assembly(desk_spec)
+        if not desk.get("success") or desk.get("passed") is not True:
+            fail(
+                "desk assembly failed: "
+                f"{desk.get('audit', {}).get('failures')} {desk.get('constraints')}"
+            )
+        desk_dims = desk["audit"]["dimensions"]["objects"]["ParamDesk_Top"]["dimensions"]
+        if any(
+            abs(actual - expected) > 0.005
+            for actual, expected in zip(desk_dims, [1.6, 0.8, 0.03], strict=False)
+        ):
+            fail(f"desk top dimensions are wrong: {desk_dims}")
+        desk_top = bpy.data.objects.get("ParamDesk_Top")
+        if not desk_top or abs(desk_top.location.z - 0.72) > 0.001:
+            fail("desk top is not at leg height")
+        desk_leg = bpy.data.objects.get("ParamDesk_Leg_FL")
+        if not desk_leg or abs(desk_leg.location.x + 0.72) > 0.001:
+            fail("desk leg is not at the expected inset")
+
+        updated_desk = server.update_assembly(
+            "ParamDesk",
+            changes={"dimensions_mm": {"width": 1200}},
+        )
+        if not updated_desk.get("passed"):
+            fail(f"updated desk failed: {updated_desk.get('audit', {}).get('failures')}")
+        updated_dims = updated_desk["audit"]["dimensions"]["objects"]["ParamDesk_Top"]["dimensions"]
+        if abs(updated_dims[0] - 1.2) > 0.005:
+            fail(f"updated desk width is wrong: {updated_dims}")
+        if bpy.data.objects.get("ParamDesk_Top.001") is not None:
+            fail("update_assembly left duplicate components")
+        updated_leg = bpy.data.objects.get("ParamDesk_Leg_FL")
+        if not updated_leg or abs(updated_leg.location.x + 0.528) > 0.005:
+            fail("updated desk leg did not move with the width")
+
+        clear_scene()
+        bracket = server.create_assembly({
+            "name": "BracketAssembly",
+            "components": [
+                {
+                    "name": "Plate",
+                    "shape": "BOX",
+                    "dimensions": [0.2, 0.2, 0.01],
+                    "location": [0.0, 0.0, 0.0],
+                    "origin": "BOTTOM",
+                },
+                {
+                    "name": "Post",
+                    "shape": "CYLINDER",
+                    "dimensions": [0.02, 0.02, 0.1],
+                    "location": [0.0, 0.0, 0.01],
+                    "origin": "BOTTOM",
+                },
+            ],
+            "constraints": [
+                {"type": "ground_contact", "objects": ["Plate"], "tolerance": 0.005},
+            ],
+        })
+        if not bracket.get("success") or not bracket.get("passed"):
+            fail(
+                "custom component assembly failed: "
+                f"{bracket.get('audit', {}).get('failures')} {bracket.get('constraints')}"
+            )
+
         # --- deterministic inspection renders ---
         clear_scene()
         render_cube = make_cube("RenderCube", 1.0)

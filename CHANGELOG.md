@@ -25,6 +25,9 @@ All notable changes to this repository are documented here.
   distance, parallel, perpendicular, ground_contact, symmetry,
   no_intersection, inside and surface_contact, with structured expected/
   actual/tolerance/method results.
+- Declarative assemblies: `create_assembly` builds from a spec (desk template
+  from `dimensions_mm` or explicit components), stores the spec on a root
+  empty, and `update_assembly` deep-merges changes and rebuilds.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
   registration through `BLENDER_MCP_PROFILE`; unknown names fail open.

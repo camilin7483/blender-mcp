@@ -42,8 +42,8 @@ def test_core_profile_is_smaller_and_includes_audit() -> None:
 
 
 def test_full_profile_has_every_tool() -> None:
-    assert len(_tools("full")) == 56
+    assert len(_tools("full")) == 58
 
 
 def test_unknown_profile_fails_open() -> None:
-    assert len(_tools("does-not-exist")) == 56
+    assert len(_tools("does-not-exist")) == 58

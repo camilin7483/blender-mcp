@@ -14,7 +14,7 @@ The only baseline facts currently measured are:
   `tests/contracts/test_tool_parity.py`).
 
 These are baseline measurements, not improvements. The current branch
-registers 56 tools; remeasure schema size before publishing any comparison.
+registers 58 tools; remeasure schema size before publishing any comparison.
 
 ## BlenderMCP-Bench
 

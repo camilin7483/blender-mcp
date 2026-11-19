@@ -19,7 +19,7 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `pro/mcp_server.py` | Registers 56 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| MCP bridge | `pro/mcp_server.py` | Registers 58 FastMCP tools; serializes each call to a socket command; returns JSON text. |
 | Socket transport | `pro/mcp_server.py` | New connection per command; 60 s / 180 s timeouts; JSON response parsing. |
 | Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; validates optional token; rate-limits. |
 | Main-thread dispatcher | `pro/blender_mcp.py` | Persistent queue drained by one timer; background and worker starts fail fast. |
@@ -77,6 +77,9 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 - `validate_constraints()` evaluates mate, align, flush, center, offset,
   distance, parallel, perpendicular, ground_contact, symmetry,
   no_intersection, inside and surface_contact without changing the scene.
+- `create_assembly()` builds a declarative assembly from a desk template or
+  explicit components; `update_assembly()` deep-merges changes and rebuilds
+  from the stored spec. Components are parented to a root empty.
 
 ### Visual inspection
 

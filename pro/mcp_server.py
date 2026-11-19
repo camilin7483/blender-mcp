@@ -248,6 +248,26 @@ def create_parametric_part(
 
 
 @mcp.tool()
+def create_assembly(spec: Dict[str, Any], replace: bool = False) -> str:
+    """Build a declarative assembly. spec: {name, type: desk|assembly, dimensions_mm?: {width,depth,height}, components?: [{name, shape, dimensions|dimensions_mm, location, origin, color}], constraints?: [...]}. Returns components, mapped constraints, audit and passed."""
+    return json.dumps(send_blender_command("create_assembly", {
+        "spec": spec, "replace": replace,
+    }), indent=2)
+
+
+@mcp.tool()
+def update_assembly(
+    name: str,
+    changes: Optional[Dict[str, Any]] = None,
+    spec: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Rebuild an existing assembly from its stored spec plus a deep-merged changes patch. Example: changes={'dimensions_mm': {'width': 1200}} keeps depth and height."""
+    return json.dumps(send_blender_command("update_assembly", {
+        "name": name, "changes": changes, "spec": spec,
+    }), indent=2)
+
+
+@mcp.tool()
 def attach_and_align(
     part_name: str,
     target_name: str,
@@ -995,7 +1015,8 @@ CORE_TOOLS = {
 PROFILE_EXTRAS = {
     "modeling": {
         "list_modeling_blueprints", "get_modeling_blueprint",
-        "create_parametric_part", "attach_and_align", "snap_to_semantic_anchor",
+        "create_parametric_part", "create_assembly", "update_assembly",
+        "attach_and_align", "snap_to_semantic_anchor",
         "list_semantic_anchors", "anchor_operation", "orient_and_face_towards",
         "place_on_surface_raycast", "smart_bevel_and_polish",
         "spawn_corner_supports", "symmetry_mirror", "radial_array",

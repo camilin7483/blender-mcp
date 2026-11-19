@@ -1966,6 +1966,8 @@ class BlenderMCPServer:
             "get_modeling_blueprint": lambda p: self.get_modeling_blueprint(**p),
             # Parametric Modeling Primitives & Assemblies
             "create_parametric_part": lambda p: self.create_parametric_part(**p),
+            "create_assembly": lambda p: self.create_assembly(**p),
+            "update_assembly": lambda p: self.update_assembly(**p),
             "attach_and_align": lambda p: self.attach_and_align(**p),
             "snap_to_semantic_anchor": lambda p: self.snap_to_semantic_anchor(**p),
             "list_semantic_anchors": lambda p: self.list_semantic_anchors(**p),
@@ -2225,6 +2227,205 @@ class BlenderMCPServer:
             "world_aabb": aabb,
             "dimensions": [round(aabb[1][i] - aabb[0][i], 4) for i in range(3)],
         }
+
+    @staticmethod
+    def _deep_merge(base: Any, patch: Any) -> Any:
+        if isinstance(base, dict) and isinstance(patch, dict):
+            merged = dict(base)
+            for key, value in patch.items():
+                merged[key] = BlenderMCPServer._deep_merge(merged.get(key), value)
+            return merged
+        return patch
+
+    @staticmethod
+    def _component_dimensions(component: Dict[str, Any]) -> List[float]:
+        if "dimensions_mm" in component:
+            values = [float(value) / 1000.0 for value in component["dimensions_mm"]]
+        else:
+            values = [float(value) for value in component.get("dimensions", [0.5, 0.5, 0.5])]
+        if len(values) != 3 or any(value <= 0.0 for value in values):
+            raise ValueError("Component dimensions must be three positive numbers")
+        return values
+
+    def _assembly_component_specs(self, spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+        assembly_type = str(spec.get("type", "assembly")).strip().lower()
+        if assembly_type == "desk" and isinstance(spec.get("dimensions_mm"), dict):
+            dimensions = spec["dimensions_mm"]
+            width = max(float(dimensions.get("width", 1600)) / 1000.0, 0.1)
+            depth = max(float(dimensions.get("depth", 800)) / 1000.0, 0.1)
+            height = max(float(dimensions.get("height", 750)) / 1000.0, 0.1)
+            top_thickness = min(0.04, max(0.02, height * 0.04))
+            leg_size = min(0.08, max(0.04, width * 0.04))
+            inset = min(0.08, max(0.02, min(width, depth) * 0.06))
+            leg_height = max(0.05, height - top_thickness)
+            materials = spec.get("materials") if isinstance(spec.get("materials"), dict) else {}
+            top_color = materials.get("top")
+            leg_color = materials.get("legs")
+            components = [{
+                "name": "Top",
+                "shape": "BOX",
+                "dimensions": [width, depth, top_thickness],
+                "location": [0.0, 0.0, leg_height],
+                "origin": "BOTTOM",
+                "color": top_color,
+            }]
+            offset_x = width / 2.0 - inset - leg_size / 2.0
+            offset_y = depth / 2.0 - inset - leg_size / 2.0
+            for label, side_x, side_y in (
+                ("Leg_FL", -1, -1),
+                ("Leg_FR", 1, -1),
+                ("Leg_BL", -1, 1),
+                ("Leg_BR", 1, 1),
+            ):
+                components.append({
+                    "name": label,
+                    "shape": "BOX",
+                    "dimensions": [leg_size, leg_size, leg_height],
+                    "location": [side_x * offset_x, side_y * offset_y, 0.0],
+                    "origin": "BOTTOM",
+                    "color": leg_color,
+                })
+            return components
+
+        components = spec.get("components")
+        if not isinstance(components, list) or not components:
+            raise ValueError(
+                "Assembly spec needs a non-empty 'components' list or "
+                "type='desk' with dimensions_mm"
+            )
+        return components
+
+    @staticmethod
+    def _map_assembly_constraints(
+        constraints: List[Dict[str, Any]],
+        name_map: Dict[str, str],
+    ) -> List[Dict[str, Any]]:
+        mapped: List[Dict[str, Any]] = []
+        for constraint in constraints:
+            if not isinstance(constraint, dict):
+                continue
+            item = dict(constraint)
+            for key in ("a", "b", "inner", "outer"):
+                value = item.get(key)
+                if isinstance(value, str) and value in name_map:
+                    item[key] = name_map[value]
+            if isinstance(item.get("objects"), list):
+                item["objects"] = [
+                    name_map.get(str(name), str(name))
+                    for name in item["objects"]
+                ]
+            mapped.append(item)
+        return mapped
+
+    def _delete_assembly(self, name: str) -> None:
+        root = bpy.data.objects.get(f"{name}_Root") or bpy.data.objects.get(name)
+        if not root or "mcp_assembly_spec" not in root:
+            raise ValueError(f"Assembly '{name}' not found")
+        tracked = json.loads(root.get("mcp_assembly_objects", "[]"))
+        for object_name in tracked:
+            obj = bpy.data.objects.get(object_name)
+            if obj:
+                bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.data.objects.remove(root, do_unlink=True)
+
+    def create_assembly(
+        self,
+        spec: Dict[str, Any],
+        replace: bool = False,
+    ) -> Dict[str, Any]:
+        """Build a declarative assembly and validate its constraints and audit."""
+        if not isinstance(spec, dict):
+            raise ValueError("Assembly spec must be an object")
+        name = str(spec.get("name") or spec.get("type") or "Assembly").strip()
+        if not name:
+            raise ValueError("Assembly spec needs a name")
+        root_name = f"{name}_Root"
+        existing = bpy.data.objects.get(root_name)
+        if existing:
+            if not replace:
+                raise ValueError(
+                    f"Assembly '{name}' already exists; use update_assembly or replace=True"
+                )
+            self._delete_assembly(name)
+
+        components = self._assembly_component_specs(spec)
+        root = bpy.data.objects.new(root_name, None)
+        root.empty_display_type = "PLAIN_AXES"
+        root["mcp_assembly_spec"] = json.dumps(spec)
+        root["mcp_assembly_objects"] = json.dumps([])
+        bpy.context.collection.objects.link(root)
+
+        created: List[str] = []
+        name_map: Dict[str, str] = {}
+        for index, component in enumerate(components):
+            if not isinstance(component, dict):
+                raise ValueError(f"Component {index} must be an object")
+            component_name = str(component.get("name") or f"Part_{index + 1}").strip()
+            if not component_name:
+                raise ValueError(f"Component {index} needs a name")
+            object_name = f"{name}_{component_name}"
+            result = self.create_parametric_part(
+                name=object_name,
+                shape=str(component.get("shape", "BOX")),
+                dimensions=self._component_dimensions(component),
+                location=[float(value) for value in component.get("location", [0.0, 0.0, 0.0])],
+                rotation_deg=[float(value) for value in component.get("rotation_deg", [0.0, 0.0, 0.0])],
+                origin=str(component.get("origin", "BOTTOM")),
+                bevel_width=float(component.get("bevel_width", 0.003)),
+                bevel_segments=int(component.get("bevel_segments", 2)),
+                subsurf_levels=int(component.get("subsurf_levels", 0)),
+                taper_ratio=float(component.get("taper_ratio", 0.7)),
+                thickness=float(component.get("thickness", 0.05)),
+                color=component.get("color"),
+                material_name=component.get("material_name"),
+                parent_name=root_name,
+                segments=int(component.get("segments", 32)),
+            )
+            actual_name = result["name"]
+            created.append(actual_name)
+            name_map[component_name] = actual_name
+
+        root["mcp_assembly_objects"] = json.dumps(created)
+        constraints = self._map_assembly_constraints(
+            spec.get("constraints") or [], name_map
+        )
+        constraint_report = (
+            self.validate_constraints(constraints) if constraints else None
+        )
+        audit = self.audit_3d_model(object_names=created)
+        return {
+            "success": True,
+            "assembly": name,
+            "root": root.name,
+            "components": created,
+            "component_map": name_map,
+            "spec": spec,
+            "constraints": constraint_report,
+            "audit": audit,
+            "passed": bool(audit.get("passed")) and (
+                constraint_report is None or constraint_report["passed"]
+            ),
+        }
+
+    def update_assembly(
+        self,
+        name: str,
+        changes: Optional[Dict[str, Any]] = None,
+        spec: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Rebuild an assembly from its stored spec plus a deep-merged changes patch."""
+        root = bpy.data.objects.get(f"{name}_Root") or bpy.data.objects.get(name)
+        if not root or "mcp_assembly_spec" not in root:
+            raise ValueError(f"Assembly '{name}' not found")
+        stored = json.loads(root["mcp_assembly_spec"])
+        new_spec = spec if spec is not None else self._deep_merge(stored, changes or {})
+        if not isinstance(new_spec, dict):
+            raise ValueError("Updated assembly spec must be an object")
+        new_spec["name"] = name
+        self._delete_assembly(name)
+        result = self.create_assembly(new_spec, replace=True)
+        result["changes"] = changes or {}
+        return result
 
     def attach_and_align(
         self,
