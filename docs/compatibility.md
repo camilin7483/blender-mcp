@@ -33,7 +33,7 @@
 
 ## Versioning
 
-- The repository follows SemVer. The current pre-release is `4.0.0-alpha`.
+- The repository follows SemVer. The current pre-release is `4.0.0-alpha.2`.
 - v3 tools keep their names during the v4 migration. Breaking changes require
   a wrapper and a note in `docs/migration-v3-v4.md`.
 - A v4 stable release requires the acceptance criteria in the project plan,
