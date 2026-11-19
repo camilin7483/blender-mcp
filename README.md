@@ -5,7 +5,7 @@
 ## Editions
 
 - **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
-- **Pro v3** — [`pro/`](pro/README.md). 53-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
+- **Pro v3** — [`pro/`](pro/README.md). 55-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
 

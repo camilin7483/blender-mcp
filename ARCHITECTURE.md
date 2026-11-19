@@ -19,7 +19,7 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `pro/mcp_server.py` | Registers 53 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| MCP bridge | `pro/mcp_server.py` | Registers 55 FastMCP tools; serializes each call to a socket command; returns JSON text. |
 | Socket transport | `pro/mcp_server.py` | New connection per command; 60 s / 180 s timeouts; JSON response parsing. |
 | Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; validates optional token; rate-limits. |
 | Main-thread dispatcher | `pro/blender_mcp.py` | Registers a timer per request; waits for completion; returns the response. |
@@ -68,6 +68,10 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
   and symmetry requirements block `passed`; topology is report-only unless
   `topology_policy="strict"`.
 - AABB is never the sole proof of collision.
+- `AnchorService` exposes world position, normal, tangent, local frame,
+  source, confidence and tolerance for center, face, surface, edge, corner,
+  socket, bone and custom anchors. AABB anchors are world-axis-aligned;
+  arbitrary-orientation mates need custom or local anchors.
 
 ### Visual inspection
 
@@ -90,7 +94,7 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 - Two unversioned sources of truth before the `v3.0.0-baseline` tag.
 - One 3.3k-line add-on file and one 0.8k-line bridge file.
 - No protocol version negotiation beyond the optional `request_id`.
-- No tool profiles; all 53 tools are always registered.
+- No tool profiles; all 55 tools are always registered.
 - Destructive and network operations have a policy layer, but no per-tool
   capability scopes.
 - The bridge and add-on duplicate parameter knowledge with no shared schema.

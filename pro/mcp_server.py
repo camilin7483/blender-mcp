@@ -289,6 +289,42 @@ def snap_to_semantic_anchor(
 
 
 @mcp.tool()
+def list_semantic_anchors(object_name: str) -> str:
+    """List anchors with world position, normal, tangent, local frame, source and confidence: CENTER, TOP/BOTTOM/LEFT/RIGHT/FRONT/BACK_CENTER, FACE_*, SURFACE_*, EDGE_*, CORNER_*, SOCKET_*, BONE_*, CUSTOM_*."""
+    return json.dumps(send_blender_command("list_semantic_anchors", {
+        "object_name": object_name,
+    }), indent=2)
+
+
+@mcp.tool()
+def anchor_operation(
+    operation: str,
+    part_name: Optional[str] = None,
+    target_name: Optional[str] = None,
+    part_anchor: str = "CENTER",
+    target_anchor: str = "TOP_CENTER",
+    offset: Optional[List[float]] = None,
+    gap: float = 0.0,
+    normal: Optional[List[float]] = None,
+    object_names: Optional[List[str]] = None,
+    axis: str = "X",
+    plane: float = 0.0,
+    spacing: Optional[float] = None,
+    duplicate: bool = True,
+    parent_to_target: bool = False,
+) -> str:
+    """Operate on anchors. align/mate need part_name, target_name and anchors; offset/orient_normal need part_name; distribute/mirror need object_names. mate orients the part normal against the target normal and adds gap along the target normal. mirror duplicates by default."""
+    return json.dumps(send_blender_command("anchor_operation", {
+        "operation": operation, "part_name": part_name, "target_name": target_name,
+        "part_anchor": part_anchor, "target_anchor": target_anchor,
+        "offset": offset, "gap": gap, "normal": normal,
+        "object_names": object_names, "axis": axis, "plane": plane,
+        "spacing": spacing, "duplicate": duplicate,
+        "parent_to_target": parent_to_target,
+    }), indent=2)
+
+
+@mcp.tool()
 def orient_and_face_towards(
     object_name: str,
     look_at_target: Any,

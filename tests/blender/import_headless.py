@@ -462,6 +462,101 @@ def main() -> None:
         if not audit["requirements"]["topology"]["passed"]:
             fail("report topology policy did not pass")
 
+        # --- semantic anchors and operations ---
+        clear_scene()
+        anchor_target = make_cube("AnchorTarget", 1.0)
+        anchor_target.location = (0.0, 0.0, 0.5)
+        anchor_part = make_cube("AnchorPart", 0.2)
+        anchor_part.location = (2.0, 0.0, 0.1)
+        bpy.context.view_layer.update()
+
+        anchor_data = server.list_semantic_anchors("AnchorTarget")
+        anchors = {item["name"]: item for item in anchor_data["anchors"]}
+        if "TOP_CENTER" not in anchors:
+            fail(f"missing TOP_CENTER; keys={sorted(anchors)}")
+        if anchor_data["count"] < 30:
+            fail(f"too few semantic anchors: {anchor_data['count']}")
+        top = anchors["TOP_CENTER"]
+        if top["position"] != [0.0, 0.0, 1.0] or top["normal"] != [0.0, 0.0, 1.0]:
+            fail(f"TOP_CENTER is wrong: {top}")
+        if top["type"] != "face_center" or top["source"] != "evaluated_aabb":
+            fail(f"TOP_CENTER metadata is wrong: {top}")
+        surface = anchors["SURFACE_+Z"]
+        if surface["source"] != "bvh_raycast" or surface["position"][2] < 0.99:
+            fail(f"SURFACE_+Z is wrong: {surface}")
+        if anchors["CORNER_X0Y0Z0"]["position"] != [-0.5, -0.5, 0.0]:
+            fail(f"CORNER_X0Y0Z0 is wrong: {anchors['CORNER_X0Y0Z0']}")
+        if anchors["EDGE_X0Y0"]["position"] != [-0.5, -0.5, 0.5]:
+            fail(f"EDGE_X0Y0 is wrong: {anchors['EDGE_X0Y0']}")
+
+        aligned = server.anchor_operation(
+            "align", part_name="AnchorPart", part_anchor="BOTTOM_CENTER",
+            target_name="AnchorTarget", target_anchor="TOP_CENTER",
+        )
+        if not aligned["passed"] or aligned["distance"] > 0.001:
+            fail(f"align failed: {aligned}")
+        if abs(anchor_part.location.z - 1.1) > 0.001:
+            fail(f"align placed the part at z={anchor_part.location.z}")
+
+        mated = server.anchor_operation(
+            "mate", part_name="AnchorPart", part_anchor="BOTTOM_CENTER",
+            target_name="AnchorTarget", target_anchor="TOP_CENTER", gap=0.01,
+        )
+        if not mated["passed"] or mated["normal_dot"] < 0.999:
+            fail(f"mate failed: {mated}")
+        if abs(anchor_part.location.z - 1.11) > 0.001:
+            fail(f"mate placed the part at z={anchor_part.location.z}")
+
+        offset = server.anchor_operation(
+            "offset", part_name="AnchorPart", part_anchor="CENTER",
+            offset=[0.0, 0.5, 0.0],
+        )
+        if abs(offset["part_anchor"]["position"][1] - 0.5) > 0.001:
+            fail(f"offset failed: {offset}")
+
+        oriented = server.anchor_operation(
+            "orient_normal", part_name="AnchorPart", part_anchor="CENTER",
+            normal=[1.0, 0.0, 0.0],
+        )
+        if not oriented["passed"] or oriented["dot"] < 0.999:
+            fail(f"orient_normal failed: {oriented}")
+
+        clear_scene()
+        distributed_objects = []
+        for index in range(3):
+            item = make_cube(f"Dist{index}", 0.2)
+            item.location = (float(index), 0.0, 0.1)
+            distributed_objects.append(item)
+        bpy.context.view_layer.update()
+        distributed = server.anchor_operation(
+            "distribute", object_names=[item.name for item in distributed_objects],
+            axis="X", spacing=0.5,
+        )
+        if not distributed["passed"]:
+            fail(f"distribute failed: {distributed}")
+        positions = sorted(item.location.x for item in distributed_objects)
+        expected_positions = [0.0, 0.5, 1.0]
+        if any(abs(actual - expected) > 0.001 for actual, expected in zip(positions, expected_positions, strict=False)):
+            fail(f"distribute positions are wrong: {positions}")
+
+        clear_scene()
+        mirror_source = make_cube("MirrorA", 0.4)
+        mirror_source.location = (1.0, 0.0, 0.2)
+        bpy.context.view_layer.update()
+        mirrored = server.anchor_operation(
+            "mirror", object_names=["MirrorA"], axis="X", plane=0.0, duplicate=True,
+        )
+        if not mirrored["created"]:
+            fail(f"mirror did not create a copy: {mirrored}")
+        mirror_copy = bpy.data.objects.get(mirrored["created"][0])
+        if not mirror_copy or abs(mirror_copy.location.x + 1.0) > 0.001:
+            fail(f"mirror copy is in the wrong place: {mirrored}")
+        mirror_audit = server.audit_3d_model(
+            object_names=["MirrorA", mirrored["created"][0]]
+        )
+        if not mirror_audit["requirements"]["normalized_scale"]["passed"]:
+            fail("mirror negative scale failed normalized_scale")
+
         # --- deterministic inspection renders ---
         clear_scene()
         render_cube = make_cube("RenderCube", 1.0)

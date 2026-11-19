@@ -1,6 +1,6 @@
 # Blender MCP Pro v3.0
 
-Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 53 tools over MCP stdio. It sends JSON commands to the Blender add-on on `localhost:9876`, where they run on Blender’s main thread.
+Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 55 tools over MCP stdio. It sends JSON commands to the Blender add-on on `localhost:9876`, where they run on Blender’s main thread.
 
 ## What’s new
 

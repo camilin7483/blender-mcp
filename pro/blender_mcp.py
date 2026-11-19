@@ -742,6 +742,497 @@ class GeometryService:
         }
 
 
+@dataclass
+class SemanticAnchor:
+    """Named point with a world position, normal, tangent and local frame."""
+
+    name: str
+    anchor_type: str
+    object_name: str
+    position: List[float]
+    normal: List[float]
+    tangent: List[float]
+    local_frame: List[List[float]]
+    space: str
+    source: str
+    confidence: float
+    tolerance: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "type": self.anchor_type,
+            "object": self.object_name,
+            "position": self.position,
+            "normal": self.normal,
+            "tangent": self.tangent,
+            "local_frame": self.local_frame,
+            "space": self.space,
+            "source": self.source,
+            "confidence": self.confidence,
+            "tolerance": self.tolerance,
+        }
+
+
+class AnchorService:
+    """Semantic anchors derived from evaluated geometry and object data."""
+
+    @classmethod
+    def _make(
+        cls,
+        obj: bpy.types.Object,
+        name: str,
+        anchor_type: str,
+        position: Any,
+        normal: Any,
+        tangent: Any,
+        source: str,
+        confidence: float,
+        tolerance: float = 0.001,
+    ) -> SemanticAnchor:
+        point = Vector(position)
+        direction = Vector(normal)
+        tangent_vector = Vector(tangent)
+        if direction.length < 1e-9:
+            direction = Vector((0.0, 0.0, 1.0))
+        direction.normalize()
+        tangent_vector = tangent_vector - direction * tangent_vector.dot(direction)
+        if tangent_vector.length < 1e-9:
+            tangent_vector = direction.orthogonal()
+        tangent_vector.normalize()
+        bitangent = direction.cross(tangent_vector).normalized()
+        frame = [
+            [round(float(value), 6) for value in tangent_vector],
+            [round(float(value), 6) for value in bitangent],
+            [round(float(value), 6) for value in direction],
+        ]
+        return SemanticAnchor(
+            name=name,
+            anchor_type=anchor_type,
+            object_name=obj.name,
+            position=[round(float(value), 6) for value in point],
+            normal=[round(float(value), 6) for value in direction],
+            tangent=[round(float(value), 6) for value in tangent_vector],
+            local_frame=frame,
+            space="world",
+            source=source,
+            confidence=float(confidence),
+            tolerance=float(tolerance),
+        )
+
+    @classmethod
+    def for_object(cls, obj: bpy.types.Object) -> Dict[str, SemanticAnchor]:
+        anchors: Dict[str, SemanticAnchor] = {}
+
+        if obj.type == "ARMATURE":
+            for bone in obj.data.bones:
+                head = obj.matrix_world @ bone.head_local
+                tail = obj.matrix_world @ bone.tail_local
+                direction = tail - head
+                if direction.length < 1e-9:
+                    continue
+                direction.normalize()
+                tangent = direction.orthogonal()
+                for suffix, position in (("HEAD", head), ("TAIL", tail)):
+                    name = f"BONE_{bone.name.upper()}_{suffix}"
+                    anchors[name] = cls._make(
+                        obj, name, "bone", position, direction, tangent,
+                        "armature_bone", 1.0,
+                    )
+            return anchors
+
+        if obj.type != "MESH":
+            raise TypeError(
+                f"Anchors need a MESH or ARMATURE object (got '{obj.type}')"
+            )
+
+        snapshot = GeometryService.snapshot(obj)
+        bmin = Vector(snapshot.world_aabb[0])
+        bmax = Vector(snapshot.world_aabb[1])
+        center = (bmin + bmax) / 2.0
+        extent = bmax - bmin
+        max_extent = max(extent.x, extent.y, extent.z, 0.001)
+
+        anchors["CENTER"] = cls._make(
+            obj, "CENTER", "center", center, (0, 0, 1), (1, 0, 0),
+            "evaluated_aabb", 0.8,
+        )
+        anchors["INSIDE_CENTER"] = cls._make(
+            obj, "INSIDE_CENTER", "center", center, (0, 0, 1), (1, 0, 0),
+            "evaluated_aabb", 0.8,
+        )
+
+        faces = {
+            "+X": ((bmax.x, center.y, center.z), (1, 0, 0), (0, 1, 0)),
+            "-X": ((bmin.x, center.y, center.z), (-1, 0, 0), (0, 1, 0)),
+            "+Y": ((center.x, bmax.y, center.z), (0, 1, 0), (1, 0, 0)),
+            "-Y": ((center.x, bmin.y, center.z), (0, -1, 0), (1, 0, 0)),
+            "+Z": ((center.x, center.y, bmax.z), (0, 0, 1), (1, 0, 0)),
+            "-Z": ((center.x, center.y, bmin.z), (0, 0, -1), (1, 0, 0)),
+        }
+        face_aliases = {
+            "TOP_CENTER": "+Z",
+            "BOTTOM_CENTER": "-Z",
+            "RIGHT_CENTER": "+X",
+            "LEFT_CENTER": "-X",
+            "BACK_CENTER": "+Y",
+            "FRONT_CENTER": "-Y",
+        }
+        for label, (position, normal, tangent) in faces.items():
+            anchors[f"FACE_{label}"] = cls._make(
+                obj, f"FACE_{label}", "face_center", position, normal, tangent,
+                "evaluated_aabb", 0.8,
+            )
+            origin = Vector(position) + Vector(normal) * (max_extent + 0.5)
+            hit, hit_normal, _index, _distance = snapshot.bvh.ray_cast(
+                origin, -Vector(normal)
+            )
+            if hit is not None:
+                anchors[f"SURFACE_{label}"] = cls._make(
+                    obj, f"SURFACE_{label}", "surface", hit, hit_normal, tangent,
+                    "bvh_raycast", 0.95,
+                )
+            else:
+                anchors[f"SURFACE_{label}"] = cls._make(
+                    obj, f"SURFACE_{label}", "surface", position, normal, tangent,
+                    "evaluated_aabb_fallback", 0.5,
+                )
+        for alias, label in face_aliases.items():
+            anchors[alias] = anchors[f"FACE_{label}"]
+
+        for edge_axis, edge_index in (("X", 0), ("Y", 1), ("Z", 2)):
+            other_axes = [index for index in range(3) if index != edge_index]
+            for first_side in (0, 1):
+                for second_side in (0, 1):
+                    position = center.copy()
+                    normal = Vector((0.0, 0.0, 0.0))
+                    tangent = Vector((0.0, 0.0, 0.0))
+                    tangent[edge_index] = 1.0
+                    name_parts = ["EDGE"]
+                    for axis_index, side in (
+                        (other_axes[0], first_side),
+                        (other_axes[1], second_side),
+                    ):
+                        axis_name = "XYZ"[axis_index]
+                        position[axis_index] = (
+                            bmin[axis_index] if side == 0 else bmax[axis_index]
+                        )
+                        normal[axis_index] = -1.0 if side == 0 else 1.0
+                        name_parts.append(f"{axis_name}{side}")
+                    name = f"EDGE_{name_parts[1]}{name_parts[2]}"
+                    anchors[name] = cls._make(
+                        obj, name, "edge_mid", position, normal, tangent,
+                        "evaluated_aabb", 0.75,
+                    )
+
+        corner_aliases = {
+            "CORNER_FL": "CORNER_X0Y0Z1",
+            "CORNER_FR": "CORNER_X1Y0Z1",
+            "CORNER_BL": "CORNER_X0Y1Z1",
+            "CORNER_BR": "CORNER_X1Y1Z1",
+        }
+        for x_side in (0, 1):
+            for y_side in (0, 1):
+                for z_side in (0, 1):
+                    position = Vector((
+                        bmin.x if x_side == 0 else bmax.x,
+                        bmin.y if y_side == 0 else bmax.y,
+                        bmin.z if z_side == 0 else bmax.z,
+                    ))
+                    normal = Vector((
+                        -1.0 if x_side == 0 else 1.0,
+                        -1.0 if y_side == 0 else 1.0,
+                        -1.0 if z_side == 0 else 1.0,
+                    ))
+                    tangent = Vector((1, 0, 0)) if abs(normal.x) < 0.9 else Vector((0, 1, 0))
+                    name = f"CORNER_X{x_side}Y{y_side}Z{z_side}"
+                    anchors[name] = cls._make(
+                        obj, name, "corner", position, normal, tangent,
+                        "evaluated_aabb", 0.75,
+                    )
+        for alias, target in corner_aliases.items():
+            anchors[alias] = anchors[target]
+        anchors["TOP_FRONT_EDGE"] = anchors["EDGE_Y0Z1"]
+        anchors["TOP_BACK_EDGE"] = anchors["EDGE_Y1Z1"]
+
+        for other in bpy.context.scene.objects:
+            if other.type != "EMPTY":
+                continue
+            if other.parent is not obj and not other.name.startswith(f"{obj.name}_socket_"):
+                continue
+            if "socket_" in other.name:
+                socket_name = other.name.split("socket_")[-1].upper()
+            else:
+                socket_name = other.name.upper()
+            position = other.matrix_world.translation.copy()
+            rotation = other.matrix_world.to_3x3()
+            normal = (rotation @ Vector((0, 0, 1))).normalized()
+            tangent = (rotation @ Vector((1, 0, 0))).normalized()
+            name = f"SOCKET_{socket_name}"
+            anchors[name] = cls._make(
+                obj, name, "socket", position, normal, tangent,
+                "empty_object", 0.9,
+            )
+
+        custom = obj.get("mcp_anchors")
+        if isinstance(custom, dict):
+            for custom_name, data in custom.items():
+                if not isinstance(data, dict):
+                    continue
+                name = f"CUSTOM_{str(custom_name).upper()}"
+                anchors[name] = cls._make(
+                    obj,
+                    name,
+                    "custom",
+                    data.get("position", center),
+                    data.get("normal", (0, 0, 1)),
+                    data.get("tangent", (1, 0, 0)),
+                    "custom_property",
+                    float(data.get("confidence", 0.9)),
+                    float(data.get("tolerance", 0.001)),
+                )
+
+        return anchors
+
+    @classmethod
+    def get(cls, obj: bpy.types.Object, name: str) -> SemanticAnchor:
+        anchors = cls.for_object(obj)
+        key = str(name).strip().upper()
+        if key not in anchors:
+            available = ", ".join(sorted(anchors)[:12])
+            raise ValueError(
+                f"Unknown anchor '{name}' on '{obj.name}'. Available: {available}..."
+            )
+        return anchors[key]
+
+    @classmethod
+    def align(
+        cls,
+        part: bpy.types.Object,
+        target: bpy.types.Object,
+        part_anchor: str,
+        target_anchor: str,
+        offset: Optional[List[float]] = None,
+        parent_to_target: bool = False,
+    ) -> Dict[str, Any]:
+        source = cls.get(part, part_anchor)
+        destination = cls.get(target, target_anchor)
+        offset_vector = Vector(offset or (0.0, 0.0, 0.0))
+        delta = Vector(destination.position) - Vector(source.position) + offset_vector
+        part.matrix_world = Matrix.Translation(delta) @ part.matrix_world
+        bpy.context.view_layer.update()
+        if parent_to_target:
+            part.parent = target
+            part.matrix_parent_inverse = target.matrix_world.inverted()
+            bpy.context.view_layer.update()
+        after = cls.get(part, part_anchor)
+        desired = Vector(destination.position) + offset_vector
+        distance = (Vector(after.position) - desired).length
+        return {
+            "success": True,
+            "operation": "align",
+            "part": part.name,
+            "target": target.name,
+            "part_anchor": after.to_dict(),
+            "target_anchor": destination.to_dict(),
+            "delta": [round(float(value), 6) for value in delta],
+            "distance": round(float(distance), 6),
+            "passed": distance <= after.tolerance,
+        }
+
+    @classmethod
+    def mate(
+        cls,
+        part: bpy.types.Object,
+        target: bpy.types.Object,
+        part_anchor: str,
+        target_anchor: str,
+        gap: float = 0.0,
+        parent_to_target: bool = False,
+    ) -> Dict[str, Any]:
+        source = cls.get(part, part_anchor)
+        destination = cls.get(target, target_anchor)
+        part_normal = Vector(source.normal).normalized()
+        target_normal = Vector(destination.normal).normalized()
+        rotation = part_normal.rotation_difference(-target_normal)
+        pivot = Vector(source.position)
+        part.matrix_world = (
+            Matrix.Translation(pivot)
+            @ rotation.to_matrix().to_4x4()
+            @ Matrix.Translation(-pivot)
+            @ part.matrix_world
+        )
+        bpy.context.view_layer.update()
+        rotated_normal = (rotation @ part_normal).normalized()
+        after = cls.get(part, part_anchor)
+        desired = Vector(destination.position) + target_normal * float(gap)
+        delta = desired - Vector(after.position)
+        part.matrix_world = Matrix.Translation(delta) @ part.matrix_world
+        bpy.context.view_layer.update()
+        if parent_to_target:
+            part.parent = target
+            part.matrix_parent_inverse = target.matrix_world.inverted()
+            bpy.context.view_layer.update()
+        after = cls.get(part, part_anchor)
+        distance = (Vector(after.position) - desired).length
+        normal_dot = rotated_normal.dot(-target_normal)
+        return {
+            "success": True,
+            "operation": "mate",
+            "part": part.name,
+            "target": target.name,
+            "part_anchor": after.to_dict(),
+            "target_anchor": destination.to_dict(),
+            "gap": float(gap),
+            "distance": round(float(distance), 6),
+            "normal_dot": round(float(normal_dot), 6),
+            "passed": distance <= after.tolerance and normal_dot >= 0.999,
+        }
+
+    @classmethod
+    def offset(
+        cls,
+        part: bpy.types.Object,
+        part_anchor: str,
+        offset: List[float],
+    ) -> Dict[str, Any]:
+        anchor = cls.get(part, part_anchor)
+        delta = Vector(offset)
+        part.matrix_world = Matrix.Translation(delta) @ part.matrix_world
+        bpy.context.view_layer.update()
+        after = cls.get(part, part_anchor)
+        return {
+            "success": True,
+            "operation": "offset",
+            "part": part.name,
+            "part_anchor": after.to_dict(),
+            "delta": [round(float(value), 6) for value in delta],
+            "passed": True,
+        }
+
+    @classmethod
+    def orient_normal(
+        cls,
+        part: bpy.types.Object,
+        part_anchor: str,
+        normal: List[float],
+    ) -> Dict[str, Any]:
+        anchor = cls.get(part, part_anchor)
+        desired = Vector(normal)
+        if desired.length < 1e-9:
+            raise ValueError("orient_normal needs a non-zero normal")
+        desired.normalize()
+        current = (part.matrix_world.to_3x3() @ Vector((0, 0, 1))).normalized()
+        rotation = current.rotation_difference(desired)
+        pivot = Vector(anchor.position)
+        part.matrix_world = (
+            Matrix.Translation(pivot)
+            @ rotation.to_matrix().to_4x4()
+            @ Matrix.Translation(-pivot)
+            @ part.matrix_world
+        )
+        bpy.context.view_layer.update()
+        after = (part.matrix_world.to_3x3() @ Vector((0, 0, 1))).normalized()
+        dot = after.dot(desired)
+        return {
+            "success": True,
+            "operation": "orient_normal",
+            "part": part.name,
+            "part_anchor": cls.get(part, part_anchor).to_dict(),
+            "normal": [round(float(value), 6) for value in desired],
+            "dot": round(float(dot), 6),
+            "passed": dot >= 0.999,
+        }
+
+    @classmethod
+    def distribute(
+        cls,
+        objects: List[bpy.types.Object],
+        axis: str = "X",
+        spacing: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        if len(objects) < 2:
+            raise ValueError("distribute needs at least two objects")
+        axis_index = {"X": 0, "Y": 1, "Z": 2}.get(str(axis).upper())
+        if axis_index is None:
+            raise ValueError(f"Invalid axis '{axis}'. Use X, Y or Z.")
+        ordered = sorted(
+            objects,
+            key=lambda item: (item.matrix_world.translation[axis_index], item.name),
+        )
+        if spacing is None:
+            gaps = [
+                ordered[index + 1].matrix_world.translation[axis_index]
+                - ordered[index].matrix_world.translation[axis_index]
+                for index in range(len(ordered) - 1)
+            ]
+            step = sum(gaps) / len(gaps) if gaps else 0.1
+            if abs(step) < 1e-6:
+                step = 0.1
+        else:
+            step = float(spacing)
+        start = ordered[0].matrix_world.translation[axis_index]
+        final_positions = []
+        for index, item in enumerate(ordered):
+            matrix = item.matrix_world.copy()
+            matrix.translation[axis_index] = start + index * step
+            item.matrix_world = matrix
+            final_positions.append({
+                "object": item.name,
+                "position": [round(float(value), 6) for value in matrix.translation],
+            })
+        bpy.context.view_layer.update()
+        return {
+            "success": True,
+            "operation": "distribute",
+            "axis": str(axis).upper(),
+            "spacing": round(float(step), 6),
+            "objects": final_positions,
+            "passed": True,
+        }
+
+    @classmethod
+    def mirror(
+        cls,
+        objects: List[bpy.types.Object],
+        axis: str = "X",
+        plane: float = 0.0,
+        duplicate: bool = True,
+    ) -> Dict[str, Any]:
+        if not objects:
+            raise ValueError("mirror needs at least one object")
+        axis_index = {"X": 0, "Y": 1, "Z": 2}.get(str(axis).upper())
+        if axis_index is None:
+            raise ValueError(f"Invalid axis '{axis}'. Use X, Y or Z.")
+        matrix = Matrix.Identity(4)
+        matrix[axis_index][axis_index] = -1.0
+        matrix.translation[axis_index] = 2.0 * float(plane)
+        created = []
+        for item in objects:
+            if duplicate:
+                copy = item.copy()
+                if item.data is not None:
+                    copy.data = item.data.copy()
+                collection = item.users_collection[0] if item.users_collection else bpy.context.collection
+                collection.objects.link(copy)
+                copy.name = f"{item.name}_mirror"
+                copy.matrix_world = matrix @ item.matrix_world
+                created.append(copy.name)
+            else:
+                item.matrix_world = matrix @ item.matrix_world
+        bpy.context.view_layer.update()
+        return {
+            "success": True,
+            "operation": "mirror",
+            "axis": str(axis).upper(),
+            "plane": float(plane),
+            "duplicate": bool(duplicate),
+            "created": created,
+            "objects": [item.name for item in objects],
+            "passed": True,
+        }
+
+
 HEAVY_COMMANDS = {
     "execute_code",
     "render_multiview_inspection",
@@ -1475,6 +1966,8 @@ class BlenderMCPServer:
             "create_parametric_part": lambda p: self.create_parametric_part(**p),
             "attach_and_align": lambda p: self.attach_and_align(**p),
             "snap_to_semantic_anchor": lambda p: self.snap_to_semantic_anchor(**p),
+            "list_semantic_anchors": lambda p: self.list_semantic_anchors(**p),
+            "anchor_operation": lambda p: self.anchor_operation(**p),
             "orient_and_face_towards": lambda p: self.orient_and_face_towards(**p),
             "spawn_corner_supports": lambda p: self.spawn_corner_supports(**p),
             "symmetry_mirror": lambda p: self.symmetry_mirror(**p),
@@ -1906,6 +2399,76 @@ class BlenderMCPServer:
             "surface_gap": gap,
             "overlap_ratio": overlap,
         }
+
+    def list_semantic_anchors(self, object_name: str) -> Dict[str, Any]:
+        """List evaluated semantic anchors for a mesh or armature."""
+        obj = bpy.data.objects.get(object_name)
+        if not obj:
+            raise ValueError(f"Object '{object_name}' not found")
+        anchors = AnchorService.for_object(obj)
+        return {
+            "object": obj.name,
+            "type": obj.type,
+            "count": len(anchors),
+            "anchors": [
+                {**anchor.to_dict(), "name": name}
+                for name, anchor in sorted(anchors.items())
+            ],
+        }
+
+    def anchor_operation(
+        self,
+        operation: str,
+        part_name: Optional[str] = None,
+        target_name: Optional[str] = None,
+        part_anchor: str = "CENTER",
+        target_anchor: str = "TOP_CENTER",
+        offset: Optional[List[float]] = None,
+        gap: float = 0.0,
+        normal: Optional[List[float]] = None,
+        object_names: Optional[List[str]] = None,
+        axis: str = "X",
+        plane: float = 0.0,
+        spacing: Optional[float] = None,
+        duplicate: bool = True,
+        parent_to_target: bool = False,
+    ) -> Dict[str, Any]:
+        """Align, mate, offset, orient, distribute or mirror using semantic anchors."""
+        op = str(operation).strip().lower()
+        if op in ("align", "mate", "offset", "orient_normal"):
+            part = bpy.data.objects.get(part_name) if part_name else None
+            if not part:
+                raise ValueError("part_name is required for this operation")
+            if op == "offset":
+                return AnchorService.offset(part, part_anchor, offset or [0.0, 0.0, 0.0])
+            if op == "orient_normal":
+                if not normal:
+                    raise ValueError("normal is required for orient_normal")
+                return AnchorService.orient_normal(part, part_anchor, normal)
+            target = bpy.data.objects.get(target_name) if target_name else None
+            if not target:
+                raise ValueError("target_name is required for align/mate")
+            if op == "align":
+                return AnchorService.align(
+                    part, target, part_anchor, target_anchor, offset, parent_to_target
+                )
+            return AnchorService.mate(
+                part, target, part_anchor, target_anchor, gap, parent_to_target
+            )
+
+        objects = [
+            bpy.data.objects.get(name)
+            for name in (object_names or [])
+        ]
+        objects = [item for item in objects if item is not None]
+        if op == "distribute":
+            return AnchorService.distribute(objects, axis, spacing)
+        if op == "mirror":
+            return AnchorService.mirror(objects, axis, plane, duplicate)
+        raise ValueError(
+            f"Unknown anchor operation '{operation}'. Valid: align, mate, offset, "
+            "orient_normal, distribute, mirror."
+        )
 
     def orient_and_face_towards(
         self,
@@ -3228,14 +3791,15 @@ class BlenderMCPServer:
         # 3. Normalized scale.
         bad_scale: List[Dict[str, Any]] = []
         for obj in mesh_objects:
-            if any(abs(value - 1.0) > scale_tolerance for value in obj.scale):
+            if any(abs(abs(value) - 1.0) > scale_tolerance for value in obj.scale):
                 entry = {
                     "object": obj.name,
                     "scale": [round(float(value), 6) for value in obj.scale],
                 }
                 bad_scale.append(entry)
                 warnings.append(
-                    f"UNAPPLIED_SCALE on '{obj.name}': scale is {entry['scale']}. Must be (1,1,1)."
+                    f"UNAPPLIED_SCALE on '{obj.name}': scale is {entry['scale']}. "
+                    "Must have absolute scale (1,1,1); negative values are mirrors."
                 )
                 command = f"repair_mesh_geometry(object_names=['{obj.name}'])"
                 if command not in llm_fix_commands:

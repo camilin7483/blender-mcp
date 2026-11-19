@@ -10,7 +10,8 @@ release candidate.
 
 | Area | v3 baseline | v4 target | Compatibility |
 |---|---|---|---|
-| Tool names | 53 tools | Same names; new tools added behind profiles | Old names keep working until v4.1 |
+| Tool names | 53 tools | Same 53 names plus 2 anchor tools | Old names keep working until v4.1 |
+| Anchors | AABB words only | `list_semantic_anchors` + `anchor_operation` | `snap_to_semantic_anchor` preserved |
 | Response shape | JSON text with free-form keys | Same keys plus `requirements`, `metrics`, `failures`, `warnings` | Old keys preserved during migration |
 | Audit | `passed` computed before blueprint | `passed` computed last; structured failures | `critical_issues` and `warnings` remain as derived views. Blueprint, ground, scale, collision and symmetry requirements block `passed`; topology is `report` or `strict`. |
 | Protocol | `{"type","params","auth_token"}` | Adds `protocol_version`, `request_id`; newline framing | v3 messages accepted by a compatibility parser |
@@ -20,7 +21,7 @@ release candidate.
 | Output paths | Any path | Confined to `BLENDER_MCP_OUTPUT_DIR` | `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation |
 | Downloads | Provider URL followed | HTTPS allowlist, private-IP block, size caps, safe ZIP | No legacy bypass |
 | Render | Perspective quad in a temp dir | Ortho FRONT/RIGHT/TOP + ISO, modes, metadata, hash output dir | Same `quad_image_path`; new `mode`/`include_overlays` |
-| Tool discovery | All 53 tools always | Profiles: `core`, `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `full` | `full` preserves the v3 surface |
+| Tool discovery | All tools always | Profiles: `core`, `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `full` | `full` preserves the v3 surface |
 | Blender support | 4.5.4 tested | 4.5 LTS required, 5.2 LTS secondary | ADR-0002 |
 
 ## Migration steps

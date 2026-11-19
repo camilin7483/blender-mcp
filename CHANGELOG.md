@@ -16,6 +16,11 @@ All notable changes to this repository are documented here.
 - Deterministic inspection renders: orthographic FRONT/RIGHT/TOP, fixed ISO
   perspective, `silhouette`/`wireframe`/`normals`/`uv_checker` modes,
   reproducible output directories, camera metadata and optional AABB overlay.
+- Semantic anchors with position, normal, tangent, local frame, source,
+  confidence and tolerance: center, face, surface (BVH raycast), edge, corner,
+  socket (empty), bone and custom anchors. `list_semantic_anchors` and
+  `anchor_operation` cover align, mate, offset, orient_normal, distribute and
+  mirror.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
 - Contract test that verifies 1:1 parity between the 53 FastMCP tools and the
@@ -34,9 +39,9 @@ All notable changes to this repository are documented here.
 - Collision decisions use BVH surface intersection; AABB is broad-phase only.
   Geometry Nodes-only objects are measured and audited.
 - `audit_3d_model` computes `passed` after every requirement. Blueprint
-  dimensions, ground contact, normalized scale, surface intersections and
+  dimensions, ground contact, absolute scale, surface intersections and
   optional symmetry now block `passed`; topology is report-only unless
-  `topology_policy="strict"`.
+  `topology_policy="strict"`. Negative scale is accepted as a mirror.
 - `render_multiview_inspection` uses orthographic FRONT/RIGHT/TOP cameras,
   writes under `<output>/inspection/<render_id>/`, returns camera metadata
   and accepts `mode` plus `include_overlays`.
