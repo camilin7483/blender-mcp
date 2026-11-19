@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Blender MCP Pro Server v3.0 (FastMCP Bridge with Universal 3D Engine & Full Spatial Toolset)
+Blender MCP Pro Server v4.0 (FastMCP Bridge with Universal 3D Engine & Full Spatial Toolset)
 Connects Claude / Cursor / OpenCode / Windsurf to the Blender MCP Engine on localhost:9876.
 """
 

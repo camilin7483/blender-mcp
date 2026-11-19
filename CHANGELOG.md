@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## Unreleased
+## 4.0.0-alpha - 2026-11-19 (unreleased)
 
 ### Added
 

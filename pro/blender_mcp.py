@@ -1,8 +1,8 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (3, 0, 0),
-    "blender": (3, 6, 0),
+    "version": (4, 0, 0),
+    "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
     "category": "Development",
@@ -39,6 +39,8 @@ import bmesh
 from mathutils import Vector, Matrix, Euler, Quaternion
 from mathutils.bvhtree import BVHTree
 from mathutils.kdtree import KDTree
+
+ADDON_PACKAGE = __name__.split(".")[0]
 
 # ==============================================================================
 # CONSTANTS & GLOBAL CONFIGURATION
@@ -5284,7 +5286,7 @@ class BlenderMCPServer:
     def _execute_code_allowed(self) -> bool:
         if os.environ.get(EXECUTE_CODE_ENV_VAR) == "1":
             return True
-        addon = bpy.context.preferences.addons.get(__name__)
+        addon = bpy.context.preferences.addons.get(ADDON_PACKAGE)
         return bool(addon and getattr(addon.preferences, "allow_execute_code", False))
 
     def _confirm_or_dry_run(self, operation: str, confirm: bool, details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -5930,7 +5932,7 @@ class BLENDM_PT_main_panel(bpy.types.Panel):
 
 
 class BLENDERMCP_AddonPreferences(bpy.types.AddonPreferences):
-    bl_idname = __name__
+    bl_idname = ADDON_PACKAGE
 
     allow_execute_code: bpy.props.BoolProperty(
         name="Allow execute_code",

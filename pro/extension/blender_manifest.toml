@@ -1,0 +1,15 @@
+schema_version = "1.0.0"
+
+id = "blender_mcp_pro"
+version = "4.0.0"
+name = "Blender MCP Pro"
+tagline = "Local MCP bridge for precision 3D modeling"
+maintainer = "Blender MCP contributors"
+type = "add-on"
+
+blender_version_min = "4.5.0"
+license = ["SPDX:MIT"]
+
+[permissions]
+network = "Serve MCP commands on localhost:9876"
+files = "Read and write .blend checkpoints and exports"

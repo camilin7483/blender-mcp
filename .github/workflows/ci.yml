@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, chore/v4-baseline]
+  pull_request:
+
+jobs:
+  python:
+    name: Python (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-dev.txt -r pro/requirements.txt
+      - run: python -m pytest tests/contracts tests/unit -q
+      - run: python -m ruff check tests scripts
+
+  blender:
+    name: Blender 4.5.4 LTS (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6 libglu1-mesa
+      - name: Download Blender 4.5.4
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/blender.tar.xz" https://download.blender.org/release/Blender4.5/blender-4.5.4-linux-x64.tar.xz
+          echo "2e6ef8e99fc36327270429ddc8e7bad2859dd878a5a137d2e0bf0f02f6792505  $RUNNER_TEMP/blender.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/blender.tar.xz" -C "$RUNNER_TEMP"
+      - name: Install bridge dependency
+        run: python -m pip install -r pro/requirements.txt
+      - name: Run real Blender tests
+        env:
+          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
+        run: ./scripts/run_blender_tests.sh
+      - name: Build and validate extension
+        env:
+          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
+        run: |
+          ./scripts/build_extension.sh
+          "$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.0.0.zip
