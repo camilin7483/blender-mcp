@@ -16,15 +16,19 @@ import json
 import time
 import math
 import hmac
+import ipaddress
 import secrets
+import shutil
 import socket
 import select
+import stat
 import queue
 import tempfile
 import threading
 import traceback
 import urllib.request
 import urllib.parse
+import zipfile
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import suppress
@@ -48,6 +52,14 @@ ALLOW_UNSAFE_OPS_ENV_VAR = "BLENDER_MCP_ALLOW_UNSAFE_OPS"
 OUTPUT_DIR_ENV_VAR = "BLENDER_MCP_OUTPUT_DIR"
 ALLOW_ANY_PATH_ENV_VAR = "BLENDER_MCP_ALLOW_ANY_PATH"
 TOKEN_FILE_NAME = "token"
+
+# Remote assets. Only provider domains are allowed, HTTPS only, with bounded
+# downloads and safe ZIP extraction.
+ALLOWED_DOWNLOAD_SUFFIXES = (".polyhaven.com", ".polyhaven.org", ".sketchfab.com")
+MAX_API_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_DOWNLOAD_BYTES = 512 * 1024 * 1024
+MAX_ZIP_FILES = 10000
+MAX_ZIP_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024
 
 # Protocol limits. A single JSON message or response larger than these is
 # rejected instead of growing an unbounded buffer.
@@ -172,6 +184,181 @@ def resolve_output_path(filepath: str, allowed_extensions: set) -> str:
             f"Unsupported extension '{extension}'. Expected one of {sorted(allowed_extensions)}."
         )
     return path
+
+
+def sanitize_asset_id(value: str, label: str = "asset id") -> str:
+    text = str(value or "").strip()
+    if not text or len(text) > 128:
+        raise ValueError(f"Invalid {label}: must be 1-128 characters")
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", text)
+    if safe in (".", ".."):
+        raise ValueError(f"Invalid {label}: '{text}'")
+    return safe
+
+
+def _is_private_ip(value: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(value.split("%", 1)[0])
+    except ValueError:
+        return True
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+def validate_download_url(url: str, resolve: bool = True) -> str:
+    """Reject non-HTTPS, non-provider, credentialed and non-public URLs."""
+    try:
+        parsed = urllib.parse.urlparse(str(url))
+        port = parsed.port
+        host = (parsed.hostname or "").lower().rstrip(".")
+    except ValueError as exc:
+        raise ValueError(f"Invalid download URL: {exc}") from exc
+
+    if parsed.scheme != "https":
+        raise ValueError("Only HTTPS downloads are allowed")
+    if not host:
+        raise ValueError("Download URL has no host")
+    allowed = any(
+        host == suffix.lstrip(".") or host.endswith(suffix)
+        for suffix in ALLOWED_DOWNLOAD_SUFFIXES
+    )
+    if not allowed:
+        raise ValueError(f"Download host '{host}' is not allowed")
+    if parsed.username or parsed.password:
+        raise ValueError("Download URL must not contain credentials")
+
+    if resolve:
+        try:
+            infos = socket.getaddrinfo(host, port or 443, type=socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            raise ValueError(f"Cannot resolve download host '{host}': {exc}") from exc
+        for info in infos:
+            if _is_private_ip(info[4][0]):
+                raise ValueError(f"Download host '{host}' resolves to a non-public address")
+    return str(url)
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        newurl = urllib.parse.urljoin(req.full_url, newurl)
+        validate_download_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open_url(
+    url: str,
+    timeout: float,
+    max_bytes: int,
+    headers: Optional[Dict[str, str]] = None,
+):
+    validate_download_url(url)
+    request_headers = {"User-Agent": "BlenderMCP-Pro/3.0"}
+    if headers:
+        request_headers.update(headers)
+    request = urllib.request.Request(url, headers=request_headers)
+    opener = urllib.request.build_opener(_SafeRedirectHandler)
+    response = opener.open(request, timeout=timeout)
+    length = response.headers.get("Content-Length")
+    if length:
+        try:
+            too_large = int(length) > max_bytes
+        except ValueError:
+            response.close()
+            raise ValueError(f"Invalid Content-Length header: {length!r}")
+        if too_large:
+            response.close()
+            raise ValueError(f"Response exceeds maximum size ({max_bytes} bytes)")
+    return response
+
+
+def fetch_json(url: str, timeout: float = 20.0, headers: Optional[Dict[str, str]] = None) -> Any:
+    with _open_url(url, timeout, MAX_API_RESPONSE_BYTES, headers) as response:
+        data = response.read(MAX_API_RESPONSE_BYTES + 1)
+    if len(data) > MAX_API_RESPONSE_BYTES:
+        raise ValueError(f"API response exceeds maximum size ({MAX_API_RESPONSE_BYTES} bytes)")
+    return json.loads(data.decode("utf-8"))
+
+
+def download_to_file(
+    url: str,
+    destination: str,
+    max_bytes: int = MAX_DOWNLOAD_BYTES,
+    timeout: float = 180.0,
+) -> str:
+    try:
+        with _open_url(url, timeout, max_bytes) as response, open(destination, "wb") as handle:
+            total = 0
+            while True:
+                chunk = response.read(1024 * 256)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_bytes:
+                    raise ValueError(f"Download exceeds maximum size ({max_bytes} bytes)")
+                handle.write(chunk)
+    except Exception:
+        with suppress(Exception):
+            os.unlink(destination)
+        raise
+    return destination
+
+
+def safe_extract_zip(
+    zip_path: str,
+    destination: str,
+    max_files: int = MAX_ZIP_FILES,
+    max_bytes: int = MAX_ZIP_UNCOMPRESSED_BYTES,
+) -> None:
+    """Extract a ZIP without path traversal, symlinks, bombs or encrypted entries."""
+    dest_real = os.path.realpath(destination)
+    os.makedirs(dest_real, exist_ok=True)
+
+    with zipfile.ZipFile(zip_path, "r") as archive:
+        infos = archive.infolist()
+        if len(infos) > max_files:
+            raise ValueError(f"ZIP contains too many files ({len(infos)} > {max_files})")
+
+        total = 0
+        for info in infos:
+            name = info.filename.replace("\\", "/")
+            if not name or name.endswith("/"):
+                continue
+            if info.flag_bits & 0x1:
+                raise ValueError("Encrypted ZIP entries are not allowed")
+
+            normalized = os.path.normpath(name)
+            if os.path.isabs(normalized) or normalized == ".." or normalized.startswith(".." + os.sep):
+                raise ValueError(f"ZIP entry escapes the destination: {info.filename}")
+
+            raw_target = os.path.join(dest_real, normalized)
+            if os.path.islink(raw_target):
+                raise ValueError(f"ZIP entry targets a symlink: {info.filename}")
+            target = os.path.realpath(raw_target)
+            if os.path.commonpath([os.path.normcase(dest_real), os.path.normcase(target)]) != os.path.normcase(dest_real):
+                raise ValueError(f"ZIP entry escapes the destination: {info.filename}")
+
+            mode = info.external_attr >> 16
+            if mode and stat.S_ISLNK(mode):
+                raise ValueError(f"ZIP entry is a symlink: {info.filename}")
+
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with archive.open(info, "r") as source, open(target, "wb") as output:
+                while True:
+                    chunk = source.read(1024 * 256)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > max_bytes:
+                        raise ValueError(
+                            f"ZIP expands beyond the maximum size ({max_bytes} bytes)"
+                        )
+                    output.write(chunk)
 
 HEAVY_COMMANDS = {
     "execute_code",
@@ -3528,18 +3715,27 @@ class BlenderMCPServer:
     # 9. EXTERNAL ASSETS (POLY HAVEN & SKETCHFAB)
     # ==========================================================================
     def search_polyhaven_assets(self, asset_type: str = "all", categories: Optional[str] = None) -> List[Dict[str, Any]]:
-        url = "https://api.polyhaven.com/assets"
-        params = []
+        params = {}
         if asset_type != "all":
-            params.append(f"t={asset_type}")
+            params["t"] = str(asset_type)
         if categories:
-            params.append(f"c={categories}")
+            params["c"] = str(categories)
+        url = "https://api.polyhaven.com/assets"
         if params:
-            url += "?" + "&".join(params)
-        req = urllib.request.Request(url, headers={"User-Agent": "BlenderMCP-Pro/3.0"})
-        with urllib.request.urlopen(req, timeout=15.0) as resp:
-            data = json.loads(resp.read().decode())
-        return [{"id": k, "name": v.get("name", k), "type": v.get("type"), "tags": v.get("tags", [])} for k, v in list(data.items())[:50]]
+            url += "?" + urllib.parse.urlencode(params)
+        data = fetch_json(url, timeout=15.0)
+        if not isinstance(data, dict):
+            raise ValueError("Unexpected Poly Haven response")
+        return [
+            {
+                "id": key,
+                "name": value.get("name", key),
+                "type": value.get("type"),
+                "tags": value.get("tags", []),
+            }
+            for key, value in list(data.items())[:50]
+            if isinstance(value, dict)
+        ]
 
     def download_polyhaven_asset(
         self,
@@ -3548,18 +3744,34 @@ class BlenderMCPServer:
         resolution: str = "1k",
         file_format: Optional[str] = None,
     ) -> Dict[str, Any]:
-        url = f"https://api.polyhaven.com/files/{asset_id}"
-        req = urllib.request.Request(url, headers={"User-Agent": "BlenderMCP-Pro/3.0"})
-        with urllib.request.urlopen(req, timeout=20.0) as resp:
-            file_meta = json.loads(resp.read().decode())
+        if asset_type != "hdris":
+            raise NotImplementedError(f"Asset type '{asset_type}' download handling is not implemented")
 
-        if asset_type == "hdris":
-            hdri_info = file_meta.get("hdri", {}).get(resolution, {}).get("hdr") or file_meta.get("hdri", {}).get(resolution, {}).get("exr")
-            if not hdri_info:
-                raise ValueError(f"HDRI '{asset_id}' not available in {resolution}")
-            dl_url = hdri_info["url"]
-            tmp_hdr = osp.join(tempfile.gettempdir(), f"{asset_id}_{resolution}.hdr")
-            urllib.request.urlretrieve(dl_url, tmp_hdr)
+        safe_id = sanitize_asset_id(asset_id, "Poly Haven asset id")
+        url = f"https://api.polyhaven.com/files/{urllib.parse.quote(safe_id, safe='')}"
+        file_meta = fetch_json(url, timeout=20.0)
+        if not isinstance(file_meta, dict):
+            raise ValueError("Unexpected Poly Haven file response")
+
+        hdri_root = file_meta.get("hdri", {})
+        if not isinstance(hdri_root, dict):
+            raise ValueError("Unexpected Poly Haven HDRI metadata")
+        hdri_meta = hdri_root.get(resolution, {})
+        if not isinstance(hdri_meta, dict):
+            raise ValueError(f"HDRI '{safe_id}' not available in {resolution}")
+        hdri_info = hdri_meta.get("hdr") or hdri_meta.get("exr")
+        if not isinstance(hdri_info, dict) or not hdri_info.get("url"):
+            raise ValueError(f"HDRI '{safe_id}' not available in {resolution}")
+
+        dl_url = validate_download_url(hdri_info["url"])
+        suffix = os.path.splitext(urllib.parse.urlparse(dl_url).path)[1].lower()
+        if suffix not in (".hdr", ".exr"):
+            raise ValueError(f"Unexpected HDRI extension '{suffix}'")
+
+        fd, tmp_hdr = tempfile.mkstemp(prefix=f"blendermcp_{safe_id}_", suffix=suffix)
+        os.close(fd)
+        try:
+            download_to_file(dl_url, tmp_hdr, max_bytes=MAX_DOWNLOAD_BYTES, timeout=120.0)
 
             world = bpy.context.scene.world or bpy.data.worlds.new("World")
             bpy.context.scene.world = world
@@ -3575,47 +3787,80 @@ class BlenderMCPServer:
 
             with suppress(Exception):
                 env_tex.image.pack()
+            return {"success": True, "asset_id": safe_id, "type": "hdri", "world": world.name}
+        finally:
             if osp.exists(tmp_hdr):
                 with suppress(Exception):
                     os.unlink(tmp_hdr)
-            return {"success": True, "asset_id": asset_id, "type": "hdri", "world": world.name}
-
-        raise NotImplementedError(f"Asset type '{asset_type}' download handling ready")
 
     def search_sketchfab_models(self, query: str, categories: Optional[str] = None, count: int = 20, downloadable: bool = True) -> List[Dict[str, Any]]:
-        base_url = "https://api.sketchfab.com/v3/search?type=models"
-        params = [f"q={urllib.parse.quote(query)}", f"downloadable={'true' if downloadable else 'false'}"]
-        url = base_url + "&" + "&".join(params)
-        req = urllib.request.Request(url, headers={"User-Agent": "BlenderMCP-Pro/3.0"})
-        with urllib.request.urlopen(req, timeout=20.0) as resp:
-            data = json.loads(resp.read().decode())
-        return [{"uid": it.get("uid"), "name": it.get("name"), "vertex_count": it.get("vertexCount")} for it in data.get("results", [])[:count]]
+        params = {
+            "type": "models",
+            "q": str(query),
+            "downloadable": "true" if downloadable else "false",
+        }
+        if categories:
+            params["categories"] = str(categories)
+        url = "https://api.sketchfab.com/v3/search?" + urllib.parse.urlencode(params)
+        data = fetch_json(url, timeout=20.0)
+        results = data.get("results", []) if isinstance(data, dict) else []
+        if not isinstance(results, list):
+            raise ValueError("Unexpected Sketchfab response")
+        limit = max(1, min(int(count), 100))
+        return [
+            {
+                "uid": item.get("uid"),
+                "name": item.get("name"),
+                "vertex_count": item.get("vertexCount"),
+            }
+            for item in results[:limit]
+            if isinstance(item, dict)
+        ]
 
     def download_sketchfab_model(self, uid: str, normalize_size: bool = True, target_size: float = 1.0) -> Dict[str, Any]:
         token = os.environ.get("SKETCHFAB_API_TOKEN", "")
         if not token:
             raise ValueError("SKETCHFAB_API_TOKEN environment variable not set")
-        download_url = f"https://api.sketchfab.com/v3/models/{uid}/download"
-        req = urllib.request.Request(download_url, headers={"Authorization": f"Token {token}", "User-Agent": "BlenderMCP-Pro/3.0"})
-        with urllib.request.urlopen(req, timeout=30.0) as resp:
-            data = json.loads(resp.read().decode())
-        gltf_url = data.get("gltf", {}).get("url")
+
+        safe_uid = sanitize_asset_id(uid, "Sketchfab UID")
+        download_url = f"https://api.sketchfab.com/v3/models/{urllib.parse.quote(safe_uid, safe='')}/download"
+        data = fetch_json(
+            download_url,
+            timeout=30.0,
+            headers={"Authorization": f"Token {token}"},
+        )
+        if not isinstance(data, dict):
+            raise ValueError("Unexpected Sketchfab download response")
+        gltf_info = data.get("gltf", {})
+        gltf_url = gltf_info.get("url") if isinstance(gltf_info, dict) else None
         if not gltf_url:
-            raise ValueError(f"Download URL not available for UID {uid}")
-        tmp_zip = osp.join(tempfile.gettempdir(), f"sketchfab_{uid}.zip")
-        urllib.request.urlretrieve(gltf_url, tmp_zip)
-        extract_dir = osp.join(tempfile.gettempdir(), f"sketchfab_{uid}")
-        import zipfile
-        with zipfile.ZipFile(tmp_zip, "r") as z:
-            z.extractall(extract_dir)
-        gltf_files = [osp.join(extract_dir, f) for f in os.listdir(extract_dir) if f.endswith((".gltf", ".glb"))]
-        if not gltf_files:
-            raise FileNotFoundError("No GLTF or GLB file found in archive")
-        bpy.ops.import_scene.gltf(filepath=gltf_files[0])
-        imported = [o for o in bpy.context.selected_objects if o.type == "MESH"]
-        if normalize_size and imported:
-            self.ground_model(object_names=[o.name for o in imported], center_xy=True)
-        return {"success": True, "uid": uid, "imported_objects": [o.name for o in imported]}
+            raise ValueError(f"Download URL not available for UID {safe_uid}")
+        gltf_url = validate_download_url(gltf_url)
+
+        fd, tmp_zip = tempfile.mkstemp(prefix=f"blendermcp_sketchfab_{safe_uid}_", suffix=".zip")
+        os.close(fd)
+        extract_dir = tempfile.mkdtemp(prefix=f"blendermcp_sketchfab_{safe_uid}_")
+        try:
+            download_to_file(gltf_url, tmp_zip, max_bytes=MAX_DOWNLOAD_BYTES, timeout=180.0)
+            safe_extract_zip(tmp_zip, extract_dir)
+
+            gltf_files = []
+            for root, _dirs, files in os.walk(extract_dir):
+                for filename in files:
+                    if filename.lower().endswith((".gltf", ".glb")):
+                        gltf_files.append(os.path.join(root, filename))
+            if not gltf_files:
+                raise FileNotFoundError("No GLTF or GLB file found in archive")
+
+            bpy.ops.import_scene.gltf(filepath=sorted(gltf_files)[0], import_pack_images=True)
+            imported = [o for o in bpy.context.selected_objects if o.type == "MESH"]
+            if normalize_size and imported:
+                self.ground_model(object_names=[o.name for o in imported], center_xy=True)
+            return {"success": True, "uid": safe_uid, "imported_objects": [o.name for o in imported]}
+        finally:
+            with suppress(Exception):
+                os.unlink(tmp_zip)
+            shutil.rmtree(extract_dir, ignore_errors=True)
 
 
 # ==============================================================================

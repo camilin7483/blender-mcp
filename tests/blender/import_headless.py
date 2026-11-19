@@ -14,6 +14,7 @@ import shutil
 import sys
 import tempfile
 import traceback
+import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "pro"))
@@ -70,6 +71,73 @@ def main() -> None:
             os.environ.pop("BLENDER_MCP_ALLOW_EXECUTE_CODE", None)
         if background_server._execute_code_allowed():
             fail("execute_code stayed enabled after removing the env opt-in")
+
+        for bad_url in (
+            "http://api.polyhaven.com/assets",
+            "https://evil.example.com/model.glb",
+            "https://localhost/model.glb",
+            "https://127.0.0.1/model.glb",
+        ):
+            try:
+                bm.validate_download_url(bad_url, resolve=False)
+            except ValueError:
+                pass
+            else:
+                fail(f"validate_download_url accepted {bad_url}")
+
+        if bm.validate_download_url("https://api.polyhaven.com/assets", resolve=False) != "https://api.polyhaven.com/assets":
+            fail("validate_download_url rejected a provider URL")
+        if not bm._is_private_ip("127.0.0.1") or not bm._is_private_ip("10.0.0.1"):
+            fail("_is_private_ip missed a private address")
+        if bm._is_private_ip("8.8.8.8"):
+            fail("_is_private_ip rejected a public address")
+        if "/" in bm.sanitize_asset_id("../../etc/passwd"):
+            fail("sanitize_asset_id kept a path separator")
+        try:
+            bm.sanitize_asset_id("")
+        except ValueError:
+            pass
+        else:
+            fail("sanitize_asset_id accepted an empty value")
+
+        zip_root = tempfile.mkdtemp(prefix="blendermcp_zip_")
+        try:
+            evil_zip = os.path.join(zip_root, "evil.zip")
+            with zipfile.ZipFile(evil_zip, "w") as archive:
+                archive.writestr("../evil.txt", "owned")
+            try:
+                bm.safe_extract_zip(evil_zip, os.path.join(zip_root, "evil-out"))
+            except ValueError:
+                pass
+            else:
+                fail("safe_extract_zip allowed zip slip")
+            if os.path.exists(os.path.join(zip_root, "evil.txt")):
+                fail("safe_extract_zip wrote outside the destination")
+
+            good_zip = os.path.join(zip_root, "good.zip")
+            with zipfile.ZipFile(good_zip, "w") as archive:
+                archive.writestr("nested/a.txt", "ok")
+            good_out = os.path.join(zip_root, "good-out")
+            bm.safe_extract_zip(good_zip, good_out)
+            with open(os.path.join(good_out, "nested", "a.txt"), "r", encoding="utf-8") as handle:
+                if handle.read() != "ok":
+                    fail("safe_extract_zip corrupted the extracted file")
+
+            try:
+                bm.safe_extract_zip(good_zip, os.path.join(zip_root, "limit-out"), max_files=0)
+            except ValueError:
+                pass
+            else:
+                fail("safe_extract_zip ignored max_files")
+
+            try:
+                bm.safe_extract_zip(good_zip, os.path.join(zip_root, "bytes-out"), max_bytes=1)
+            except ValueError:
+                pass
+            else:
+                fail("safe_extract_zip ignored max_bytes")
+        finally:
+            shutil.rmtree(zip_root, ignore_errors=True)
 
         for obj in list(bpy.context.scene.objects):
             bpy.data.objects.remove(obj, do_unlink=True)

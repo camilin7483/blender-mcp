@@ -37,6 +37,9 @@ All notable changes to this repository are documented here.
 - `export_scene` is confined to `BLENDER_MCP_OUTPUT_DIR`, validates the
   extension and rejects unknown formats. `BLENDER_MCP_ALLOW_ANY_PATH=1`
   preserves the old behavior for trusted automation.
+- Remote assets are limited to HTTPS Poly Haven and Sketchfab hosts, reject
+  private/link-local/loopback addresses and redirects to them, cap download
+  size, and extract ZIPs with path, symlink, file-count and size checks.
 - Batched requests are parsed incrementally instead of being dropped, and
   request/response sizes are bounded.
 - Commands are routed through a main-thread queue with one persistent timer,
