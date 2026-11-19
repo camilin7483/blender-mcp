@@ -43,6 +43,7 @@ BUFFER_SIZE = 65536
 AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
 TOKEN_FILE_ENV_VAR = "BLENDER_MCP_TOKEN_FILE"
 ALLOW_NO_AUTH_ENV_VAR = "BLENDER_MCP_ALLOW_NO_AUTH"
+EXECUTE_CODE_ENV_VAR = "BLENDER_MCP_ALLOW_EXECUTE_CODE"
 TOKEN_FILE_NAME = "token"
 
 # Protocol limits. A single JSON message or response larger than these is
@@ -2987,6 +2988,11 @@ class BlenderMCPServer:
         return {"success": True, "filepath": filepath, "format": fmt}
 
     def execute_code(self, code: str, auto_audit: bool = True, blueprint_name: Optional[str] = None) -> Dict[str, Any]:
+        if not self._execute_code_allowed():
+            raise PermissionError(
+                "execute_code is disabled. Enable 'Allow execute_code' in the Blender MCP Pro "
+                f"preferences or set {EXECUTE_CODE_ENV_VAR}=1."
+            )
         local_scope = {"bpy": bpy, "bmesh": bmesh, "Vector": Vector, "Matrix": Matrix, "Euler": Euler}
         exec(code, local_scope)
         bpy.context.view_layer.update()
@@ -2994,6 +3000,12 @@ class BlenderMCPServer:
         if auto_audit:
             res["auto_audit"] = self.audit_3d_model(blueprint_name=blueprint_name)
         return res
+
+    def _execute_code_allowed(self) -> bool:
+        if os.environ.get(EXECUTE_CODE_ENV_VAR) == "1":
+            return True
+        addon = bpy.context.preferences.addons.get(__name__)
+        return bool(addon and getattr(addon.preferences, "allow_execute_code", False))
 
     def create_checkpoint(self, name: str = "step", max_checkpoints: int = 10) -> Dict[str, Any]:
         safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", str(name or "step"))
@@ -3554,9 +3566,25 @@ class BLENDM_PT_main_panel(bpy.types.Panel):
             box.operator("blendermcp.start_server", icon="PLAY")
         else:
             box.operator("blendermcp.stop_server", icon="CANCEL")
+        if server is not None and server._execute_code_allowed():
+            box.label(text="execute_code: ENABLED", icon="ERROR")
 
 
-classes = (BLENDM_OT_start_server, BLENDM_OT_stop_server, BLENDM_PT_main_panel)
+class BLENDERMCP_AddonPreferences(bpy.types.AddonPreferences):
+    bl_idname = __name__
+
+    allow_execute_code: bpy.props.BoolProperty(
+        name="Allow execute_code",
+        description="Allow MCP clients to execute arbitrary Python. Only enable for trusted local clients.",
+        default=False,
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "allow_execute_code")
+
+
+classes = (BLENDM_OT_start_server, BLENDM_OT_stop_server, BLENDM_PT_main_panel, BLENDERMCP_AddonPreferences)
 
 
 def register():

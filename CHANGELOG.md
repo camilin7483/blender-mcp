@@ -28,6 +28,8 @@ All notable changes to this repository are documented here.
   token file (0600) and the bridge reads it; `BLENDER_AUTH_TOKEN` still
   overrides the file. `BLENDER_MCP_ALLOW_NO_AUTH=1` is the explicit unsafe
   escape hatch.
+- `execute_code` is disabled by default. Enable it in the add-on preferences
+  or with `BLENDER_MCP_ALLOW_EXECUTE_CODE=1`.
 - Batched requests are parsed incrementally instead of being dropped, and
   request/response sizes are bounded.
 - Commands are routed through a main-thread queue with one persistent timer,

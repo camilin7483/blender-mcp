@@ -39,6 +39,25 @@ def main() -> None:
         if background_server.start():
             fail("server started in Blender background mode; timers cannot run")
 
+        if background_server._execute_code_allowed():
+            fail("execute_code is enabled by default")
+        try:
+            background_server.execute_code("raise RuntimeError('must not run')", auto_audit=False)
+        except PermissionError:
+            pass
+        else:
+            fail("execute_code did not refuse the default policy")
+
+        os.environ["BLENDER_MCP_ALLOW_EXECUTE_CODE"] = "1"
+        try:
+            result = background_server.execute_code("x = 1", auto_audit=False)
+            if not result.get("success"):
+                fail(f"execute_code failed with explicit opt-in: {result}")
+        finally:
+            os.environ.pop("BLENDER_MCP_ALLOW_EXECUTE_CODE", None)
+        if background_server._execute_code_allowed():
+            fail("execute_code stayed enabled after removing the env opt-in")
+
         for obj in list(bpy.context.scene.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
 

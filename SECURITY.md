@@ -38,7 +38,7 @@ extension, a compromised MCP client, or a prompt-injected agent can all reach
 | Confused deputy | The add-on has more privileges than the caller and executes a request on the caller's behalf. | A per-install token is required by default; there are no per-tool scopes yet. | Per-session token, capability scopes, explicit user consent for privileged operations. | Local user session compromise. |
 | SSRF | A crafted asset URL or provider response points to `127.0.0.1`, link-local, metadata services or an internal host. | Provider URLs are followed without host or IP validation. | HTTPS-only allowlist, DNS resolution and private/link-local/loopback blocking, redirect re-validation, pinned IP per connection. | DNS rebinding needs pinned resolution; document residual risk. |
 | Token theft | `BLENDER_AUTH_TOKEN` or the Sketchfab token is read from env, logs, process listings or a world-readable file. | Token file is 0600; passed in plaintext JSON over loopback; env override supported. | Token file mode 0600, constant-time comparison, never log tokens, rotate on start, redact errors. | Same-user process can read the file. |
-| Arbitrary code execution | `execute_code` calls `exec()` with full builtins. | Enabled by default; authentication is now required. The opt-in gate is the next fix. | Disabled by default; explicit preference/env opt-in; structured refusal; no hidden execution path. | An opted-in user grants full Blender Python access. |
+| Arbitrary code execution | `execute_code` calls `exec()` with full builtins. | Disabled by default; explicit add-on preference or `BLENDER_MCP_ALLOW_EXECUTE_CODE=1`. | Disabled by default; explicit preference/env opt-in; structured refusal; no hidden execution path. | An opted-in user grants full Blender Python access. |
 | Data exfiltration | A tool reads scene data, files or tokens and sends them to a remote host. | `execute_code` and download tools can read files and make network calls. | Output sandbox, no arbitrary file reads, network allowlist, audit log, user confirmation for exports. | A user-approved export can still leak data. |
 | Destructive scene operations | `clear_scene`, `delete_object`, `boolean_operation`, `rollback_checkpoint` mutate or replace the scene. | No confirmation or dry-run. | `confirm` flag, dry-run preview, checkpoint before mutation, undo integration where possible. | Confirmed destructive calls still destroy data. |
 | Malicious asset files | A `.blend`, `.glb`, texture or archive exploits the importer, contains a zip-slip path, or fills the disk. | `zipfile.extractall()` without validation; no size limits. | Safe extraction (resolve, reject `..`, absolute paths, symlinks), uncompressed-size and file-count caps, importer sandboxing where available. | Importer vulnerabilities remain. |
@@ -48,8 +48,8 @@ extension, a compromised MCP client, or a prompt-injected agent can all reach
 
 ## Secure defaults for v4
 
-Implemented in this branch: per-install token file and main-thread queue. The
-rest are planned.
+Implemented in this branch: per-install token file, main-thread queue and the
+`execute_code` gate. The rest are planned.
 
 - Authentication enabled by default with a per-install token file (0600).
 - `execute_code` disabled unless explicitly enabled in add-on preferences or

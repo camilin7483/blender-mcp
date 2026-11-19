@@ -55,11 +55,14 @@ This table was built with the metric `table` blueprint and passed `audit_3d_mode
 
 | Environment variable | Where to set it | Purpose |
 | --- | --- | --- |
-| `BLENDER_AUTH_TOKEN` | Blender and the MCP bridge | Optional shared token. Supply the same value to both processes. |
+| `BLENDER_MCP_TOKEN_FILE` | Blender and the MCP bridge | Override the token file path. Default: `$XDG_CONFIG_HOME/blender-mcp/token` (Linux/macOS) or `%APPDATA%\blender-mcp\token` (Windows). |
+| `BLENDER_AUTH_TOKEN` | Blender and the MCP bridge | Override the token value. Supply the same value to both processes. |
+| `BLENDER_MCP_ALLOW_NO_AUTH` | Blender and the MCP bridge | Unsafe: disable local authentication. Use only for a trusted local process that cannot read the token file. |
+| `BLENDER_MCP_ALLOW_EXECUTE_CODE` | Blender | Enable `execute_code`. Prefer the add-on preference; this variable is for automation. |
 | `BLENDER_HOST`, `BLENDER_PORT` | MCP bridge | Socket destination. The add-on listens on `localhost:9876` in a standard installation. |
 | `SKETCHFAB_API_TOKEN` | Blender | Required by the Sketchfab download tool. |
 
-Keep the Blender socket on loopback and grant access only to trusted clients. The tools can modify the active scene, write files, and execute Python inside Blender.
+Authentication is required by default. The add-on creates the token file with mode 0600 on first start. `execute_code` is disabled until you enable it explicitly. Keep the Blender socket on loopback and grant access only to trusted clients. The tools can modify the active scene, write files, and execute Python inside Blender.
 
 ## License and credits
 
