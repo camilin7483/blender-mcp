@@ -42,14 +42,15 @@ extension, a compromised MCP client, or a prompt-injected agent can all reach
 | Data exfiltration | A tool reads scene data, files or tokens and sends them to a remote host. | `execute_code` and download tools can read files and make network calls. | Output sandbox, no arbitrary file reads, network allowlist, audit log, user confirmation for exports. | A user-approved export can still leak data. |
 | Destructive scene operations | `clear_scene`, `delete_object`, `boolean_operation`, `rollback_checkpoint` mutate or replace the scene. | `clear_scene`, `delete_object`, `rollback_checkpoint` and `setup_studio_lighting` return a dry-run unless `confirm=true` or `BLENDER_MCP_ALLOW_UNSAFE_OPS=1`. | `confirm` flag, dry-run preview, checkpoint before mutation, undo integration where possible. | Confirmed destructive calls still destroy data. |
 | Malicious asset files | A `.blend`, `.glb`, texture or archive exploits the importer, contains a zip-slip path, or fills the disk. | `zipfile.extractall()` without validation; no size limits. | Safe extraction (resolve, reject `..`, absolute paths, symlinks), uncompressed-size and file-count caps, importer sandboxing where available. | Importer vulnerabilities remain. |
-| Malicious paths | `export_scene`, checkpoint names or download IDs escape the output directory. | Arbitrary paths accepted; `uid`/`asset_id` interpolated into temp names. | Resolve and confine to `BLENDER_MCP_OUTPUT_DIR`; reject traversal and symlinks; sanitize IDs; extension allowlist. | A user-approved path outside the sandbox. |
+| Malicious paths | `export_scene`, checkpoint names or download IDs escape the output directory. | `export_scene` is confined to `BLENDER_MCP_OUTPUT_DIR` with an extension allowlist; unknown formats raise. Download IDs and ZIP paths are still open until the next fix. | Resolve and confine to `BLENDER_MCP_OUTPUT_DIR`; reject traversal and symlinks; sanitize IDs; extension allowlist. | A user-approved path outside the sandbox. |
 | DNS rebinding | A hostname resolves to a public IP during validation and to a private IP at connect time. | No DNS validation at all. | Resolve once, reject private ranges, connect to the validated IP, re-validate redirects. | A compromised resolver or OS-level attack. |
 | Supply chain | A compromised `mcp` package, Blender build, add-on zip or GitHub Action runs with the user's privileges. | `mcp==1.30.0` is pinned in `pro/requirements.txt`; no hashes, no pinned CI actions yet. | Pin dependencies and Actions by commit, publish hashes, sign releases, reproducible build, dependency review. | Upstream compromise before pinning. |
 
 ## Secure defaults for v4
 
 Implemented in this branch: per-install token file, main-thread queue,
-`execute_code` gate and dry-run destructive operations. The rest are planned.
+`execute_code` gate, dry-run destructive operations and the export path
+sandbox. The rest are planned.
 
 - Authentication enabled by default with a per-install token file (0600).
 - `execute_code` disabled unless explicitly enabled in add-on preferences or

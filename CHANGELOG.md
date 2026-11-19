@@ -34,6 +34,9 @@ All notable changes to this repository are documented here.
   `setup_studio_lighting` return a dry-run unless called with `confirm=true`.
   `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` preserves the old behavior for trusted
   automation.
+- `export_scene` is confined to `BLENDER_MCP_OUTPUT_DIR`, validates the
+  extension and rejects unknown formats. `BLENDER_MCP_ALLOW_ANY_PATH=1`
+  preserves the old behavior for trusted automation.
 - Batched requests are parsed incrementally instead of being dropped, and
   request/response sizes are bounded.
 - Commands are routed through a main-thread queue with one persistent timer,

@@ -45,6 +45,8 @@ TOKEN_FILE_ENV_VAR = "BLENDER_MCP_TOKEN_FILE"
 ALLOW_NO_AUTH_ENV_VAR = "BLENDER_MCP_ALLOW_NO_AUTH"
 EXECUTE_CODE_ENV_VAR = "BLENDER_MCP_ALLOW_EXECUTE_CODE"
 ALLOW_UNSAFE_OPS_ENV_VAR = "BLENDER_MCP_ALLOW_UNSAFE_OPS"
+OUTPUT_DIR_ENV_VAR = "BLENDER_MCP_OUTPUT_DIR"
+ALLOW_ANY_PATH_ENV_VAR = "BLENDER_MCP_ALLOW_ANY_PATH"
 TOKEN_FILE_NAME = "token"
 
 # Protocol limits. A single JSON message or response larger than these is
@@ -124,6 +126,52 @@ def load_or_create_auth_token() -> str:
     with suppress(Exception):
         os.chmod(path, 0o600)
     return token
+
+
+def default_output_dir() -> str:
+    return os.path.expanduser(os.environ.get(OUTPUT_DIR_ENV_VAR, "~/BlenderMCP/output"))
+
+
+def resolve_output_path(filepath: str, allowed_extensions: set) -> str:
+    """Resolve an export path inside the output sandbox.
+
+    Relative paths are resolved against BLENDER_MCP_OUTPUT_DIR. Absolute
+    paths must already be inside it. BLENDER_MCP_ALLOW_ANY_PATH=1 disables
+    the sandbox for trusted automation; the extension is still validated.
+    """
+    if not str(filepath).strip():
+        raise ValueError("filepath must not be empty")
+
+    expanded = os.path.expanduser(str(filepath))
+    base = default_output_dir()
+    allow_any = os.environ.get(ALLOW_ANY_PATH_ENV_VAR) == "1"
+
+    if allow_any or os.path.isabs(expanded):
+        path = os.path.abspath(expanded)
+    else:
+        path = os.path.abspath(os.path.join(base, expanded))
+
+    if not allow_any:
+        base_real = os.path.normcase(os.path.realpath(base))
+        path_real = os.path.normcase(os.path.realpath(path))
+        try:
+            inside = os.path.commonpath([base_real, path_real]) == base_real
+        except ValueError:
+            inside = False
+        if not inside:
+            raise PermissionError(
+                f"Export path '{filepath}' is outside the output directory '{base}'. "
+                f"Set {OUTPUT_DIR_ENV_VAR} or {ALLOW_ANY_PATH_ENV_VAR}=1 for trusted automation."
+            )
+
+    if not os.path.splitext(path)[1]:
+        path += sorted(allowed_extensions)[0]
+    extension = os.path.splitext(path)[1].lower()
+    if extension not in allowed_extensions:
+        raise ValueError(
+            f"Unsupported extension '{extension}'. Expected one of {sorted(allowed_extensions)}."
+        )
+    return path
 
 HEAVY_COMMANDS = {
     "execute_code",
@@ -2999,14 +3047,28 @@ class BlenderMCPServer:
         return {"success": True, "removed_count": count}
 
     def export_scene(self, filepath: str, format: str = "GLB") -> Dict[str, Any]:
-        fmt = format.upper()
+        fmt = str(format).upper()
+        allowed = {
+            "GLB": {".glb"},
+            "GLTF": {".gltf"},
+            "FBX": {".fbx"},
+            "OBJ": {".obj"},
+        }
+        if fmt not in allowed:
+            raise ValueError(f"Unsupported export format '{format}'. Valid: {sorted(allowed)}")
+
+        path = resolve_output_path(filepath, allowed[fmt])
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+
         if fmt in ("GLB", "GLTF"):
-            bpy.ops.export_scene.gltf(filepath=filepath, export_format="GLB" if fmt == "GLB" else "GLTF_SEPARATE")
+            bpy.ops.export_scene.gltf(filepath=path, export_format="GLB" if fmt == "GLB" else "GLTF_SEPARATE")
         elif fmt == "FBX":
-            bpy.ops.export_scene.fbx(filepath=filepath)
+            bpy.ops.export_scene.fbx(filepath=path)
         elif fmt == "OBJ":
-            bpy.ops.wm.obj_export(filepath=filepath)
-        return {"success": True, "filepath": filepath, "format": fmt}
+            bpy.ops.wm.obj_export(filepath=path)
+        return {"success": True, "filepath": path, "format": fmt}
 
     def execute_code(self, code: str, auto_audit: bool = True, blueprint_name: Optional[str] = None) -> Dict[str, Any]:
         if not self._execute_code_allowed():

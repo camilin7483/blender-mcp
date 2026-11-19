@@ -845,7 +845,7 @@ def clear_scene(keep_cameras_and_lights: bool = False, confirm: bool = False) ->
 
 @mcp.tool()
 def export_scene(filepath: str, format: str = "GLB") -> str:
-    """Export scene to 'GLB', 'GLTF', 'FBX', or 'OBJ'."""
+    """Export scene to 'GLB', 'GLTF', 'FBX', or 'OBJ'. Paths are confined to BLENDER_MCP_OUTPUT_DIR unless BLENDER_MCP_ALLOW_ANY_PATH=1."""
     return json.dumps(send_blender_command("export_scene", {"filepath": filepath, "format": format}), indent=2)
 
 

@@ -10,7 +10,9 @@ smoke_gui.py because --background never pumps the event loop.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
+import tempfile
 import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -123,6 +125,57 @@ def main() -> None:
         lights = server.setup_studio_lighting(confirm=True)
         if not lights.get("success") or len(lights.get("lights", [])) != 3:
             fail(f"setup_studio_lighting failed with confirm=true: {lights}")
+
+        export_dir = tempfile.mkdtemp(prefix="blendermcp_export_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = export_dir
+        try:
+            make_cube("ExportMe", 1.0)
+            exported = server.export_scene("cube.glb", "GLB")
+            if not exported.get("success") or not os.path.exists(os.path.join(export_dir, "cube.glb")):
+                fail(f"GLB export failed: {exported}")
+
+            server.export_scene("nested/cube.glb", "GLB")
+            if not os.path.exists(os.path.join(export_dir, "nested", "cube.glb")):
+                fail("nested GLB export did not create the directory")
+
+            server.export_scene("noext", "GLB")
+            if not os.path.exists(os.path.join(export_dir, "noext.glb")):
+                fail("export did not append the expected extension")
+
+            try:
+                server.export_scene("../escape.glb", "GLB")
+            except PermissionError:
+                pass
+            else:
+                fail("export_scene allowed path traversal")
+
+            try:
+                server.export_scene(os.path.join(tempfile.gettempdir(), "outside.glb"), "GLB")
+            except PermissionError:
+                pass
+            else:
+                fail("export_scene allowed an absolute path outside the sandbox")
+
+            try:
+                server.export_scene("cube.xyz", "XYZ")
+            except ValueError:
+                pass
+            else:
+                fail("export_scene accepted an invalid format")
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(export_dir, ignore_errors=True)
+
+        any_dir = tempfile.mkdtemp(prefix="blendermcp_any_")
+        os.environ["BLENDER_MCP_ALLOW_ANY_PATH"] = "1"
+        try:
+            any_path = os.path.join(any_dir, "any.glb")
+            server.export_scene(any_path, "GLB")
+            if not os.path.exists(any_path):
+                fail("BLENDER_MCP_ALLOW_ANY_PATH=1 did not allow the export")
+        finally:
+            os.environ.pop("BLENDER_MCP_ALLOW_ANY_PATH", None)
+            shutil.rmtree(any_dir, ignore_errors=True)
 
     except SystemExit:
         raise
