@@ -47,3 +47,17 @@ def test_full_profile_has_every_tool() -> None:
 
 def test_unknown_profile_fails_open() -> None:
     assert len(_tools("does-not-exist")) == 58
+
+
+def test_every_tool_belongs_to_a_profile() -> None:
+    import mcp_server
+
+    all_tools = set(mcp_server.mcp._tool_manager._tools)
+    covered = set(mcp_server.CORE_TOOLS)
+    for extras in mcp_server.PROFILE_EXTRAS.values():
+        covered |= extras
+    assert all_tools - covered == {"execute_code"}
+    for name, allowed in mcp_server.TOOL_PROFILES.items():
+        if allowed is None:
+            continue
+        assert allowed <= all_tools, f"profile '{name}' references unknown tools"

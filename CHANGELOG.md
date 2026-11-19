@@ -33,6 +33,7 @@ All notable changes to this repository are documented here.
   raw artifacts in `bench/results/latest/` and 3 local runs at 8/8.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
   portability, CI matrix for 4.5.4 and 5.2.4.
+- Release checklist documenting the remaining stable-release gates.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
   registration through `BLENDER_MCP_PROFILE`; unknown names fail open.

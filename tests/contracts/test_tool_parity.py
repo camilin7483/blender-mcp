@@ -92,6 +92,20 @@ def test_tool_surface_parity() -> None:
             f"required parameters differ for {name}: "
             f"bridge={tool['required']} addon={methods[name]['required']}"
         )
+        missing = set(tool["params"]) - set(methods[name]["params"])
+        assert not missing, (
+            f"bridge parameters not accepted by the add-on for {name}: {sorted(missing)}"
+        )
+
+
+def test_every_tool_has_a_docstring() -> None:
+    tree = _parse(MCP_SERVER)
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not any(_is_mcp_tool_decorator(d) for d in node.decorator_list):
+            continue
+        assert ast.get_docstring(node), f"tool '{node.name}' has no docstring"
 
 
 def test_no_duplicate_tool_names() -> None:

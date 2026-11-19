@@ -27,6 +27,25 @@ Real Blender 4.5 LTS:
 BLENDER_BIN=/path/to/blender-4.5.4-linux-x64/blender ./scripts/run_blender_tests.sh
 ```
 
+Real Blender 5.2 LTS:
+
+```bash
+BLENDER_BIN=/path/to/blender-5.2.4-linux-x64/blender ./scripts/run_blender_tests.sh
+```
+
+BlenderMCP-Bench:
+
+```bash
+BLENDER_BIN=/path/to/blender ./scripts/run_bench.sh --runs 3 --output bench/results/latest
+```
+
+Extension build and validation:
+
+```bash
+BLENDER_BIN=/path/to/blender ./scripts/build_extension.sh
+"$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.0.0.zip
+```
+
 The GUI test needs an event loop. On Linux without `DISPLAY`, the script uses
 `xvfb-run`. `blender --background` does not pump timers and is only used for
 import/geometry tests.
@@ -34,7 +53,7 @@ import/geometry tests.
 Lint:
 
 ```bash
-.venv/bin/ruff check .
+.venv/bin/ruff check tests scripts bench
 ```
 
 ## Rules
