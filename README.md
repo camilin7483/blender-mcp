@@ -5,7 +5,7 @@
 ## Editions
 
 - **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
-- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 60-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
+- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 61-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
 
@@ -46,7 +46,7 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Game-ready export** — `godot`, `unity`, `unreal` and `generic-gltf`
   profiles validate scale, materials, UVs, armatures, actions, LOD and
   collision meshes, then reimport the file and compare dimensions.
-- **Constraint validation** — Read-only checks for mate, align, flush,
+- **Constraint validation and solving** — Read-only checks plus apply for positioning constraints: mate, align, flush,
   center, offset, distance, parallel, perpendicular, ground contact,
   symmetry, no-intersection, inside and surface contact, with structured
   expected/actual/tolerance/method results.
@@ -63,7 +63,7 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
 tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
 `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
-and `full` (default, 60 tools). `execute_code` is full-only and remains
+and `full` (default, 61 tools). `execute_code` is full-only and remains
 disabled in the add-on by default. Unknown profile names fail open to
 `full`. Profiles filter bridge registration only; the add-on keeps every
 handler.

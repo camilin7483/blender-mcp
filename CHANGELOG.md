@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.0.0-alpha.2 - 2026-11-19 (unreleased)
+## 4.0.0-alpha.3 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -21,10 +21,10 @@ All notable changes to this repository are documented here.
   socket (empty), bone and custom anchors. `list_semantic_anchors` and
   `anchor_operation` cover align, mate, offset, orient_normal, distribute and
   mirror.
-- Read-only constraint validator: mate, align, flush, center, offset,
-  distance, parallel, perpendicular, ground_contact, symmetry,
-  no_intersection, inside and surface_contact, with structured expected/
-  actual/tolerance/method results.
+- Constraint validation and solving: `validate_constraints` covers mate,
+  align, flush, center, offset, distance, parallel, perpendicular,
+  ground_contact, symmetry, no_intersection, inside and surface_contact;
+  `apply_constraints` moves align/mate/offset/ground/center/distance.
 - Declarative assemblies: `create_assembly` builds from a spec (desk template
   from `dimensions_mm` or explicit components), stores the spec on a root
   empty, and `update_assembly` deep-merges changes and rebuilds.

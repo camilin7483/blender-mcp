@@ -692,6 +692,29 @@ def main() -> None:
         if unknown_constraint["passed"] or not unknown_constraint["results"][0].get("error"):
             fail(f"constraint validator accepted an unknown type: {unknown_constraint}")
 
+        clear_scene()
+        apply_target = make_cube("ApplyTarget", 1.0)
+        apply_target.location = (0.0, 0.0, 0.5)
+        apply_part = make_cube("ApplyPart", 0.2)
+        apply_part.location = (2.0, 0.0, 0.1)
+        bpy.context.view_layer.update()
+        applied = server.apply_constraints([
+            {
+                "type": "align", "a": "ApplyPart", "b": "ApplyTarget",
+                "a_anchor": "BOTTOM_CENTER", "b_anchor": "TOP_CENTER",
+            },
+            {
+                "type": "ground_contact", "objects": ["ApplyTarget"],
+            },
+            {
+                "type": "no_intersection", "objects": ["ApplyPart", "ApplyTarget"],
+            },
+        ])
+        if not applied["passed"]:
+            fail(f"apply_constraints failed: {applied['report']}")
+        if abs(apply_part.location.z - 1.1) > 0.001:
+            fail(f"apply_constraints placed the part at z={apply_part.location.z}")
+
         # --- declarative assemblies ---
         clear_scene()
         desk_spec = {

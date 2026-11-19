@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MCP_SERVER = ROOT / "pro" / "mcp_server.py"
 ADDON = ROOT / "pro" / "blender_mcp.py"
 
-EXPECTED_TOOL_COUNT = 60
+EXPECTED_TOOL_COUNT = 61
 
 
 def _parse(path: Path) -> ast.Module:

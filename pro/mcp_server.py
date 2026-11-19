@@ -354,6 +354,14 @@ def validate_constraints(constraints: List[Dict[str, Any]]) -> str:
 
 
 @mcp.tool()
+def apply_constraints(constraints: List[Dict[str, Any]], iterations: int = 1) -> str:
+    """Apply align, mate, offset, ground_contact, center and distance constraints, then validate the full set. Validation-only types are reported without moving objects."""
+    return json.dumps(send_blender_command("apply_constraints", {
+        "constraints": constraints, "iterations": iterations,
+    }), indent=2)
+
+
+@mcp.tool()
 def orient_and_face_towards(
     object_name: str,
     look_at_target: Any,
@@ -1052,7 +1060,7 @@ PROFILE_EXTRAS = {
         "create_floorplan_walls", "cut_wall_opening", "create_parametric_roof",
         "create_staircase", "create_building_shell", "array_grid_on_surface",
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
-        "validate_constraints",
+        "validate_constraints", "apply_constraints",
     },
     "materials": {
         "create_material", "assign_material",

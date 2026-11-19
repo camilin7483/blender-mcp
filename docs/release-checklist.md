@@ -7,7 +7,7 @@ environment.
 ## Required gate
 
 - [x] Every FastMCP tool has a matching add-on handler.
-- [x] Required parameters match 1:1 (60 tools; `tests/contracts/test_tool_parity.py`).
+- [x] Required parameters match 1:1 (61 tools; `tests/contracts/test_tool_parity.py`).
 - [x] Every tool has a docstring and a profile assignment.
 - [x] `bpy` command execution runs on Blender's main thread; background start
       fails fast.
@@ -43,7 +43,7 @@ environment.
 
 | Tag | Meaning |
 |---|---|
-| `v4.0.0-alpha.2` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
+| `v4.0.0-alpha.3` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
 | `v4.0.0-beta` | After CI runs green on Linux 4.5/5.2 and cross-platform Blender is validated. |
 | `v4.0.0-rc` | After the external benchmark protocol is published and no critical defect remains. |
 | `v4.0.0` | Only when every required item above is checked. |

@@ -1972,6 +1972,7 @@ class BlenderMCPServer:
             "list_semantic_anchors": lambda p: self.list_semantic_anchors(**p),
             "anchor_operation": lambda p: self.anchor_operation(**p),
             "validate_constraints": lambda p: self.validate_constraints(**p),
+            "apply_constraints": lambda p: self.apply_constraints(**p),
             "orient_and_face_towards": lambda p: self.orient_and_face_towards(**p),
             "spawn_corner_supports": lambda p: self.spawn_corner_supports(**p),
             "symmetry_mirror": lambda p: self.symmetry_mirror(**p),
@@ -2990,6 +2991,191 @@ class BlenderMCPServer:
             )
 
         raise ValueError(f"Unknown constraint type '{ctype}'")
+
+    def apply_constraints(
+        self,
+        constraints: List[Dict[str, Any]],
+        iterations: int = 1,
+    ) -> Dict[str, Any]:
+        """Apply positioning constraints, then validate the full constraint set."""
+        applied: List[Dict[str, Any]] = []
+        iterations = max(0, min(int(iterations), 5))
+        for _ in range(iterations):
+            for constraint in constraints or []:
+                if not isinstance(constraint, dict):
+                    continue
+                ctype = str(constraint.get("type", "")).strip().lower()
+                tolerance = float(constraint.get("tolerance", 0.001))
+                try:
+                    if ctype in ("align", "mate"):
+                        part = bpy.data.objects.get(
+                            constraint.get("a") or constraint.get("part")
+                        )
+                        target = bpy.data.objects.get(
+                            constraint.get("b") or constraint.get("target")
+                        )
+                        if not part or not target:
+                            raise ValueError("align/mate needs existing a/part and b/target")
+                        part_anchor = str(constraint.get("a_anchor", "CENTER"))
+                        target_anchor = str(constraint.get("b_anchor", "TOP_CENTER"))
+                        if ctype == "align":
+                            move = AnchorService.align(
+                                part,
+                                target,
+                                part_anchor,
+                                target_anchor,
+                                constraint.get("offset"),
+                                False,
+                            )
+                        else:
+                            move = AnchorService.mate(
+                                part,
+                                target,
+                                part_anchor,
+                                target_anchor,
+                                float(constraint.get("gap", 0.0)),
+                                False,
+                            )
+                        applied.append({
+                            "type": ctype,
+                            "objects": [part.name, target.name],
+                            "passed": move.get("passed"),
+                        })
+                    elif ctype == "offset":
+                        part = bpy.data.objects.get(
+                            constraint.get("a") or constraint.get("part")
+                        )
+                        if not part:
+                            raise ValueError("offset needs an existing object")
+                        move = AnchorService.offset(
+                            part,
+                            str(constraint.get("a_anchor", "CENTER")),
+                            constraint.get("offset", [0.0, 0.0, 0.0]),
+                        )
+                        applied.append({
+                            "type": ctype,
+                            "objects": [part.name],
+                            "passed": move.get("passed"),
+                        })
+                    elif ctype == "ground_contact":
+                        names = constraint.get("objects") or [constraint.get("a")]
+                        objects = [
+                            bpy.data.objects.get(str(name))
+                            for name in names
+                            if name and bpy.data.objects.get(str(name))
+                        ]
+                        if not objects:
+                            raise ValueError("ground_contact needs objects")
+                        snapshots = [
+                            GeometryService.snapshot(obj) for obj in objects
+                        ]
+                        minimum_z = min(
+                            snapshot.world_aabb[0][2] for snapshot in snapshots
+                        )
+                        if abs(minimum_z) > tolerance:
+                            for obj in objects:
+                                matrix = obj.matrix_world.copy()
+                                matrix.translation.z -= minimum_z
+                                obj.matrix_world = matrix
+                        bpy.context.view_layer.update()
+                        applied.append({
+                            "type": ctype,
+                            "objects": [obj.name for obj in objects],
+                            "delta_z": round(float(-minimum_z), 6),
+                        })
+                    elif ctype == "center":
+                        names = constraint.get("objects") or [
+                            constraint.get("a"), constraint.get("b")
+                        ]
+                        objects = [
+                            bpy.data.objects.get(str(name))
+                            for name in names
+                            if name and bpy.data.objects.get(str(name))
+                        ]
+                        if len(objects) < 2:
+                            raise ValueError("center needs at least two objects")
+                        axes = [
+                            str(axis).upper()
+                            for axis in constraint.get("axes", ["X", "Y"])
+                        ]
+                        snapshots = [
+                            GeometryService.snapshot(obj) for obj in objects
+                        ]
+                        base_center = [
+                            (snapshots[0].world_aabb[0][axis] + snapshots[0].world_aabb[1][axis]) / 2.0
+                            for axis in range(3)
+                        ]
+                        for index, obj in enumerate(objects[1:], start=1):
+                            center = [
+                                (snapshots[index].world_aabb[0][axis] + snapshots[index].world_aabb[1][axis]) / 2.0
+                                for axis in range(3)
+                            ]
+                            matrix = obj.matrix_world.copy()
+                            for axis in axes:
+                                axis_index = {"X": 0, "Y": 1, "Z": 2}.get(axis)
+                                if axis_index is None:
+                                    raise ValueError(f"Invalid center axis '{axis}'")
+                                matrix.translation[axis_index] += (
+                                    base_center[axis_index] - center[axis_index]
+                                )
+                            obj.matrix_world = matrix
+                        bpy.context.view_layer.update()
+                        applied.append({
+                            "type": ctype,
+                            "objects": [obj.name for obj in objects],
+                            "axes": axes,
+                        })
+                    elif ctype == "distance":
+                        part = bpy.data.objects.get(
+                            constraint.get("a") or constraint.get("part")
+                        )
+                        target = bpy.data.objects.get(
+                            constraint.get("b") or constraint.get("target")
+                        )
+                        if not part or not target:
+                            raise ValueError("distance needs existing a/part and b/target")
+                        part_anchor = AnchorService.get(
+                            part, str(constraint.get("a_anchor", "CENTER"))
+                        )
+                        target_anchor = AnchorService.get(
+                            target, str(constraint.get("b_anchor", "TOP_CENTER"))
+                        )
+                        part_position = Vector(part_anchor.position)
+                        target_position = Vector(target_anchor.position)
+                        current = (part_position - target_position).length
+                        desired = float(constraint.get("distance", 0.0))
+                        direction = part_position - target_position
+                        if direction.length < 1e-9:
+                            direction = Vector(target_anchor.normal)
+                        else:
+                            direction.normalize()
+                        matrix = part.matrix_world.copy()
+                        matrix.translation += direction * (desired - current)
+                        part.matrix_world = matrix
+                        bpy.context.view_layer.update()
+                        applied.append({
+                            "type": ctype,
+                            "objects": [part.name, target.name],
+                            "desired": desired,
+                        })
+                    else:
+                        applied.append({
+                            "type": ctype,
+                            "skipped": "validation_only",
+                        })
+                except Exception as exc:
+                    applied.append({
+                        "type": ctype,
+                        "error": f"{type(exc).__name__}: {exc}",
+                    })
+        report = self.validate_constraints(constraints)
+        return {
+            "success": True,
+            "iterations": iterations,
+            "applied": applied,
+            "report": report,
+            "passed": report["passed"],
+        }
 
     def orient_and_face_towards(
         self,
