@@ -50,14 +50,21 @@ def test_unknown_profile_fails_open() -> None:
 
 
 def test_every_tool_belongs_to_a_profile() -> None:
-    import mcp_server
+    import blender_mcp.server as server
 
-    all_tools = set(mcp_server.mcp._tool_manager._tools)
-    covered = set(mcp_server.CORE_TOOLS)
-    for extras in mcp_server.PROFILE_EXTRAS.values():
+    all_tools = set(server.mcp._tool_manager._tools)
+    covered = set(server.CORE_TOOLS)
+    for extras in server.PROFILE_EXTRAS.values():
         covered |= extras
     assert all_tools - covered == {"execute_code"}
-    for name, allowed in mcp_server.TOOL_PROFILES.items():
+    for name, allowed in server.TOOL_PROFILES.items():
         if allowed is None:
             continue
         assert allowed <= all_tools, f"profile '{name}' references unknown tools"
+
+
+def test_legacy_wrapper_exposes_mcp() -> None:
+    import mcp_server
+
+    assert hasattr(mcp_server, "mcp")
+    assert mcp_server.mcp is not None

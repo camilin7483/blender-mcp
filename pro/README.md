@@ -1,4 +1,4 @@
-# Blender MCP Pro v4.0.0-alpha.3
+# Blender MCP Pro v4.0.0-alpha.4
 
 Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 61 tools over MCP stdio. Set
 `BLENDER_MCP_PROFILE` to `core`, `modeling`, `materials`, `animation`,

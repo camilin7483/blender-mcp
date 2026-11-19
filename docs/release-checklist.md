@@ -43,7 +43,7 @@ environment.
 
 | Tag | Meaning |
 |---|---|
-| `v4.0.0-alpha.3` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
+| `v4.0.0-alpha.4` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
 | `v4.0.0-beta` | After CI runs green on Linux 4.5/5.2 and cross-platform Blender is validated. |
 | `v4.0.0-rc` | After the external benchmark protocol is published and no critical defect remains. |
 | `v4.0.0` | Only when every required item above is checked. |

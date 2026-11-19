@@ -4,7 +4,7 @@
 
 ## Editions
 
-- **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
+- **Legacy** — `legacy/blender_mcp.py`. Original single-file v3 add-on, kept for compatibility.
 - **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 61-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
@@ -86,17 +86,21 @@ The add-on starts a **socket server** inside Blender on `localhost:9876`. When a
 
 ### Prerequisites
 
-- **Blender 3.0+** (tested up to 4.5)
-- **Python 3.10+** (comes bundled with Blender)
+- **Blender 4.5 LTS or 5.2 LTS** (tested with 4.5.4 and 5.2.4)
+- **Python 3.10+** for the bridge (Blender bundles its own interpreter)
 
 ### Install the Add-on
 
 1. Open **Blender**
 2. Go to **Edit > Preferences > Add-ons**
 3. Click **Install from Disk...**
-4. Navigate to and select `blender_mcp.py`
-5. **Enable** the add-on by checking the checkbox next to "Interface: Blender MCP"
-6. Find the panel in **View3D > Sidebar > BlenderMCP** tab
+4. Select `pro/blender_mcp.py` (or install `build/blender_mcp_pro-4.0.0.zip` as an extension)
+5. Enable **Blender MCP Pro Engine**
+6. Find the panel in **View3D > Sidebar > MCP Pro**
+
+The bridge runs outside Blender: `pro/mcp_server.py` (legacy entry point) or
+the installed `blender-mcp` console script. The legacy v3 add-on remains at
+`legacy/blender_mcp.py` and is not the Pro bridge.
 
 ## Usage
 

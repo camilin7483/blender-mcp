@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.0.0-alpha.3 - 2026-11-19 (unreleased)
+## 4.0.0-alpha.4 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -53,6 +53,10 @@ All notable changes to this repository are documented here.
 
 ### Changed
 
+- Bridge split: `src/blender_mcp/server.py`, `transport.py` and `config.py`;
+  `pro/mcp_server.py` is now a thin legacy entry-point wrapper.
+- Legacy v3 add-on moved to `legacy/blender_mcp.py` so it no longer
+  shadows the `blender_mcp` Python package.
 - Consolidated the Pro v3 sources under `pro/` in the canonical repository.
 - `pro/sync_addon.sh` now resolves paths relative to the script and accepts
   `BLENDER_ADDONS_DIR`.

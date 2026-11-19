@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import mcp_server
 import pytest
+
+import blender_mcp.transport as bridge_transport
 
 
 def test_token_file_is_read(tmp_path, monkeypatch) -> None:
@@ -12,7 +13,7 @@ def test_token_file_is_read(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BLENDER_MCP_TOKEN_FILE", str(token_file))
     monkeypatch.delenv("BLENDER_AUTH_TOKEN", raising=False)
 
-    assert mcp_server._load_auth_token() == "file-token"
+    assert bridge_transport._load_auth_token() == "file-token"
 
 
 def test_env_token_wins(tmp_path, monkeypatch) -> None:
@@ -21,27 +22,30 @@ def test_env_token_wins(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BLENDER_MCP_TOKEN_FILE", str(token_file))
     monkeypatch.setenv("BLENDER_AUTH_TOKEN", "env-token")
 
-    assert mcp_server._load_auth_token() == "env-token"
+    assert bridge_transport._load_auth_token() == "env-token"
 
 
 def test_missing_file_returns_empty(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BLENDER_MCP_TOKEN_FILE", str(tmp_path / "missing"))
     monkeypatch.delenv("BLENDER_AUTH_TOKEN", raising=False)
 
-    assert mcp_server._load_auth_token() == ""
+    assert bridge_transport._load_auth_token() == ""
 
 
 def test_default_path_honors_override(tmp_path, monkeypatch) -> None:
     target = tmp_path / "custom-token"
     monkeypatch.setenv("BLENDER_MCP_TOKEN_FILE", str(target))
 
-    assert mcp_server.default_token_path() == str(target)
+    assert bridge_transport.default_token_path() == str(target)
 
 
 def test_send_refuses_without_token(monkeypatch) -> None:
-    monkeypatch.setattr(mcp_server, "_current_auth_token", lambda: "")
+    monkeypatch.setattr(bridge_transport, "_current_auth_token", lambda: "")
     monkeypatch.delenv("BLENDER_MCP_ALLOW_NO_AUTH", raising=False)
-    monkeypatch.setattr(mcp_server, "default_token_path", lambda: "/nonexistent/token")
+    monkeypatch.setattr(
+        bridge_transport, "default_token_path", lambda: "/nonexistent/token"
+    )
 
     with pytest.raises(RuntimeError, match="No Blender auth token"):
-        mcp_server.send_blender_command("get_scene_info")
+        bridge_transport.send_blender_command("get_scene_info")
+

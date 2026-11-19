@@ -1,12 +1,12 @@
 # Architecture
 
-## Current baseline (v3.0.0)
+## Current baseline (v4.0.0-alpha.3)
 
 ```
 MCP client (Claude/OpenCode/Cursor)
     |  stdio, FastMCP tools
     v
-pro/mcp_server.py            host Python, one socket per command
+src/blender_mcp/server.py    host Python, one socket per command
     |  JSON {"type","params","auth_token"} + "\n"
     v  localhost:9876
 pro/blender_mcp.py           Blender add-on, socket thread
@@ -15,12 +15,20 @@ pro/blender_mcp.py           Blender add-on, socket thread
 Blender main thread          _execute_command_internal -> handlers -> bpy
 ```
 
+`pro/mcp_server.py` is the legacy entry-point wrapper around
+`src/blender_mcp/server.py`; existing MCP client configurations keep working.
+`src/blender_mcp/transport.py` owns socket framing/auth and `config.py` owns
+environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
+
 ### Components
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `pro/mcp_server.py` | Registers 61 FastMCP tools; serializes each call to a socket command; returns JSON text. |
-| Socket transport | `pro/mcp_server.py` | New connection per command; 60 s / 180 s timeouts; JSON response parsing. |
+| MCP bridge | `src/blender_mcp/server.py` | Registers 61 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| Socket transport | `src/blender_mcp/transport.py` | Auth token loading, one connection per command, framing, request IDs and response limits. |
+| Bridge config | `src/blender_mcp/config.py` | Host, port, token paths, response limits and heavy-command timeouts. |
+| Legacy entry point | `pro/mcp_server.py` | Thin wrapper that imports the package and keeps old MCP configurations working. |
+| Legacy add-on | `legacy/blender_mcp.py` | Original v3 single-file add-on; not the Pro bridge. |
 | Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; validates optional token; rate-limits. |
 | Main-thread dispatcher | `pro/blender_mcp.py` | Persistent queue drained by one timer; background and worker starts fail fast. |
 | Command table | `pro/blender_mcp.py` | Maps command names to `BlenderMCPServer` methods. |
