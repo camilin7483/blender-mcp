@@ -706,11 +706,22 @@ def audit_3d_model(
     blueprint_name: Optional[str] = None,
     contact_tolerance: float = 0.018,
     suspended: Optional[List[str]] = None,
+    ground_tolerance: float = 0.005,
+    scale_tolerance: float = 0.001,
+    symmetry_axis: Optional[str] = None,
+    symmetry_plane: float = 0.0,
+    symmetry_tolerance: float = 0.001,
+    topology_policy: str = "report",
+    check_self_intersections: bool = False,
 ) -> str:
-    """Run the BVHTree Surface Auditor: checks floating parts, polygon interpenetration, scale, and ground alignment. Face-to-face joints report CONTACT_JOINT (warning, not critical); names in suspended (hanging lamps, cables) are excluded from ground/floating checks. Returns llm_fix_commands with copy-paste calls to run verbatim on failure."""
+    """Audit evaluated geometry: dimensions, ground contact, normalized scale, BVH surface intersections, contact graph, topology, symmetry and optional blueprint dimensions. Returns passed, requirements, failures and the legacy critical_issues/warnings views. passed is computed after every requirement. topology_policy is 'report' or 'strict'. Names in suspended are excluded from ground/floating checks."""
     return json.dumps(send_blender_command("audit_3d_model", {
         "object_names": object_names, "blueprint_name": blueprint_name,
         "contact_tolerance": contact_tolerance, "suspended": suspended,
+        "ground_tolerance": ground_tolerance, "scale_tolerance": scale_tolerance,
+        "symmetry_axis": symmetry_axis, "symmetry_plane": symmetry_plane,
+        "symmetry_tolerance": symmetry_tolerance, "topology_policy": topology_policy,
+        "check_self_intersections": check_self_intersections,
     }), indent=2)
 
 

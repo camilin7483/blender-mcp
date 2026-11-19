@@ -6,6 +6,13 @@ All notable changes to this repository are documented here.
 
 ### Added
 
+- Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
+  graph, topology metrics, symmetry error, ground contact and absolute/
+  relative tolerance model.
+- `audit_3d_model` now returns `requirements`, `dimensions`, `topology`,
+  `contacts`, `collisions`, `symmetry` and structured `failures`, while
+  preserving the legacy `critical_issues`, `warnings`, `joints` and
+  `llm_fix_commands` views.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
 - Contract test that verifies 1:1 parity between the 53 FastMCP tools and the
@@ -21,6 +28,12 @@ All notable changes to this repository are documented here.
 - `pro/sync_addon.sh` now resolves paths relative to the script and accepts
   `BLENDER_ADDONS_DIR`.
 - Root README documents the legacy and Pro editions.
+- Collision decisions use BVH surface intersection; AABB is broad-phase only.
+  Geometry Nodes-only objects are measured and audited.
+- `audit_3d_model` computes `passed` after every requirement. Blueprint
+  dimensions, ground contact, normalized scale, surface intersections and
+  optional symmetry now block `passed`; topology is report-only unless
+  `topology_policy="strict"`.
 
 ### Security
 

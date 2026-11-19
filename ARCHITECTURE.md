@@ -54,23 +54,29 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 
 ### Geometry authority
 
-- `_get_aabb()` evaluates the depsgraph and reads the evaluated mesh. It is
-  the only current measurement that includes modifiers.
-- `_build_world_bvh()` builds a world-space BVH from the evaluated mesh.
-- `_compute_surface_gap_and_overlap()` uses AABB as a broad-phase filter, then
-  BVH overlap and sampled nearest-point queries.
-- The audit's final collision decision still includes an AABB-only branch.
-  This is a known P0: AABBs are not proof of collision.
-- There are no units, absolute/relative tolerances, topology metrics, contact
-  graph or symmetry metrics in the audit contract.
+- `GeometryService.snapshot()` evaluates the depsgraph and stores world/local
+  AABB, world vertices, face centers/areas and a world-space BVH.
+- `contact_graph()` uses AABB only as a broad-phase filter. Surface
+  intersection comes from `BVHTree.overlap`; separation distance comes from
+  BVH nearest queries with a method and confidence label.
+- `topology_metrics()` reports non-manifold and boundary edges, loose
+  vertices/edges, zero-area and degenerate faces, duplicate vertices,
+  inverted normals, disconnected components and optional self-intersections.
+- `symmetry_error()` and `ground_contact()` use evaluated geometry.
+- `audit_3d_model()` collects all metrics, evaluates requirements, computes
+  the score, and only then sets `passed`. Blueprint, ground, scale, collision
+  and symmetry requirements block `passed`; topology is report-only unless
+  `topology_policy="strict"`.
+- AABB is never the sole proof of collision.
 
 ### Known architectural debt
 
 - Two unversioned sources of truth before the `v3.0.0-baseline` tag.
 - One 3.3k-line add-on file and one 0.8k-line bridge file.
-- No protocol version, request IDs, response-size limit or structured errors.
+- No protocol version negotiation beyond the optional `request_id`.
 - No tool profiles; all 53 tools are always registered.
-- Destructive and network operations have no policy layer.
+- Destructive and network operations have a policy layer, but no per-tool
+  capability scopes.
 - The bridge and add-on duplicate parameter knowledge with no shared schema.
 
 ## Target v4

@@ -39,6 +39,42 @@ def make_cube(name: str, size: float = 1.0):
     return obj
 
 
+def make_ring(name: str, outer: float = 2.0, inner: float = 1.0, height: float = 0.2):
+    mesh = bpy.data.meshes.new(name)
+    bm_mesh = bmesh.new()
+    half_outer, half_inner = outer / 2.0, inner / 2.0
+    corners = [
+        (-half_outer, -half_outer),
+        (half_outer, -half_outer),
+        (half_outer, half_outer),
+        (-half_outer, half_outer),
+    ]
+    inner_corners = [
+        (-half_inner, -half_inner),
+        (half_inner, -half_inner),
+        (half_inner, half_inner),
+        (-half_inner, half_inner),
+    ]
+    outer_bottom, inner_bottom, outer_top, inner_top = [], [], [], []
+    for x, y in corners:
+        outer_bottom.append(bm_mesh.verts.new((x, y, 0.0)))
+        outer_top.append(bm_mesh.verts.new((x, y, height)))
+    for x, y in inner_corners:
+        inner_bottom.append(bm_mesh.verts.new((x, y, 0.0)))
+        inner_top.append(bm_mesh.verts.new((x, y, height)))
+    for index in range(4):
+        nxt = (index + 1) % 4
+        bm_mesh.faces.new([outer_bottom[index], outer_bottom[nxt], outer_top[nxt], outer_top[index]])
+        bm_mesh.faces.new([inner_bottom[nxt], inner_bottom[index], inner_top[index], inner_top[nxt]])
+        bm_mesh.faces.new([outer_bottom[nxt], outer_bottom[index], inner_bottom[index], inner_bottom[nxt]])
+        bm_mesh.faces.new([outer_top[index], outer_top[nxt], inner_top[nxt], inner_top[index]])
+    bm_mesh.to_mesh(mesh)
+    bm_mesh.free()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
 def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
@@ -244,6 +280,187 @@ def main() -> None:
         finally:
             os.environ.pop("BLENDER_MCP_ALLOW_ANY_PATH", None)
             shutil.rmtree(any_dir, ignore_errors=True)
+
+        # --- evaluated geometry engine ---
+        for item in list(bpy.context.scene.objects):
+            bpy.data.objects.remove(item, do_unlink=True)
+
+        geo_a = make_cube("GeoA", 1.0)
+        geo_a.location = (0.0, 0.0, 0.5)
+        geo_b = make_cube("GeoB", 1.0)
+        geo_b.location = (0.0, 0.0, 1.5)
+        bpy.context.view_layer.update()
+
+        snapshot = bm.GeometryService.snapshot(geo_a)
+        if snapshot.world_aabb != [[-0.5, -0.5, 0.0], [0.5, 0.5, 1.0]]:
+            fail(f"unexpected snapshot AABB: {snapshot.world_aabb}")
+
+        graph = bm.GeometryService.contact_graph([geo_a, geo_b], tolerance=0.001)
+        pair = graph["pairs"][0]
+        if not pair["surface_intersection"] or pair["min_distance"] != 0.0:
+            fail(f"stacked cubes were not detected as surface contact: {pair}")
+
+        for item in list(bpy.context.scene.objects):
+            bpy.data.objects.remove(item, do_unlink=True)
+        ring = make_ring("Ring")
+        hole_cube = make_cube("HoleCube", 0.6)
+        hole_cube.location = (0.0, 0.0, 0.3)
+        bpy.context.view_layer.update()
+        graph = bm.GeometryService.contact_graph([ring, hole_cube], tolerance=0.001)
+        pair = graph["pairs"][0]
+        if pair["surface_intersection"] or pair["contact"] or pair["min_distance"] < 0.1:
+            fail(f"AABB-only overlap leaked into the contact graph: {pair}")
+
+        hole_cube.location.x = 0.85
+        bpy.context.view_layer.update()
+        graph = bm.GeometryService.contact_graph([ring, hole_cube], tolerance=0.001)
+        pair = graph["pairs"][0]
+        if not pair["surface_intersection"]:
+            fail(f"true interpenetration was not detected: {pair}")
+
+        for item in list(bpy.context.scene.objects):
+            bpy.data.objects.remove(item, do_unlink=True)
+        left = make_cube("Left", 1.0)
+        left.location = (-1.0, 0.0, 0.5)
+        right = make_cube("Right", 1.0)
+        right.location = (1.0, 0.0, 0.5)
+        bpy.context.view_layer.update()
+        symmetry = bm.GeometryService.symmetry_error([left, right], axis="X", tolerance=0.001)
+        if not symmetry["passed"] or symmetry["max_error"] > 0.001:
+            fail(f"symmetric pair failed symmetry: {symmetry}")
+
+        bpy.data.objects.remove(right, do_unlink=True)
+        bpy.context.view_layer.update()
+        symmetry = bm.GeometryService.symmetry_error([left], axis="X", tolerance=0.001)
+        if symmetry["passed"]:
+            fail(f"asymmetric pair passed symmetry: {symmetry}")
+
+        ground = bm.GeometryService.ground_contact(
+            [bm.GeometryService.snapshot(left)], tolerance=0.005
+        )
+        if not ground["passed"]:
+            fail(f"grounded cube failed ground contact: {ground}")
+        left.location.z = 0.6
+        bpy.context.view_layer.update()
+        ground = bm.GeometryService.ground_contact(
+            [bm.GeometryService.snapshot(left)], tolerance=0.005
+        )
+        if ground["passed"]:
+            fail(f"floating cube passed ground contact: {ground}")
+
+        topology = bm.GeometryService.topology_metrics(left)
+        if topology["non_manifold_edges"] != 0 or topology["disconnected_components"] != 1:
+            fail(f"unexpected cube topology: {topology}")
+
+        loose_mesh = bpy.data.meshes.new("Loose")
+        loose_bm = bmesh.new()
+        bmesh.ops.create_cube(loose_bm, size=1.0)
+        loose_bm.verts.new((5.0, 5.0, 5.0))
+        loose_bm.to_mesh(loose_mesh)
+        loose_bm.free()
+        loose = bpy.data.objects.new("Loose", loose_mesh)
+        bpy.context.collection.objects.link(loose)
+        bpy.context.view_layer.update()
+        topology = bm.GeometryService.topology_metrics(loose)
+        if topology["loose_vertices"] != 1 or topology["disconnected_components"] != 2:
+            fail(f"loose vertex metrics failed: {topology}")
+
+        # --- audit contract and regressions ---
+        def clear_scene() -> None:
+            for item in list(bpy.context.scene.objects):
+                bpy.data.objects.remove(item, do_unlink=True)
+
+        clear_scene()
+        blueprint_cube = make_cube("BlueprintCube", 1.0)
+        blueprint_cube.location = (0.0, 0.0, 0.5)
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(
+            object_names=["BlueprintCube"], blueprint_name="table"
+        )
+        if audit["passed"]:
+            fail("audit passed a table blueprint mismatch")
+        if not any(failure["rule"] == "blueprint_dimensions" for failure in audit["failures"]):
+            fail("audit did not report a structured blueprint failure")
+        for key in ("requirements", "dimensions", "topology", "contacts", "collisions", "failures"):
+            if key not in audit:
+                fail(f"audit contract is missing '{key}'")
+
+        clear_scene()
+        ring = make_ring("AuditRing")
+        hole = make_cube("AuditHole", 0.6)
+        hole.location = (0.0, 0.0, 0.3)
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(object_names=["AuditRing", "AuditHole"])
+        if not audit["passed"] or audit["collisions"]:
+            fail(f"audit false-positive on ring-in-hole: {audit['failures']}")
+
+        hole.location.x = 0.85
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(object_names=["AuditRing", "AuditHole"])
+        if audit["passed"] or not audit["collisions"]:
+            fail("audit missed a true interpenetration")
+
+        clear_scene()
+        gn_mesh = bpy.data.meshes.new("GNBase")
+        gn_obj = bpy.data.objects.new("GNOnly", gn_mesh)
+        bpy.context.collection.objects.link(gn_obj)
+        node_group = bpy.data.node_groups.new("GNAudit", "GeometryNodeTree")
+        node_group.interface.new_socket(
+            name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry"
+        )
+        output_node = node_group.nodes.new("NodeGroupOutput")
+        cube_node = node_group.nodes.new("GeometryNodeMeshCube")
+        node_group.links.new(cube_node.outputs["Mesh"], output_node.inputs["Geometry"])
+        gn_modifier = gn_obj.modifiers.new("GN", "NODES")
+        gn_modifier.node_group = node_group
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(object_names=["GNOnly"])
+        if audit["object_count_audited"] != 1:
+            fail("audit skipped a Geometry Nodes-only object")
+        if "GNOnly" not in audit["dimensions"]["objects"]:
+            fail("audit did not measure a Geometry Nodes-only object")
+
+        clear_scene()
+        sym_left = make_cube("SymL", 1.0)
+        sym_left.location = (-1.0, 0.0, 0.5)
+        sym_right = make_cube("SymR", 1.0)
+        sym_right.location = (1.0, 0.0, 0.5)
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(
+            object_names=["SymL", "SymR"], symmetry_axis="X"
+        )
+        if not audit["passed"] or not audit["symmetry"]["passed"]:
+            fail(f"symmetric audit failed: {audit['failures']}")
+
+        bpy.data.objects.remove(sym_right, do_unlink=True)
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(object_names=["SymL"], symmetry_axis="X")
+        if audit["passed"] or audit["requirements"]["symmetry"]["passed"]:
+            fail("asymmetric audit passed the symmetry requirement")
+
+        clear_scene()
+        strict_mesh = bpy.data.meshes.new("StrictLoose")
+        strict_bm = bmesh.new()
+        bmesh.ops.create_cube(strict_bm, size=1.0)
+        strict_bm.verts.new((5.0, 5.0, 5.0))
+        strict_bm.to_mesh(strict_mesh)
+        strict_bm.free()
+        strict_obj = bpy.data.objects.new("StrictLoose", strict_mesh)
+        bpy.context.collection.objects.link(strict_obj)
+        strict_obj.location = (0.0, 0.0, 0.5)
+        bpy.context.view_layer.update()
+        audit = server.audit_3d_model(
+            object_names=["StrictLoose"], topology_policy="strict"
+        )
+        if audit["passed"] or not any(
+            failure["rule"] == "loose_vertices" for failure in audit["failures"]
+        ):
+            fail(f"strict topology did not fail a loose vertex: {audit['failures']}")
+        audit = server.audit_3d_model(
+            object_names=["StrictLoose"], topology_policy="report"
+        )
+        if not audit["requirements"]["topology"]["passed"]:
+            fail("report topology policy did not pass")
 
     except SystemExit:
         raise

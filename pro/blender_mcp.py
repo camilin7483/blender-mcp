@@ -37,6 +37,7 @@ import bpy
 import bmesh
 from mathutils import Vector, Matrix, Euler, Quaternion
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 # ==============================================================================
 # CONSTANTS & GLOBAL CONFIGURATION
@@ -359,6 +360,386 @@ def safe_extract_zip(
                             f"ZIP expands beyond the maximum size ({max_bytes} bytes)"
                         )
                     output.write(chunk)
+
+
+@dataclass
+class Tolerance:
+    """Absolute, relative and maximum allowed error."""
+
+    absolute: float = 0.001
+    relative: float = 0.0
+    max_error: Optional[float] = None
+
+    def allowed(self, expected: float) -> float:
+        value = max(float(self.absolute), abs(float(expected)) * float(self.relative))
+        if self.max_error is not None:
+            value = min(value, float(self.max_error))
+        return value
+
+    def within(self, actual: float, expected: float) -> bool:
+        return abs(float(actual) - float(expected)) <= self.allowed(expected)
+
+
+@dataclass
+class GeometrySnapshot:
+    """Evaluated mesh data in local and world space."""
+
+    name: str
+    unit_scale: float
+    world_aabb: List[List[float]]
+    local_aabb: List[List[float]]
+    vertices_world: List[Vector]
+    face_centers_world: List[Vector]
+    face_areas: List[float]
+    face_count: int
+    bvh: BVHTree
+
+
+class GeometryService:
+    """Evaluated-geometry measurements. AABB is broad-phase only."""
+
+    @classmethod
+    def snapshot(cls, obj: bpy.types.Object) -> GeometrySnapshot:
+        if obj.type != "MESH":
+            raise TypeError(f"Object '{obj.name}' must be a MESH (got {obj.type})")
+
+        bpy.context.view_layer.update()
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        eval_obj = obj.evaluated_get(depsgraph)
+        mesh = eval_obj.to_mesh()
+        try:
+            if mesh is None or len(mesh.vertices) == 0:
+                raise ValueError(f"Object '{obj.name}' has no evaluated vertices")
+
+            matrix = eval_obj.matrix_world.copy()
+            bm = bmesh.new()
+            bm.from_mesh(mesh)
+            bm.verts.ensure_lookup_table()
+            bm.faces.ensure_lookup_table()
+            local_vertices = [v.co.copy() for v in bm.verts]
+            bm.transform(matrix)
+            vertices = [v.co.copy() for v in bm.verts]
+            face_centers = [f.calc_center_median() for f in bm.faces]
+            face_areas = [f.calc_area() for f in bm.faces]
+            face_count = len(bm.faces)
+            bvh = BVHTree.FromBMesh(bm, epsilon=1e-6)
+            bm.free()
+
+            world_min = Vector((
+                min(v.x for v in vertices),
+                min(v.y for v in vertices),
+                min(v.z for v in vertices),
+            ))
+            world_max = Vector((
+                max(v.x for v in vertices),
+                max(v.y for v in vertices),
+                max(v.z for v in vertices),
+            ))
+            local_min = Vector((
+                min(v.x for v in local_vertices),
+                min(v.y for v in local_vertices),
+                min(v.z for v in local_vertices),
+            ))
+            local_max = Vector((
+                max(v.x for v in local_vertices),
+                max(v.y for v in local_vertices),
+                max(v.z for v in local_vertices),
+            ))
+            unit_scale = float(bpy.context.scene.unit_settings.scale_length or 1.0)
+            return GeometrySnapshot(
+                name=obj.name,
+                unit_scale=unit_scale,
+                world_aabb=[[round(float(c), 6) for c in world_min], [round(float(c), 6) for c in world_max]],
+                local_aabb=[[round(float(c), 6) for c in local_min], [round(float(c), 6) for c in local_max]],
+                vertices_world=vertices,
+                face_centers_world=face_centers,
+                face_areas=face_areas,
+                face_count=face_count,
+                bvh=bvh,
+            )
+        finally:
+            eval_obj.to_mesh_clear()
+
+    @staticmethod
+    def aabb_gap(a: GeometrySnapshot, b: GeometrySnapshot) -> float:
+        gap_sq = 0.0
+        for axis in range(3):
+            a_min, a_max = a.world_aabb[0][axis], a.world_aabb[1][axis]
+            b_min, b_max = b.world_aabb[0][axis], b.world_aabb[1][axis]
+            if a_max < b_min:
+                gap_sq += (b_min - a_max) ** 2
+            elif b_max < a_min:
+                gap_sq += (a_min - b_max) ** 2
+        return math.sqrt(gap_sq)
+
+    @classmethod
+    def nearest_distance(
+        cls,
+        a: GeometrySnapshot,
+        b: GeometrySnapshot,
+        max_samples: int = 20000,
+    ) -> Tuple[float, bool, str, int]:
+        """Return (distance, approximate, method, overlap_pairs)."""
+        pairs = a.bvh.overlap(b.bvh)
+        if pairs:
+            return 0.0, False, "bvh_overlap", len(pairs)
+
+        points_a = a.vertices_world + a.face_centers_world
+        points_b = b.vertices_world + b.face_centers_world
+        approximate = len(points_a) > max_samples or len(points_b) > max_samples
+        best = float("inf")
+
+        for points, tree in ((points_a, b.bvh), (points_b, a.bvh)):
+            step = max(1, math.ceil(len(points) / max_samples))
+            for point in points[::step]:
+                location, _normal, _index, distance = tree.find_nearest(point)
+                if location is not None and distance < best:
+                    best = distance
+
+        if best == float("inf"):
+            return cls.aabb_gap(a, b), True, "bvh_nearest_failed", 0
+        return float(best), approximate, "bvh_nearest", 0
+
+    @classmethod
+    def contact_graph(
+        cls,
+        objects: List[bpy.types.Object],
+        tolerance: float = 0.001,
+    ) -> Dict[str, Any]:
+        snapshots = [cls.snapshot(obj) for obj in objects]
+        pairs_out: List[Dict[str, Any]] = []
+        threshold = max(float(tolerance), 0.6)
+
+        for i in range(len(snapshots)):
+            for j in range(i + 1, len(snapshots)):
+                a, b = snapshots[i], snapshots[j]
+                gap = cls.aabb_gap(a, b)
+                if gap > threshold:
+                    pairs_out.append({
+                        "a": a.name,
+                        "b": b.name,
+                        "min_distance": round(gap, 6),
+                        "contact": False,
+                        "surface_intersection": False,
+                        "overlap_face_pairs": 0,
+                        "estimated_contact_area": None,
+                        "method": "aabb_broad_phase",
+                        "confidence": 0.5,
+                        "approximate": True,
+                    })
+                    continue
+
+                overlap_pairs = a.bvh.overlap(b.bvh)
+                if overlap_pairs:
+                    area_a = sum(
+                        a.face_areas[index]
+                        for index in {pair[0] for pair in overlap_pairs}
+                        if index < len(a.face_areas)
+                    )
+                    area_b = sum(
+                        b.face_areas[index]
+                        for index in {pair[1] for pair in overlap_pairs}
+                        if index < len(b.face_areas)
+                    )
+                    pairs_out.append({
+                        "a": a.name,
+                        "b": b.name,
+                        "min_distance": 0.0,
+                        "contact": True,
+                        "surface_intersection": True,
+                        "overlap_face_pairs": len(overlap_pairs),
+                        "estimated_contact_area": round(min(area_a, area_b), 6),
+                        "method": "bvh_overlap",
+                        "confidence": 1.0,
+                        "approximate": False,
+                    })
+                    continue
+
+                distance, approximate, method, _ = cls.nearest_distance(a, b)
+                pairs_out.append({
+                    "a": a.name,
+                    "b": b.name,
+                    "min_distance": round(distance, 6),
+                    "contact": distance <= tolerance,
+                    "surface_intersection": False,
+                    "overlap_face_pairs": 0,
+                    "estimated_contact_area": None,
+                    "method": method,
+                    "confidence": 0.8 if not approximate else 0.6,
+                    "approximate": approximate,
+                })
+
+        return {
+            "tolerance": float(tolerance),
+            "objects": [snapshot.name for snapshot in snapshots],
+            "pairs": pairs_out,
+        }
+
+    @classmethod
+    def topology_metrics(
+        cls,
+        obj: bpy.types.Object,
+        merge_distance: float = 1e-6,
+        area_epsilon: float = 1e-9,
+        check_self_intersections: bool = False,
+    ) -> Dict[str, Any]:
+        if obj.type != "MESH":
+            raise TypeError(f"Object '{obj.name}' must be a MESH (got {obj.type})")
+
+        bpy.context.view_layer.update()
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        eval_obj = obj.evaluated_get(depsgraph)
+        bm = bmesh.new()
+        try:
+            bm.from_object(eval_obj, depsgraph)
+            bm.verts.ensure_lookup_table()
+            bm.edges.ensure_lookup_table()
+            bm.faces.ensure_lookup_table()
+            if len(bm.verts) == 0:
+                raise ValueError(f"Object '{obj.name}' has no evaluated vertices")
+
+            non_manifold = sum(1 for edge in bm.edges if len(edge.link_faces) != 2)
+            boundary = sum(1 for edge in bm.edges if len(edge.link_faces) == 1)
+            loose_edges = sum(1 for edge in bm.edges if len(edge.link_faces) == 0)
+            loose_vertices = sum(1 for vert in bm.verts if len(vert.link_edges) == 0)
+            zero_area = sum(1 for face in bm.faces if face.calc_area() < area_epsilon)
+            degenerate = sum(
+                1 for face in bm.faces if len({vert.index for vert in face.verts}) < 3
+            )
+
+            duplicate_vertices = 0
+            buckets: set = set()
+            step = max(float(merge_distance), 1e-9)
+            for vert in bm.verts:
+                key = (
+                    round(vert.co.x / step),
+                    round(vert.co.y / step),
+                    round(vert.co.z / step),
+                )
+                if key in buckets:
+                    duplicate_vertices += 1
+                else:
+                    buckets.add(key)
+
+            remaining = set(bm.verts)
+            components = 0
+            while remaining:
+                components += 1
+                stack = [remaining.pop()]
+                while stack:
+                    current = stack.pop()
+                    for edge in current.link_edges:
+                        other = edge.other_vert(current)
+                        if other in remaining:
+                            remaining.remove(other)
+                            stack.append(other)
+
+            before = [face.normal.copy() for face in bm.faces]
+            bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            inverted_normals = sum(
+                1 for face, old_normal in zip(bm.faces, before) if face.normal.dot(old_normal) < 0
+            )
+
+            self_intersections: Optional[int] = None
+            if check_self_intersections and 0 < len(bm.faces) <= 20000:
+                bvh = BVHTree.FromBMesh(bm, epsilon=1e-6)
+                unique_pairs = set()
+                for first, second in bvh.overlap(bvh):
+                    if first == second:
+                        continue
+                    face_a, face_b = bm.faces[first], bm.faces[second]
+                    if {vert.index for vert in face_a.verts} & {vert.index for vert in face_b.verts}:
+                        continue
+                    unique_pairs.add((min(first, second), max(first, second)))
+                self_intersections = len(unique_pairs)
+
+            return {
+                "object": obj.name,
+                "vertex_count": len(bm.verts),
+                "edge_count": len(bm.edges),
+                "face_count": len(bm.faces),
+                "non_manifold_edges": non_manifold,
+                "boundary_edges": boundary,
+                "loose_edges": loose_edges,
+                "loose_vertices": loose_vertices,
+                "zero_area_faces": zero_area,
+                "degenerate_faces": degenerate,
+                "duplicate_vertices": duplicate_vertices,
+                "inverted_normals": inverted_normals,
+                "disconnected_components": components,
+                "self_intersections": self_intersections,
+                "merge_distance": float(merge_distance),
+                "area_epsilon": float(area_epsilon),
+                "method": "bmesh_evaluated",
+            }
+        finally:
+            bm.free()
+
+    @classmethod
+    def symmetry_error(
+        cls,
+        objects: List[bpy.types.Object],
+        axis: str = "X",
+        plane: float = 0.0,
+        tolerance: float = 0.001,
+    ) -> Dict[str, Any]:
+        axis_index = {"X": 0, "Y": 1, "Z": 2}.get(str(axis).upper())
+        if axis_index is None:
+            raise ValueError(f"Invalid symmetry axis '{axis}'. Use X, Y or Z.")
+
+        vertices: List[Vector] = []
+        for obj in objects:
+            vertices.extend(cls.snapshot(obj).vertices_world)
+        if not vertices:
+            raise ValueError("No evaluated vertices for symmetry measurement")
+
+        tree = KDTree(len(vertices))
+        for index, vertex in enumerate(vertices):
+            tree.insert(vertex, index)
+        tree.balance()
+
+        errors: List[float] = []
+        for vertex in vertices:
+            mirrored = vertex.copy()
+            mirrored[axis_index] = 2.0 * float(plane) - mirrored[axis_index]
+            _location, _index, distance = tree.find(mirrored)
+            if distance is not None:
+                errors.append(float(distance))
+
+        max_error = max(errors) if errors else float("inf")
+        mean_error = sum(errors) / len(errors) if errors else float("inf")
+        return {
+            "axis": str(axis).upper(),
+            "plane": float(plane),
+            "tolerance": float(tolerance),
+            "max_error": round(max_error, 6),
+            "mean_error": round(mean_error, 6),
+            "passed": max_error <= tolerance,
+            "method": "kdtree_vertex_symmetry",
+            "confidence": 0.6,
+            "vertex_count": len(vertices),
+        }
+
+    @staticmethod
+    def ground_contact(
+        snapshots: List[GeometrySnapshot],
+        tolerance: float = 0.005,
+    ) -> Dict[str, Any]:
+        if not snapshots:
+            return {
+                "passed": True,
+                "min_z": None,
+                "tolerance": float(tolerance),
+                "method": "evaluated_world_aabb",
+            }
+        min_z = min(snapshot.world_aabb[0][2] for snapshot in snapshots)
+        return {
+            "passed": abs(min_z) <= tolerance,
+            "min_z": round(float(min_z), 6),
+            "tolerance": float(tolerance),
+            "method": "evaluated_world_aabb",
+        }
+
 
 HEAVY_COMMANDS = {
     "execute_code",
@@ -2698,139 +3079,511 @@ class BlenderMCPServer:
         blueprint_name: Optional[str] = None,
         contact_tolerance: float = 0.018,
         suspended: Optional[List[str]] = None,
+        ground_tolerance: float = 0.005,
+        scale_tolerance: float = 1e-3,
+        symmetry_axis: Optional[str] = None,
+        symmetry_plane: float = 0.0,
+        symmetry_tolerance: float = 1e-3,
+        topology_policy: str = "report",
+        check_self_intersections: bool = False,
     ) -> Dict[str, Any]:
-        """Audita colisiones reales, partes flotantes y topología mediante árboles BVHTree y depsgraph."""
+        """Audit evaluated geometry. AABB is broad-phase; `passed` is computed last."""
         bpy.context.view_layer.update()
-        objs = [bpy.data.objects.get(n) for n in object_names] if object_names else list(bpy.context.scene.objects)
-        mesh_objs = [o for o in objs if o and o.type == "MESH" and len(o.data.vertices) > 0]
-        suspended_set = {str(n) for n in (suspended or [])}
-        structural = [o for o in mesh_objs if o.name not in suspended_set]
+        candidates = (
+            [bpy.data.objects.get(name) for name in object_names]
+            if object_names
+            else list(bpy.context.scene.objects)
+        )
 
-        critical_issues = []
-        warnings = []
-        joints = []
-        llm_fix_commands = []
-        assembly_aabb = [[float("inf")] * 3, [float("-inf")] * 3]
-        aabbs: Dict[str, List[List[float]]] = {}
+        mesh_objects: List[bpy.types.Object] = []
+        snapshots: Dict[str, GeometrySnapshot] = {}
+        for obj in candidates:
+            if not obj or obj.type != "MESH":
+                continue
+            try:
+                snapshots[obj.name] = GeometryService.snapshot(obj)
+            except (TypeError, ValueError):
+                continue
+            mesh_objects.append(obj)
 
-        for o in mesh_objs:
-            # 1. Escala no normalizada
-            if any(abs(s - 1.0) > 1e-3 for s in o.scale):
-                warnings.append(f"UNAPPLIED_SCALE on '{o.name}': scale is {list(o.scale)}. Must be (1,1,1).")
-                cmd = f"repair_mesh_geometry(object_names=['{o.name}'])"
-                if cmd not in llm_fix_commands:
-                    llm_fix_commands.append(cmd)
+        units = {
+            "system": bpy.context.scene.unit_settings.system,
+            "scale_length": float(bpy.context.scene.unit_settings.scale_length or 1.0),
+            "length_unit": bpy.context.scene.unit_settings.length_unit,
+        }
+        suspended_set = {str(name) for name in (suspended or [])}
 
-            # 2. AABB update (solo estructural: lo suspendido no define el suelo).
-            # Se evalúa una vez por objeto y se reutiliza en los pares (O(n)).
-            o_aabb = self._get_aabb(o)
-            aabbs[o.name] = o_aabb
-            if o in structural:
-                for i in range(3):
-                    assembly_aabb[0][i] = min(assembly_aabb[0][i], o_aabb[0][i])
-                    assembly_aabb[1][i] = max(assembly_aabb[1][i], o_aabb[1][i])
+        if not mesh_objects:
+            message = "NO_MESH_OBJECTS: no evaluated mesh objects to audit."
+            return {
+                "passed": False,
+                "quality_score": 0,
+                "requirements": {"objects_present": {"passed": False, "actual": 0}},
+                "dimensions": {
+                    "units": units,
+                    "assembly_world_aabb": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    "assembly_dimensions": [0.0, 0.0, 0.0],
+                    "objects": {},
+                },
+                "topology": {},
+                "contacts": {
+                    "tolerance": float(contact_tolerance),
+                    "objects": [],
+                    "pairs": [],
+                },
+                "collisions": [],
+                "symmetry": None,
+                "warnings": [message],
+                "failures": [{
+                    "rule": "objects_present",
+                    "object": "assembly",
+                    "expected": ">=1 evaluated mesh",
+                    "actual": 0,
+                    "tolerance": 0,
+                    "method": "evaluated_mesh",
+                    "severity": "critical",
+                }],
+                "critical_issues": [message],
+                "joints": [],
+                "llm_fix_commands": [],
+                "suspended": [],
+                "blueprint": None,
+                "assembly_world_aabb": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                "object_count_audited": 0,
+            }
 
-        # Verificación del plano del suelo
-        if assembly_aabb[0][2] != float("inf"):
-            if abs(assembly_aabb[0][2]) > 0.005:
-                critical_issues.append(f"GROUND_MISALIGNMENT: lowest point Z = {assembly_aabb[0][2]:.4f}m. Model must touch Z=0.0.")
-                if "ground_model()" not in llm_fix_commands:
-                    llm_fix_commands.append("ground_model()")
+        structural = [obj for obj in mesh_objects if obj.name not in suspended_set]
+        warnings: List[str] = []
+        failures: List[Dict[str, Any]] = []
+        joints: List[str] = []
+        llm_fix_commands: List[str] = []
+        requirements: Dict[str, Any] = {}
 
-        # Pares y proximidad BVHTree (AABBs cacheados del paso 2, sin re-evaluar)
-        for i in range(len(mesh_objs)):
-            for j in range(i + 1, len(mesh_objs)):
-                oa, ob = mesh_objs[i], mesh_objs[j]
-                aabb_a = aabbs[oa.name]
-                aabb_b = aabbs[ob.name]
-                gap, _, overlap = self._compute_surface_gap_and_overlap(oa, ob, aabb_a, aabb_b)
-                if overlap > 0.40:
-                    if self._is_face_contact(aabb_a, aabb_b):
-                        # Junta de diseño (muro sobre piso, placa contra fachada):
-                        # informativa, no resta puntaje. Solo se verifica visualmente.
-                        joints.append(f"CONTACT_JOINT between '{oa.name}' and '{ob.name}': faces touch coplanar ({overlap*100:.1f}% boundary overlap, no shared volume).")
-                    else:
-                        critical_issues.append(f"SEVERE_OVERLAP between '{oa.name}' and '{ob.name}': {overlap*100:.1f}% interpenetration.")
-                        cmd = f"auto_fix_model(object_names=['{oa.name}', '{ob.name}'])"
-                        if cmd not in llm_fix_commands:
-                            llm_fix_commands.append(cmd)
-                elif self._is_volumetric_overlap(aabb_a, aabb_b):
-                    critical_issues.append(f"SEVERE_OVERLAP between '{oa.name}' and '{ob.name}': volumetric interpenetration (BVH face ratio {overlap*100:.1f}% hides a small part buried in a big one).")
-                    cmd = f"auto_fix_model(object_names=['{oa.name}', '{ob.name}'])"
-                    if cmd not in llm_fix_commands:
-                        llm_fix_commands.append(cmd)
-                elif gap > contact_tolerance and (oa.parent == ob or ob.parent == oa):
-                    if oa.name in suspended_set or ob.name in suspended_set:
-                        continue  # colgado a propósito (lámpara, cable): no es flotante
-                    critical_issues.append(f"FLOATING_PART gap between parent-child '{oa.name}' and '{ob.name}': gap={gap:.4f}m > tol={contact_tolerance}m.")
-                    child = oa.name if oa.parent == ob else ob.name if ob.parent == oa else oa.name
-                    parent = ob.name if child == oa.name else oa.name
-                    cmd = f"attach_and_align(part_name='{child}', target_name='{parent}', relation='ON_TOP')"
-                    if cmd not in llm_fix_commands:
-                        llm_fix_commands.append(cmd)
+        # 1. Collect dimensions from evaluated geometry.
+        assembly_min = [float("inf")] * 3
+        assembly_max = [float("-inf")] * 3
+        objects_dimensions: Dict[str, Any] = {}
+        for obj in mesh_objects:
+            snapshot = snapshots[obj.name]
+            dimensions = [
+                snapshot.world_aabb[1][axis] - snapshot.world_aabb[0][axis]
+                for axis in range(3)
+            ]
+            objects_dimensions[obj.name] = {
+                "world_aabb": snapshot.world_aabb,
+                "local_aabb": snapshot.local_aabb,
+                "dimensions": [round(value, 6) for value in dimensions],
+                "unit_scale": snapshot.unit_scale,
+                "face_count": snapshot.face_count,
+            }
+            if obj.name in suspended_set:
+                continue
+            for axis in range(3):
+                assembly_min[axis] = min(assembly_min[axis], snapshot.world_aabb[0][axis])
+                assembly_max[axis] = max(assembly_max[axis], snapshot.world_aabb[1][axis])
 
-        quality_score = max(0, 100 - len(critical_issues) * 25 - len(warnings) * 5)
-        passed = (len(critical_issues) == 0 and quality_score >= 80)
+        if assembly_min[0] == float("inf"):
+            assembly_aabb = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            assembly_dimensions = [0.0, 0.0, 0.0]
+        else:
+            assembly_aabb = [
+                [round(value, 6) for value in assembly_min],
+                [round(value, 6) for value in assembly_max],
+            ]
+            assembly_dimensions = [
+                round(assembly_max[axis] - assembly_min[axis], 6)
+                for axis in range(3)
+            ]
 
-        # Comparación contra blueprint (guía de proporciones, no bloqueante).
+        dimensions_report = {
+            "units": units,
+            "assembly_world_aabb": assembly_aabb,
+            "assembly_dimensions": assembly_dimensions,
+            "objects": objects_dimensions,
+        }
+
+        # 2. Ground contact.
+        structural_snapshots = [snapshots[obj.name] for obj in structural]
+        ground = GeometryService.ground_contact(structural_snapshots, ground_tolerance)
+        requirements["ground_contact"] = {
+            "passed": ground["passed"],
+            "tolerance": float(ground_tolerance),
+            "actual": ground["min_z"],
+            "method": ground["method"],
+        }
+        if structural_snapshots and not ground["passed"]:
+            failures.append({
+                "rule": "ground_contact",
+                "object": "assembly",
+                "expected": 0.0,
+                "actual": ground["min_z"],
+                "tolerance": float(ground_tolerance),
+                "method": ground["method"],
+                "severity": "critical",
+            })
+            if "ground_model()" not in llm_fix_commands:
+                llm_fix_commands.append("ground_model()")
+
+        # 3. Normalized scale.
+        bad_scale: List[Dict[str, Any]] = []
+        for obj in mesh_objects:
+            if any(abs(value - 1.0) > scale_tolerance for value in obj.scale):
+                entry = {
+                    "object": obj.name,
+                    "scale": [round(float(value), 6) for value in obj.scale],
+                }
+                bad_scale.append(entry)
+                warnings.append(
+                    f"UNAPPLIED_SCALE on '{obj.name}': scale is {entry['scale']}. Must be (1,1,1)."
+                )
+                command = f"repair_mesh_geometry(object_names=['{obj.name}'])"
+                if command not in llm_fix_commands:
+                    llm_fix_commands.append(command)
+                failures.append({
+                    "rule": "normalized_scale",
+                    "object": obj.name,
+                    "expected": [1.0, 1.0, 1.0],
+                    "actual": entry["scale"],
+                    "tolerance": float(scale_tolerance),
+                    "method": "object_scale",
+                    "severity": "critical",
+                })
+        requirements["normalized_scale"] = {
+            "passed": not bad_scale,
+            "tolerance": float(scale_tolerance),
+            "objects": bad_scale,
+            "method": "object_scale",
+        }
+
+        # 4. Contact graph and collisions. AABB is broad-phase only; a
+        # collision claim comes from BVH triangle intersection.
+        contact_graph = GeometryService.contact_graph(
+            mesh_objects, tolerance=contact_tolerance
+        )
+        collisions: List[Dict[str, Any]] = []
+        floating: List[Dict[str, Any]] = []
+
+        for pair in contact_graph["pairs"]:
+            if pair["surface_intersection"]:
+                aabb_a = snapshots[pair["a"]].world_aabb
+                aabb_b = snapshots[pair["b"]].world_aabb
+                if self._is_face_contact(aabb_a, aabb_b):
+                    joints.append(
+                        f"CONTACT_JOINT between '{pair['a']}' and '{pair['b']}': "
+                        f"surfaces touch ({pair['overlap_face_pairs']} face pairs, "
+                        f"estimated area {pair['estimated_contact_area']} m2, "
+                        f"method={pair['method']})."
+                    )
+                else:
+                    collisions.append(pair)
+                    failures.append({
+                        "rule": "no_surface_intersection",
+                        "object": f"{pair['a']} <-> {pair['b']}",
+                        "expected": "no surface intersection",
+                        "actual": f"{pair['overlap_face_pairs']} overlapping face pairs",
+                        "tolerance": float(contact_tolerance),
+                        "method": pair["method"],
+                        "confidence": pair["confidence"],
+                        "severity": "critical",
+                    })
+                    command = f"auto_fix_model(object_names=['{pair['a']}', '{pair['b']}'])"
+                    if command not in llm_fix_commands:
+                        llm_fix_commands.append(command)
+                continue
+
+            object_a = bpy.data.objects.get(pair["a"])
+            object_b = bpy.data.objects.get(pair["b"])
+            if not object_a or not object_b:
+                continue
+            if not (object_a.parent == object_b or object_b.parent == object_a):
+                continue
+            if object_a.name in suspended_set or object_b.name in suspended_set:
+                continue
+            if pair["min_distance"] <= contact_tolerance:
+                continue
+
+            child = object_a.name if object_a.parent == object_b else object_b.name
+            parent = object_b.name if child == object_a.name else object_a.name
+            floating.append({
+                "child": child,
+                "parent": parent,
+                "gap": pair["min_distance"],
+                "method": pair["method"],
+                "approximate": pair["approximate"],
+            })
+            failures.append({
+                "rule": "parent_child_contact",
+                "object": child,
+                "expected": f"gap <= {contact_tolerance}",
+                "actual": pair["min_distance"],
+                "tolerance": float(contact_tolerance),
+                "method": pair["method"],
+                "severity": "critical",
+            })
+            command = f"attach_and_align(part_name='{child}', target_name='{parent}', relation='ON_TOP')"
+            if command not in llm_fix_commands:
+                llm_fix_commands.append(command)
+
+        requirements["no_surface_intersection"] = {
+            "passed": not collisions,
+            "tolerance": float(contact_tolerance),
+            "collision_pairs": len(collisions),
+            "method": "bvh_overlap",
+        }
+        requirements["parent_child_contact"] = {
+            "passed": not floating,
+            "tolerance": float(contact_tolerance),
+            "floating": floating,
+            "method": "contact_graph",
+        }
+
+        # 5. Topology metrics. Report by default; strict mode makes defects
+        # blocking.
+        if topology_policy not in ("report", "strict"):
+            warnings.append(
+                f"UNKNOWN_TOPOLOGY_POLICY '{topology_policy}': using 'report'."
+            )
+            topology_policy = "report"
+
+        topology: Dict[str, Any] = {}
+        topology_issues: List[Dict[str, Any]] = []
+        for obj in mesh_objects:
+            try:
+                metrics = GeometryService.topology_metrics(
+                    obj, check_self_intersections=check_self_intersections
+                )
+            except Exception as exc:
+                warnings.append(f"TOPOLOGY_ERROR on '{obj.name}': {exc}")
+                continue
+            topology[obj.name] = metrics
+
+            checks = (
+                ("non_manifold_edges", "TOPOLOGY_NON_MANIFOLD"),
+                ("loose_vertices", "TOPOLOGY_LOOSE_VERTICES"),
+                ("zero_area_faces", "TOPOLOGY_ZERO_AREA"),
+                ("self_intersections", "TOPOLOGY_SELF_INTERSECTIONS"),
+            )
+            for key, label in checks:
+                count = metrics.get(key)
+                if count:
+                    topology_issues.append({
+                        "object": obj.name,
+                        "rule": key,
+                        "count": count,
+                    })
+                    warnings.append(f"{label} on '{obj.name}': {count}.")
+            if metrics.get("inverted_normals"):
+                warnings.append(
+                    f"TOPOLOGY_INVERTED_NORMALS on '{obj.name}': "
+                    f"{metrics['inverted_normals']} (recalc heuristic)."
+                )
+
+        requirements["topology"] = {
+            "passed": True if topology_policy == "report" else not topology_issues,
+            "policy": topology_policy,
+            "objects_with_issues": sorted({issue["object"] for issue in topology_issues}),
+        }
+        if topology_policy == "strict":
+            for issue in topology_issues:
+                failures.append({
+                    "rule": issue["rule"],
+                    "object": issue["object"],
+                    "expected": 0,
+                    "actual": issue["count"],
+                    "tolerance": 0,
+                    "method": "bmesh_evaluated",
+                    "severity": "critical",
+                })
+
+        # 6. Symmetry (optional).
+        symmetry = None
+        if symmetry_axis:
+            try:
+                symmetry = GeometryService.symmetry_error(
+                    structural,
+                    axis=symmetry_axis,
+                    plane=symmetry_plane,
+                    tolerance=symmetry_tolerance,
+                )
+                requirements["symmetry"] = {
+                    "passed": symmetry["passed"],
+                    "tolerance": float(symmetry_tolerance),
+                    "actual_max_error": symmetry["max_error"],
+                    "method": symmetry["method"],
+                    "confidence": symmetry["confidence"],
+                }
+                if not symmetry["passed"]:
+                    failures.append({
+                        "rule": "symmetry",
+                        "object": "assembly",
+                        "expected": f"max error <= {symmetry_tolerance}",
+                        "actual": symmetry["max_error"],
+                        "tolerance": float(symmetry_tolerance),
+                        "method": symmetry["method"],
+                        "severity": "critical",
+                    })
+            except Exception as exc:
+                warnings.append(f"SYMMETRY_ERROR: {exc}")
+
+        # 7. Blueprint dimensions. This runs before `passed` is computed.
         blueprint_report = None
-        if blueprint_name and assembly_aabb[0][2] != float("inf"):
-            bp = MODELING_BLUEPRINTS.get(str(blueprint_name).lower().strip())
-            if bp is None:
-                warnings.append(f"UNKNOWN_BLUEPRINT '{blueprint_name}': no proportion reference applied.")
+        if blueprint_name:
+            blueprint = MODELING_BLUEPRINTS.get(str(blueprint_name).lower().strip())
+            if blueprint is None:
+                warnings.append(
+                    f"UNKNOWN_BLUEPRINT '{blueprint_name}': no proportion reference applied."
+                )
             else:
-                exp = [float(v) for v in bp.get("dimensions", [])]
-                act = [round(assembly_aabb[1][i] - assembly_aabb[0][i], 4) for i in range(3)]
-                tol = float(bp.get("tolerance", 0.30))
-                blueprint_report = {"name": str(blueprint_name), "expected_dimensions": exp,
-                                    "actual_dimensions": act, "tolerance": tol,
-                                    "rescale_factors": None, "rescale_suggestion": None}
-                if len(exp) != 3:
-                    warnings.append(f"BLUEPRINT_NO_DIMENSIONS '{blueprint_name}': cannot compare proportions.")
-                    exp = []
-                mismatch = False
+                expected = [float(value) for value in blueprint.get("dimensions", [])]
+                actual = assembly_dimensions
+                relative_tolerance = float(blueprint.get("tolerance", 0.30))
+                tolerance = Tolerance(
+                    absolute=0.0005, relative=relative_tolerance
+                )
+                blueprint_report = {
+                    "name": str(blueprint_name),
+                    "expected_dimensions": expected,
+                    "actual_dimensions": actual,
+                    "tolerance": relative_tolerance,
+                    "tolerance_model": {
+                        "absolute": tolerance.absolute,
+                        "relative": tolerance.relative,
+                    },
+                    "rescale_factors": None,
+                    "rescale_suggestion": None,
+                    "passed": True,
+                }
+                if len(expected) != 3:
+                    warnings.append(
+                        f"BLUEPRINT_NO_DIMENSIONS '{blueprint_name}': cannot compare proportions."
+                    )
+                    expected = []
+                    blueprint_report["passed"] = False
+                dimensions_available = len(expected) == 3
+
+                mismatches = []
                 for axis, label in ((0, "X"), (1, "Y"), (2, "Z")):
-                    if exp and exp[axis] > 1e-6 and abs(act[axis] - exp[axis]) / exp[axis] > tol:
-                        mismatch = True
-                        warnings.append(
-                            f"BLUEPRINT_DIMENSION_MISMATCH on {label}: blueprint "
-                            f"'{blueprint_name}' expects {exp[axis]}m ± {tol*100:.0f}%, assembly is {act[axis]}m.")
-                        if len(mesh_objs) == 1:
-                            cmd = (f"transform_object(name='{mesh_objs[0].name}', "
-                                   f"dimensions=[{exp[0]}, {exp[1]}, {exp[2]}])")
-                            if cmd not in llm_fix_commands:
-                                llm_fix_commands.append(cmd)
-                if mismatch:
-                    # Plan de reescalado (propuesta, no comando ciego): los factores
-                    # son por eje y transform_object(scale=...) no mueve locations,
-                    # así que en multi-objeto hay que escalar locations también.
-                    factors = [round(exp[i] / act[i], 4) if act[i] > 1e-6 else None
-                               for i in range(3)]
+                    if not expected or expected[axis] <= 1e-6:
+                        continue
+                    allowed = tolerance.allowed(expected[axis])
+                    if abs(actual[axis] - expected[axis]) > allowed:
+                        mismatches.append({
+                            "axis": label,
+                            "expected": expected[axis],
+                            "actual": actual[axis],
+                            "tolerance": round(allowed, 6),
+                        })
+                        failures.append({
+                            "rule": "blueprint_dimensions",
+                            "object": "assembly",
+                            "expected": expected[axis],
+                            "actual": actual[axis],
+                            "tolerance": round(allowed, 6),
+                            "method": "evaluated_world_aabb",
+                            "axis": label,
+                            "severity": "critical",
+                        })
+                        if len(mesh_objects) == 1:
+                            command = (
+                                f"transform_object(name='{mesh_objects[0].name}', "
+                                f"dimensions=[{expected[0]}, {expected[1]}, {expected[2]}])"
+                            )
+                            if command not in llm_fix_commands:
+                                llm_fix_commands.append(command)
+
+                if not dimensions_available:
+                    failures.append({
+                        "rule": "blueprint_dimensions",
+                        "object": "assembly",
+                        "expected": "3 blueprint dimensions",
+                        "actual": len(expected),
+                        "tolerance": 0,
+                        "method": "blueprint",
+                        "severity": "critical",
+                    })
+                    requirements["blueprint_dimensions"] = {
+                        "passed": False,
+                        "tolerance": relative_tolerance,
+                        "mismatches": [],
+                        "method": "blueprint",
+                    }
+                elif mismatches:
+                    blueprint_report["passed"] = False
+                    factors = [
+                        round(expected[index] / actual[index], 4)
+                        if actual[index] > 1e-6
+                        else None
+                        for index in range(3)
+                    ]
                     blueprint_report["rescale_factors"] = factors
                     blueprint_report["rescale_suggestion"] = (
                         "Parent the roots to an empty and scale it uniformly, or per root: "
                         "transform_object(scale=[fx,fy,fz]) AND scale its location by the same "
-                        "factors, then ground_model() and re-audit. Verify visually.")
-                bounds = bp.get("bounds", {})
-                ar = bounds.get("aspect_xy")
-                if ar and act[1] > 1e-6:
-                    ratio = act[0] / act[1]
-                    if not (ar[0] <= ratio <= ar[1]):
+                        "factors, then ground_model() and re-audit. Verify visually."
+                    )
+                    requirements["blueprint_dimensions"] = {
+                        "passed": False,
+                        "tolerance": relative_tolerance,
+                        "mismatches": mismatches,
+                        "method": "evaluated_world_aabb",
+                    }
+                else:
+                    requirements["blueprint_dimensions"] = {
+                        "passed": True,
+                        "tolerance": relative_tolerance,
+                        "mismatches": [],
+                        "method": "evaluated_world_aabb",
+                    }
+
+                bounds = blueprint.get("bounds", {})
+                aspect = bounds.get("aspect_xy")
+                if aspect and actual[1] > 1e-6:
+                    ratio = actual[0] / actual[1]
+                    if not (aspect[0] <= ratio <= aspect[1]):
                         warnings.append(
                             f"BLUEPRINT_PROPORTION_OFF: X/Y aspect {ratio:.2f} outside "
-                            f"blueprint '{blueprint_name}' range {ar}.")
+                            f"blueprint '{blueprint_name}' range {aspect}."
+                        )
+
+        # 8. Score and final verdict. `passed` is last.
+        critical_count = sum(
+            1 for failure in failures if failure.get("severity") == "critical"
+        )
+        quality_score = max(0, 100 - critical_count * 25 - len(warnings) * 5)
+        passed = (
+            critical_count == 0
+            and all(requirement.get("passed", False) for requirement in requirements.values())
+        )
+
+        critical_issues = [
+            f"{failure['rule'].upper()} on '{failure['object']}': expected "
+            f"{failure['expected']!r}, got {failure['actual']!r} "
+            f"(tolerance {failure['tolerance']!r}, method {failure['method']})."
+            for failure in failures
+            if failure.get("severity") == "critical"
+        ]
 
         return {
             "passed": passed,
             "quality_score": quality_score,
-            "critical_issues": critical_issues,
+            "requirements": requirements,
+            "dimensions": dimensions_report,
+            "topology": topology,
+            "contacts": contact_graph,
+            "collisions": collisions,
+            "symmetry": symmetry,
             "warnings": warnings,
+            "failures": failures,
+            # Legacy views consumed by existing prompts.
+            "critical_issues": critical_issues,
             "joints": joints,
             "llm_fix_commands": llm_fix_commands,
-            "suspended": sorted(n for n in suspended_set if bpy.data.objects.get(n)),
+            "suspended": sorted(
+                name for name in suspended_set if bpy.data.objects.get(name)
+            ),
             "blueprint": blueprint_report,
             "assembly_world_aabb": assembly_aabb,
-            "object_count_audited": len(mesh_objs),
+            "object_count_audited": len(mesh_objects),
         }
 
     def repair_mesh_geometry(
