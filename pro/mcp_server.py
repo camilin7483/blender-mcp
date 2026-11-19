@@ -9,6 +9,7 @@ import json
 import socket
 import base64
 import logging
+import uuid
 from typing import Optional, List, Dict, Any
 from mcp.server.fastmcp import FastMCP, Image
 
@@ -18,6 +19,10 @@ logger = logging.getLogger("blender_mcp_server")
 BLENDER_HOST = os.getenv("BLENDER_HOST", "localhost")
 BLENDER_PORT = int(os.getenv("BLENDER_PORT", "9876"))
 BLENDER_AUTH_TOKEN = os.getenv("BLENDER_AUTH_TOKEN", "")
+
+# A single response larger than this is rejected instead of growing an
+# unbounded buffer. Base64 inspection images are the largest normal payload.
+MAX_RESPONSE_BYTES = 64 * 1024 * 1024
 
 SYSTEM_INSTRUCTIONS = """
 You are a Precision 3D Modeler controlling Blender via the Blender MCP Pro Universal Engine.
@@ -95,7 +100,8 @@ def send_blender_command(
     timeout: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Sends a JSON command to the Blender MCP Socket Server on localhost:9876."""
-    payload: Dict[str, Any] = {"type": cmd_type, "params": params or {}}
+    request_id = uuid.uuid4().hex
+    payload: Dict[str, Any] = {"type": cmd_type, "params": params or {}, "request_id": request_id}
     if BLENDER_AUTH_TOKEN:
         payload["auth_token"] = BLENDER_AUTH_TOKEN
 
@@ -113,9 +119,18 @@ def send_blender_command(
             if not data:
                 break
             buffer += data
+            if len(buffer) > MAX_RESPONSE_BYTES:
+                raise RuntimeError(
+                    f"Response from Blender exceeds maximum size ({MAX_RESPONSE_BYTES} bytes)"
+                )
             try:
                 text = buffer.decode("utf-8").lstrip()
                 resp, _ = decoder.raw_decode(text)
+                if resp.get("request_id") not in (None, request_id):
+                    raise RuntimeError(
+                        f"Response request_id mismatch for '{cmd_type}': "
+                        f"expected {request_id}, got {resp.get('request_id')}"
+                    )
                 if resp.get("status") == "error":
                     raise RuntimeError(resp.get("message", "Unknown Blender error"))
                 return resp.get("result", resp)

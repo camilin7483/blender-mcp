@@ -38,6 +38,11 @@ DEFAULT_PORT = 9876
 BUFFER_SIZE = 65536
 AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
 
+# Protocol limits. A single JSON message or response larger than these is
+# rejected instead of growing an unbounded buffer.
+MAX_MESSAGE_BYTES = 10 * 1024 * 1024
+MAX_RESPONSE_BYTES = 32 * 1024 * 1024
+
 HEAVY_COMMANDS = {
     "execute_code",
     "render_multiview_inspection",
@@ -275,9 +280,19 @@ class BlenderMCPServer:
         client_send_lock = threading.Lock()
         client.settimeout(180.0)
         buffer = b""
+        decoder = json.JSONDecoder()
 
-        def send_response(data: Dict[str, Any]):
+        def send_response(data: Dict[str, Any], request_id: Any = None):
+            if request_id is not None:
+                data = dict(data)
+                data["request_id"] = request_id
             payload = json.dumps(data).encode("utf-8") + b"\n"
+            if len(payload) > MAX_RESPONSE_BYTES:
+                payload = json.dumps({
+                    "status": "error",
+                    "message": f"Response exceeds maximum size ({MAX_RESPONSE_BYTES} bytes)",
+                    "request_id": request_id,
+                }).encode("utf-8") + b"\n"
             with client_send_lock:
                 client.sendall(payload)
 
@@ -287,50 +302,77 @@ class BlenderMCPServer:
                 if not chunk:
                     break
                 buffer += chunk
-                while b"\n" in buffer or buffer.strip().endswith(b"}"):
+                if len(buffer) > MAX_MESSAGE_BYTES:
+                    send_response({
+                        "status": "error",
+                        "message": f"Request exceeds maximum size ({MAX_MESSAGE_BYTES} bytes)",
+                    })
+                    return
+
+                # Parse every complete JSON value in the buffer. TCP may
+                # coalesce two requests into one recv; decoding the whole
+                # buffer as a single object would drop both of them.
+                while self.running:
                     try:
-                        text = buffer.decode("utf-8").strip()
-                        if not text:
-                            break
-                        msg = json.loads(text)
+                        text = buffer.decode("utf-8")
+                    except UnicodeDecodeError:
+                        break  # incomplete multi-byte sequence, wait for more
+
+                    stripped = text.lstrip()
+                    if not stripped:
                         buffer = b""
-                    except json.JSONDecodeError:
                         break
 
+                    try:
+                        msg, end = decoder.raw_decode(stripped)
+                    except json.JSONDecodeError:
+                        break  # incomplete JSON, wait for more
+
+                    consumed = len(text) - len(stripped) + len(stripped[:end].encode("utf-8"))
+                    buffer = buffer[consumed:]
+
+                    if not isinstance(msg, dict):
+                        send_response({"status": "error", "message": "Request must be a JSON object"})
+                        continue
+
+                    request_id = msg.get("request_id")
                     expected_token = os.environ.get(AUTH_TOKEN_ENV_VAR, "")
                     if expected_token and msg.get("auth_token") != expected_token:
-                        send_response({"status": "error", "message": "Authentication failed: invalid token"})
+                        send_response({"status": "error", "message": "Authentication failed: invalid token"}, request_id)
                         return
 
                     cmd_type = msg.get("type", "")
                     params = msg.get("params", {})
+                    if not isinstance(params, dict):
+                        send_response({"status": "error", "message": "'params' must be a JSON object"}, request_id)
+                        continue
 
                     rate_err = self._check_rate_limit(cmd_type)
                     if rate_err:
-                        send_response({"status": "error", "message": rate_err})
+                        send_response({"status": "error", "message": rate_err}, request_id)
                         continue
 
                     # Sincronización thread-safe con el hilo principal de Blender mediante bpy.app.timers
                     response_container: List[Optional[Dict[str, Any]]] = [None]
                     done_event = threading.Event()
 
-                    def execute_in_blender_thread():
+                    def execute_in_blender_thread(cmd=cmd_type, par=params, out=response_container, done=done_event):
                         try:
-                            res = self._execute_command_internal(cmd_type, params)
-                            response_container[0] = {"status": "success", "result": res}
+                            res = self._execute_command_internal(cmd, par)
+                            out[0] = {"status": "success", "result": res}
                         except Exception as ex:
                             err_trace = traceback.format_exc()
                             print(f"[BlenderMCP Error] {err_trace}")
-                            response_container[0] = {"status": "error", "message": str(ex), "traceback": err_trace}
+                            out[0] = {"status": "error", "message": str(ex), "traceback": err_trace}
                         finally:
-                            done_event.set()
+                            done.set()
                         return None
 
                     bpy.app.timers.register(execute_in_blender_thread)
                     done_event.wait(timeout=175.0)
 
                     resp = response_container[0] or {"status": "error", "message": "Operation timed out in Blender"}
-                    send_response(resp)
+                    send_response(resp, request_id)
 
         except Exception as ex:
             print(f"[BlenderMCP-Pro] Client handler exception: {ex}")
