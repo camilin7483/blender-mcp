@@ -5,6 +5,7 @@ Connects Claude / Cursor / OpenCode / Windsurf to the Blender MCP Engine on loca
 """
 
 import os
+import sys
 import json
 import socket
 import base64
@@ -956,6 +957,97 @@ def download_sketchfab_model(uid: str, normalize_size: bool = True, target_size:
     return json.dumps(send_blender_command("download_sketchfab_model", {
         "uid": uid, "normalize_size": normalize_size, "target_size": target_size,
     }), indent=2)
+
+
+CORE_TOOLS = {
+    "get_scene_info",
+    "get_object_info",
+    "list_objects",
+    "transform_object",
+    "delete_object",
+    "duplicate_object",
+    "clear_scene",
+    "create_checkpoint",
+    "rollback_checkpoint",
+    "list_checkpoints",
+    "audit_3d_model",
+    "repair_mesh_geometry",
+    "ground_model",
+}
+
+PROFILE_EXTRAS = {
+    "modeling": {
+        "list_modeling_blueprints", "get_modeling_blueprint",
+        "create_parametric_part", "attach_and_align", "snap_to_semantic_anchor",
+        "list_semantic_anchors", "anchor_operation", "orient_and_face_towards",
+        "place_on_surface_raycast", "smart_bevel_and_polish",
+        "spawn_corner_supports", "symmetry_mirror", "radial_array",
+        "boolean_operation", "create_articulation_joint", "create_lathe_part",
+        "create_curve_sweep", "create_loft_surface", "deform_object",
+        "create_floorplan_walls", "cut_wall_opening", "create_parametric_roof",
+        "create_staircase", "create_building_shell", "array_grid_on_surface",
+        "auto_fix_model", "build_3d_network_datacenter_from_pt",
+    },
+    "materials": {
+        "create_material", "assign_material",
+        "apply_smart_procedural_material", "setup_studio_lighting",
+    },
+    "animation": {
+        "create_articulation_joint", "auto_rig_humanoid",
+        "orient_and_face_towards",
+    },
+    "rigging": {
+        "fuse_organic_parts", "create_skeleton_skin_mesh",
+        "auto_rig_humanoid", "create_articulation_joint",
+    },
+    "geometry_nodes": {
+        "deform_object", "create_loft_surface", "array_grid_on_surface",
+        "smart_bevel_and_polish", "apply_smart_procedural_material",
+    },
+    "inspection": {
+        "list_modeling_blueprints", "get_modeling_blueprint",
+        "audit_3d_model", "render_multiview_inspection",
+        "list_semantic_anchors", "repair_mesh_geometry", "ground_model",
+    },
+    "export": {
+        "export_scene", "generate_game_ready_asset",
+        "repair_mesh_geometry", "auto_fix_model",
+    },
+    "assets": {
+        "search_polyhaven_assets", "download_polyhaven_asset",
+        "search_sketchfab_models", "download_sketchfab_model",
+    },
+}
+
+TOOL_PROFILES = {
+    name: CORE_TOOLS | extras
+    for name, extras in PROFILE_EXTRAS.items()
+}
+TOOL_PROFILES["core"] = set(CORE_TOOLS)
+TOOL_PROFILES["full"] = None
+
+
+def _apply_tool_profile() -> str:
+    requested = os.environ.get("BLENDER_MCP_PROFILE", "full").strip().lower() or "full"
+    if requested == "full":
+        return requested
+    if requested not in TOOL_PROFILES:
+        print(
+            f"[blender-mcp] Unknown BLENDER_MCP_PROFILE '{requested}'; using 'full'.",
+            file=sys.stderr,
+        )
+        return "full"
+    allowed = TOOL_PROFILES[requested]
+    manager = getattr(mcp, "_tool_manager", None)
+    if manager is None:
+        return requested
+    for name in list(getattr(manager, "_tools", {})):
+        if name not in allowed:
+            manager.remove_tool(name)
+    return requested
+
+
+ACTIVE_TOOL_PROFILE = _apply_tool_profile()
 
 
 if __name__ == "__main__":

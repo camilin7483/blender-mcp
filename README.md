@@ -43,6 +43,16 @@ output paths and camera metadata. See [`SECURITY.md`](SECURITY.md) and
   and a reproducible output hash.
 - **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
+## Tool profiles
+
+Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
+tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
+`animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
+and `full` (default, 55 tools). `execute_code` is full-only and remains
+disabled in the add-on by default. Unknown profile names fail open to
+`full`. Profiles filter bridge registration only; the add-on keeps every
+handler.
+
 ## How It Works
 
 ```

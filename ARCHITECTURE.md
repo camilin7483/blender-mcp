@@ -94,7 +94,8 @@ Blender main thread          _execute_command_internal -> handlers -> bpy
 - Two unversioned sources of truth before the `v3.0.0-baseline` tag.
 - One 3.3k-line add-on file and one 0.8k-line bridge file.
 - No protocol version negotiation beyond the optional `request_id`.
-- No tool profiles; all 55 tools are always registered.
+- Profiles filter FastMCP registration at bridge import; the add-on keeps
+  every handler. `execute_code` is full-only.
 - Destructive and network operations have a policy layer, but no per-tool
   capability scopes.
 - The bridge and add-on duplicate parameter knowledge with no shared schema.

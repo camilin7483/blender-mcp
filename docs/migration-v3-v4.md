@@ -21,7 +21,7 @@ release candidate.
 | Output paths | Any path | Confined to `BLENDER_MCP_OUTPUT_DIR` | `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation |
 | Downloads | Provider URL followed | HTTPS allowlist, private-IP block, size caps, safe ZIP | No legacy bypass |
 | Render | Perspective quad in a temp dir | Ortho FRONT/RIGHT/TOP + ISO, modes, metadata, hash output dir | Same `quad_image_path`; new `mode`/`include_overlays` |
-| Tool discovery | All tools always | Profiles: `core`, `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `full` | `full` preserves the v3 surface |
+| Tool discovery | All tools always | `BLENDER_MCP_PROFILE`: `core` (13), `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`, `full` (55) | `full` preserves the v3 surface; unknown profiles fail open |
 | Blender support | 4.5.4 tested | 4.5 LTS required, 5.2 LTS secondary | ADR-0002 |
 
 ## Migration steps

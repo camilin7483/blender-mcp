@@ -21,6 +21,9 @@ All notable changes to this repository are documented here.
   socket (empty), bone and custom anchors. `list_semantic_anchors` and
   `anchor_operation` cover align, mate, offset, orient_normal, distribute and
   mirror.
+- Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
+  `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
+  registration through `BLENDER_MCP_PROFILE`; unknown names fail open.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
 - Contract test that verifies 1:1 parity between the 53 FastMCP tools and the
