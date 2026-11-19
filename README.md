@@ -7,7 +7,26 @@
 - **Legacy** — `blender_mcp.py` at the repository root. Original single-file add-on.
 - **Pro v3** — [`pro/`](pro/README.md). 53-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
+## Status
+
+The `v3.0.0-baseline` tag is a development baseline, not a hardened release.
+Authentication is optional, `execute_code` is unrestricted by default, and the
+collision audit still uses AABB as a final proof. The v4 work closes these
+issues; see [`SECURITY.md`](SECURITY.md) and
+[`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Documentation
+
+- [Architecture](ARCHITECTURE.md)
+- [Security and threat model](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Compatibility](docs/compatibility.md)
+- [Migration v3 -> v4](docs/migration-v3-v4.md)
+- [Benchmark methodology](docs/benchmark.md)
+- [Changelog](CHANGELOG.md)
+
 ## Features
+
 
 
 - **Natural Language Control** — Create, modify, and manipulate 3D scenes using plain English
@@ -114,7 +133,21 @@ Use the `search_polyhaven` command with parameters like `type: hdri`, `type: tex
 - Generate textures using AI models via Replicate API
 - Requires a Replicate API token configured in preferences
 
+## Development
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt -r pro/requirements.txt
+.venv/bin/python -m pytest tests/contracts tests/unit tests/integration -q
+BLENDER_BIN=/path/to/blender-4.5.4-linux-x64/blender ./scripts/run_blender_tests.sh
+```
+
+The Pro tests need a real Blender 4.5 LTS with its event loop. On Linux
+without `DISPLAY`, the script uses `xvfb-run`; `blender --background` does not
+pump timers. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Credits
+
 
 Original code by **Siddharth Ahuja** (github.com/ahujasid)
 Repository maintained by **CamiloDev**
