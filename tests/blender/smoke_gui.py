@@ -102,6 +102,11 @@ def finish() -> None:
 
     server.stop()
 
+    if server.last_dispatch_thread != "MainThread":
+        checks.append(f"dispatcher thread={server.last_dispatch_thread!r}")
+    if server.main_thread_timer_registered:
+        checks.append("main-thread timer was not unregistered")
+
     if checks:
         print("BLENDER_GUI_TEST_FAIL: " + "; ".join(checks))
     else:
@@ -110,9 +115,28 @@ def finish() -> None:
 
 
 def main() -> None:
+    worker_result: dict[str, bool] = {}
+    worker_server = bm.BlenderMCPServer(port=0)
+
+    def start_from_worker() -> None:
+        worker_result["started"] = worker_server.start()
+
+    worker = threading.Thread(target=start_from_worker)
+    worker.start()
+    worker.join()
+    if worker_result.get("started") is not False:
+        print("BLENDER_GUI_TEST_FAIL: start() accepted a worker thread")
+        bpy.ops.wm.quit_blender()
+        return
+
     server.start()
     if not server.running or server.server_socket is None:
         print("BLENDER_GUI_TEST_FAIL: server did not start")
+        bpy.ops.wm.quit_blender()
+        return
+    if not server.main_thread_timer_registered:
+        print("BLENDER_GUI_TEST_FAIL: persistent main-thread timer not registered")
+        server.stop()
         bpy.ops.wm.quit_blender()
         return
 

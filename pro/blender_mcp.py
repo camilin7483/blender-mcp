@@ -17,11 +17,13 @@ import time
 import math
 import socket
 import select
+import queue
 import tempfile
 import threading
 import traceback
 import urllib.request
 import urllib.parse
+from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import suppress
 
@@ -42,6 +44,23 @@ AUTH_TOKEN_ENV_VAR = "BLENDER_AUTH_TOKEN"
 # rejected instead of growing an unbounded buffer.
 MAX_MESSAGE_BYTES = 10 * 1024 * 1024
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
+
+# Main-thread dispatcher. Socket threads enqueue work; a single persistent
+# timer drains the queue on Blender's main thread.
+MAIN_THREAD_TICK_SECONDS = 0.02
+MAX_REQUESTS_PER_TICK = 8
+MAX_CLIENTS = 5
+
+
+@dataclass
+class PendingRequest:
+    """A socket request waiting for Blender's main thread."""
+
+    cmd_type: str
+    params: Dict[str, Any]
+    request_id: Any
+    response: Optional[Dict[str, Any]] = None
+    done: threading.Event = field(default_factory=threading.Event)
 
 HEAVY_COMMANDS = {
     "execute_code",
@@ -205,6 +224,7 @@ class BlenderMCPServer:
         self.host = host
         self.port = port
         self.running = False
+        self.accepting_requests = False
         self.server_socket: Optional[socket.socket] = None
         self.server_thread: Optional[threading.Thread] = None
         self.checkpoint_dir = tempfile.mkdtemp(prefix="blendermcp_checkpoints_")
@@ -215,9 +235,23 @@ class BlenderMCPServer:
         self.request_times: List[float] = []
         self.heavy_request_times: List[float] = []
 
+        # Main-thread queue. Only the timer registered on Blender's main
+        # thread touches bpy; socket threads only enqueue.
+        self.request_queue: "queue.Queue[PendingRequest]" = queue.Queue()
+        self.client_slots = threading.BoundedSemaphore(MAX_CLIENTS)
+        self.main_thread_timer_registered = False
+        self.last_dispatch_thread: Optional[str] = None
+        self._main_thread_timer = self._drain_main_thread_queue
+
     def start(self):
         if self.running:
-            return
+            return True
+        if bpy.app.background:
+            print("[BlenderMCP-Pro] Cannot serve commands in Blender background mode: timers do not run. Use a GUI session or xvfb-run.")
+            return False
+        if threading.current_thread() is not threading.main_thread():
+            print("[BlenderMCP-Pro] start() must be called from Blender's main thread.")
+            return False
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -228,15 +262,25 @@ class BlenderMCPServer:
             self.server_socket = None
             print(f"[BlenderMCP-Pro] Cannot bind {self.host}:{self.port} ({exc}). Another Blender instance is already serving on that port.")
             return False
+        self.port = self.server_socket.getsockname()[1]
         self.running = True
+        self.accepting_requests = True
         self.server_socket.listen(5)
         self.server_socket.settimeout(1.0)
         self.server_thread = threading.Thread(target=self._server_loop, daemon=True)
         self.server_thread.start()
+        try:
+            self._register_main_thread_timer()
+        except Exception as exc:
+            print(f"[BlenderMCP-Pro] Cannot register the main-thread timer: {exc}")
+            self.stop()
+            return False
         print(f"[BlenderMCP-Pro] Server listening on {self.host}:{self.port}")
+        return True
 
     def stop(self):
         self.running = False
+        self.accepting_requests = False
         if self.server_socket:
             with suppress(Exception):
                 self.server_socket.close()
@@ -244,13 +288,81 @@ class BlenderMCPServer:
         if self.server_thread:
             self.server_thread.join(timeout=2.0)
             self.server_thread = None
+        self._fail_pending_requests("Server stopped")
+        if threading.current_thread() is threading.main_thread():
+            self._unregister_main_thread_timer()
         print("[BlenderMCP-Pro] Server stopped.")
+
+    def _register_main_thread_timer(self):
+        if self.main_thread_timer_registered:
+            return
+        bpy.app.timers.register(
+            self._main_thread_timer,
+            first_interval=MAIN_THREAD_TICK_SECONDS,
+            persistent=True,
+        )
+        self.main_thread_timer_registered = True
+
+    def _unregister_main_thread_timer(self):
+        if not self.main_thread_timer_registered:
+            return
+        with suppress(Exception):
+            bpy.app.timers.unregister(self._main_thread_timer)
+        self.main_thread_timer_registered = False
+
+    def _drain_main_thread_queue(self):
+        if not self.running:
+            self.main_thread_timer_registered = False
+            return None
+        if threading.current_thread() is not threading.main_thread():
+            print("[BlenderMCP-Pro] Queue drained from a non-main thread; stopping.")
+            self.running = False
+            self.main_thread_timer_registered = False
+            return None
+
+        self.last_dispatch_thread = threading.current_thread().name
+        processed = 0
+        while processed < MAX_REQUESTS_PER_TICK:
+            try:
+                pending = self.request_queue.get_nowait()
+            except queue.Empty:
+                break
+            processed += 1
+            if pending.done.is_set():
+                continue
+            try:
+                result = self._execute_command_internal(pending.cmd_type, pending.params)
+                pending.response = {"status": "success", "result": result}
+            except Exception as ex:
+                err_trace = traceback.format_exc()
+                print(f"[BlenderMCP Error] {err_trace}")
+                pending.response = {"status": "error", "message": str(ex), "traceback": err_trace}
+            finally:
+                pending.done.set()
+        return MAIN_THREAD_TICK_SECONDS
+
+    def _fail_pending_requests(self, message: str):
+        while True:
+            try:
+                pending = self.request_queue.get_nowait()
+            except queue.Empty:
+                break
+            if not pending.done.is_set():
+                pending.response = {"status": "error", "message": message}
+                pending.done.set()
 
     def _server_loop(self):
         while self.running:
             try:
                 client_sock, client_addr = self.server_socket.accept()
-                t = threading.Thread(target=self._handle_client, args=(client_sock, client_addr), daemon=True)
+                if not self.client_slots.acquire(blocking=False):
+                    with suppress(Exception):
+                        client_sock.sendall(
+                            json.dumps({"status": "error", "message": f"Too many clients (max {MAX_CLIENTS})"}).encode("utf-8") + b"\n"
+                        )
+                        client_sock.close()
+                    continue
+                t = threading.Thread(target=self._handle_client_wrapper, args=(client_sock, client_addr), daemon=True)
                 t.start()
             except socket.timeout:
                 continue
@@ -258,6 +370,12 @@ class BlenderMCPServer:
                 if self.running:
                     print(f"[BlenderMCP-Pro] Accept error: {e}")
                 break
+
+    def _handle_client_wrapper(self, client: socket.socket, addr: Tuple[str, int]):
+        try:
+            self._handle_client(client, addr)
+        finally:
+            self.client_slots.release()
 
     def _check_rate_limit(self, cmd_type: str) -> Optional[str]:
         now = time.time()
@@ -352,26 +470,18 @@ class BlenderMCPServer:
                         send_response({"status": "error", "message": rate_err}, request_id)
                         continue
 
-                    # Sincronización thread-safe con el hilo principal de Blender mediante bpy.app.timers
-                    response_container: List[Optional[Dict[str, Any]]] = [None]
-                    done_event = threading.Event()
+                    if not self.accepting_requests:
+                        send_response({"status": "error", "message": "Server is stopping"}, request_id)
+                        return
 
-                    def execute_in_blender_thread(cmd=cmd_type, par=params, out=response_container, done=done_event):
-                        try:
-                            res = self._execute_command_internal(cmd, par)
-                            out[0] = {"status": "success", "result": res}
-                        except Exception as ex:
-                            err_trace = traceback.format_exc()
-                            print(f"[BlenderMCP Error] {err_trace}")
-                            out[0] = {"status": "error", "message": str(ex), "traceback": err_trace}
-                        finally:
-                            done.set()
-                        return None
+                    pending = PendingRequest(cmd_type=cmd_type, params=params, request_id=request_id)
+                    self.request_queue.put(pending)
+                    if not self.accepting_requests and not pending.done.is_set():
+                        pending.response = {"status": "error", "message": "Server is stopping"}
+                        pending.done.set()
+                    pending.done.wait(timeout=175.0)
 
-                    bpy.app.timers.register(execute_in_blender_thread)
-                    done_event.wait(timeout=175.0)
-
-                    resp = response_container[0] or {"status": "error", "message": "Operation timed out in Blender"}
+                    resp = pending.response or {"status": "error", "message": "Operation timed out in Blender"}
                     send_response(resp, request_id)
 
         except Exception as ex:

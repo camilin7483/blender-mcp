@@ -35,6 +35,10 @@ def main() -> None:
         if not hasattr(bm, "BlenderMCPServer"):
             fail("BlenderMCPServer is missing")
 
+        background_server = bm.BlenderMCPServer(port=0)
+        if background_server.start():
+            fail("server started in Blender background mode; timers cannot run")
+
         for obj in list(bpy.context.scene.objects):
             bpy.data.objects.remove(obj, do_unlink=True)
 
