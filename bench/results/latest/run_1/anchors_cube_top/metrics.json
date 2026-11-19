@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "anchors",
+  "duration_ms": 2.827,
+  "error": null,
+  "expected": {
+    "anchor_count_min": {
+      "min": 30
+    },
+    "top_position": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "top_source": "evaluated_aabb"
+  },
+  "failures": [],
+  "observed": {
+    "anchor_count_min": 46,
+    "top_position": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "top_source": "evaluated_aabb"
+  },
+  "passed": true,
+  "run": 1,
+  "task": "anchors_cube_top"
+}

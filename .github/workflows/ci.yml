@@ -21,7 +21,7 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-dev.txt -r pro/requirements.txt
       - run: python -m pytest tests/contracts tests/unit -q
-      - run: python -m ruff check tests scripts
+      - run: python -m ruff check tests scripts bench
 
   blender:
     name: Blender 4.5.4 LTS (Linux)
@@ -46,6 +46,14 @@ jobs:
         env:
           BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
         run: ./scripts/run_blender_tests.sh
+      - name: Run BlenderMCP-Bench
+        env:
+          BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender
+        run: ./scripts/run_bench.sh --runs 1 --output bench/results/ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blender-mcp-bench
+          path: bench/results/ci
       - name: Build and validate extension
         env:
           BLENDER_BIN: ${{ runner.temp }}/blender-4.5.4-linux-x64/blender

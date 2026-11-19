@@ -1,0 +1,213 @@
+{
+  "benchmark": "BlenderMCP-Bench",
+  "blender": "4.5.4 LTS",
+  "external_comparison": {
+    "performed": false,
+    "reason": "Requires a second server with the same LLM, prompt, budget and machine."
+  },
+  "passed_tasks": 8,
+  "runs": 3,
+  "tasks": {
+    "anchors_cube_top": {
+      "category": "anchors",
+      "median_ms": 2.675,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 2.827,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 2.395,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 2.675,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "assemblies_desk_update": {
+      "category": "assemblies",
+      "median_ms": 26.792,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 23.38,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 26.792,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 28.828,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "constraints_desk_ground": {
+      "category": "constraints",
+      "median_ms": 11.115,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 11.115,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 9.547,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 12.641,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "dimensions_desk_1600": {
+      "category": "dimensions",
+      "median_ms": 10.723,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 11.038,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 9.714,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 10.723,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "export_godot_glb": {
+      "category": "export",
+      "median_ms": 14.911,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 97.995,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 14.911,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 11.71,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "inspection_front_ortho": {
+      "category": "inspection",
+      "median_ms": 1300.559,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1667.541,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 1283.693,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 1300.559,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "primitives_cube_1000mm": {
+      "category": "primitives",
+      "median_ms": 2.986,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 2.269,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 4.495,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 2.986,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "topology_clean_cube": {
+      "category": "topology",
+      "median_ms": 3.42,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1.746,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 3.76,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 3.42,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    }
+  },
+  "total_tasks": 8
+}

@@ -28,6 +28,9 @@ All notable changes to this repository are documented here.
 - Declarative assemblies: `create_assembly` builds from a spec (desk template
   from `dimensions_mm` or explicit components), stores the spec on a root
   empty, and `update_assembly` deep-merges changes and rebuilds.
+- BlenderMCP-Bench runner with 8 deterministic tasks (primitives, dimensions,
+  assemblies, topology, inspection, export, anchors, constraints), published
+  raw artifacts in `bench/results/latest/` and 3 local runs at 8/8.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
   registration through `BLENDER_MCP_PROFILE`; unknown names fail open.

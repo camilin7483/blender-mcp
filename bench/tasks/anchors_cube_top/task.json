@@ -1,0 +1,5 @@
+{
+  "category": "anchors",
+  "runner": "cube_anchors",
+  "description": "List semantic anchors and verify the top-center anchor of a grounded cube."
+}

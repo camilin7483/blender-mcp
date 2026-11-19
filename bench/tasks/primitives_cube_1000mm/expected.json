@@ -1,0 +1,21 @@
+{
+  "dimensions_mm": {
+    "width": {
+      "target": 1000,
+      "tolerance": 1
+    },
+    "depth": {
+      "target": 1000,
+      "tolerance": 1
+    },
+    "height": {
+      "target": 1000,
+      "tolerance": 1
+    }
+  },
+  "topology": {
+    "non_manifold_edges": 0,
+    "loose_vertices": 0
+  },
+  "passed": true
+}

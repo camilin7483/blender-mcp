@@ -1,0 +1,22 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "constraints",
+  "duration_ms": 9.547,
+  "error": null,
+  "expected": {
+    "constraint_passed": true,
+    "failed_count": 0,
+    "passed": true
+  },
+  "failures": [],
+  "observed": {
+    "constraint_passed": true,
+    "failed_count": 0,
+    "passed": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "constraints_desk_ground"
+}

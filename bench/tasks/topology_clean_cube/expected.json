@@ -1,0 +1,8 @@
+{
+  "topology": {
+    "non_manifold_edges": 0,
+    "loose_vertices": 0,
+    "zero_area_faces": 0
+  },
+  "passed": true
+}

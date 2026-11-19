@@ -16,6 +16,19 @@ The only baseline facts currently measured are:
 These are baseline measurements, not improvements. The current branch
 registers 58 tools; remeasure schema size before publishing any comparison.
 
+## Published baseline
+
+A first local run is published in `bench/results/latest/`:
+
+- Blender 4.5.4 LTS, Linux x64, 3 runs.
+- 8/8 tasks passed in every run.
+- `summary.json` contains medians and per-run results; `trace.jsonl` contains
+  the per-task trace; `run_1/` contains `.blend`, `.glb` and render artifacts.
+- No external comparison has been performed. Categories not covered yet:
+  materials, Geometry Nodes, animation, rigging and open visual scenes.
+
+These are functional measurements, not evidence of superiority.
+
 ## BlenderMCP-Bench
 
 The benchmark must not be optimized only for this server. It is a task suite

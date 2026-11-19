@@ -1,0 +1,18 @@
+{
+  "dimensions_mm": {
+    "width": {
+      "target": 1600,
+      "tolerance": 5
+    },
+    "depth": {
+      "target": 800,
+      "tolerance": 5
+    },
+    "height": {
+      "target": 750,
+      "tolerance": 5
+    }
+  },
+  "components": 5,
+  "passed": true
+}

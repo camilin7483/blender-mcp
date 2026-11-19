@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "assemblies",
+  "duration_ms": 23.38,
+  "error": null,
+  "expected": {
+    "components": 5,
+    "dimensions_mm": {
+      "depth": {
+        "target": 800,
+        "tolerance": 5
+      },
+      "height": {
+        "target": 750,
+        "tolerance": 5
+      },
+      "width": {
+        "target": 1200,
+        "tolerance": 5
+      }
+    },
+    "duplicate_components": 0,
+    "passed": true
+  },
+  "failures": [],
+  "observed": {
+    "components": 5,
+    "dimensions_mm": {
+      "depth": 800.0,
+      "height": 750.0,
+      "width": 1200.0
+    },
+    "duplicate_components": 0,
+    "passed": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "assemblies_desk_update"
+}

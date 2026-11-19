@@ -1,0 +1,19 @@
+{
+  "dimensions_mm": {
+    "width": {
+      "target": 1200,
+      "tolerance": 5
+    },
+    "depth": {
+      "target": 800,
+      "tolerance": 5
+    },
+    "height": {
+      "target": 750,
+      "tolerance": 5
+    }
+  },
+  "components": 5,
+  "duplicate_components": 0,
+  "passed": true
+}

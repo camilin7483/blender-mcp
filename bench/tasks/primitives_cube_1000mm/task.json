@@ -1,0 +1,5 @@
+{
+  "category": "primitives",
+  "runner": "cube_1000mm",
+  "description": "Create a 1000 mm cube at the ground and audit dimensions and topology."
+}

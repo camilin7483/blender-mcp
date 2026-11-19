@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "topology",
+  "duration_ms": 3.76,
+  "error": null,
+  "expected": {
+    "passed": true,
+    "topology": {
+      "loose_vertices": 0,
+      "non_manifold_edges": 0,
+      "zero_area_faces": 0
+    }
+  },
+  "failures": [],
+  "observed": {
+    "passed": true,
+    "topology": {
+      "loose_vertices": 0,
+      "non_manifold_edges": 0,
+      "zero_area_faces": 0
+    }
+  },
+  "passed": true,
+  "run": 2,
+  "task": "topology_clean_cube"
+}
