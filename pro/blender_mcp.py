@@ -8412,7 +8412,7 @@ class BLENDM_OT_stop_server(bpy.types.Operator):
 
 
 class BLENDM_PT_main_panel(bpy.types.Panel):
-    bl_label = "Blender MCP Pro v3.0"
+    bl_label = "Blender MCP Pro"
     bl_idname = "BLENDM_PT_main_panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"

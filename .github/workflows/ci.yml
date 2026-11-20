@@ -4,6 +4,12 @@ on:
   push:
     branches: [main, chore/v4-baseline]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,13 +18,16 @@ jobs:
   python:
     name: Python (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
@@ -29,7 +38,7 @@ jobs:
   blender-cross-platform:
     name: Blender headless (${{ matrix.os }}, experimental)
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -41,16 +50,29 @@ jobs:
             artifact: blender-5.2.4-macos-arm64.dmg
             sha: e73d564f97061b2496ccc5a0bd738937d2d3d0acae23621a00bbc7534dfd135f
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Download and verify Blender
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $zip = "$env:RUNNER_TEMP\blender.zip"
-          Invoke-WebRequest -Uri "https://download.blender.org/release/Blender5.2/${{ matrix.artifact }}" -OutFile $zip
-          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          if ($hash -ne "${{ matrix.sha }}") { throw "Blender checksum mismatch" }
-          Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP
+          foreach ($mirror in @("https://ftp.nluug.nl/graphics/blender", "https://mirror.clarkson.edu/blender", "https://download.blender.org")) {
+            try {
+              Invoke-WebRequest -Uri "$mirror/release/Blender5.2/${{ matrix.artifact }}" -OutFile $zip -TimeoutSec 180
+            } catch {
+              Write-Warning "Download from $mirror failed: $_"
+              continue
+            }
+            if ((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -ne "${{ matrix.sha }}") {
+              Write-Warning "Blender checksum mismatch on $mirror"
+              continue
+            }
+            Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP
+            exit 0
+          }
+          throw "No Blender mirror returned the expected archive checksum"
       - name: Run Blender headless (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -61,21 +83,36 @@ jobs:
       - name: Download and verify Blender (macOS)
         if: runner.os == 'macOS'
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/blender.dmg" "https://download.blender.org/release/Blender5.2/${{ matrix.artifact }}"
-          echo "${{ matrix.sha }}  $RUNNER_TEMP/blender.dmg" | shasum -a 256 -c -
+          archive="$RUNNER_TEMP/blender.dmg"
+          verified=false
+          for mirror in https://ftp.nluug.nl/graphics/blender https://mirror.clarkson.edu/blender https://download.blender.org; do
+            if curl -fsSL --connect-timeout 15 --max-time 180 -o "$archive" "$mirror/release/Blender5.2/${{ matrix.artifact }}" &&
+               echo "${{ matrix.sha }}  $archive" | shasum -a 256 -c -; then
+              verified=true
+              break
+            fi
+          done
+          if [[ "$verified" != true ]]; then
+            echo "No Blender mirror returned the expected archive checksum" >&2
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/blender-mount"
-          hdiutil attach "$RUNNER_TEMP/blender.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/blender-mount"
+          hdiutil attach "$archive" -nobrowse -mountpoint "$RUNNER_TEMP/blender-mount"
       - name: Run Blender headless (macOS)
         if: runner.os == 'macOS'
         run: |
           "$RUNNER_TEMP/blender-mount/Blender.app/Contents/MacOS/Blender" -b --factory-startup --python-exit-code 1 --python tests/blender/import_headless.py
       - name: Detach Blender (macOS)
-        if: runner.os == 'macOS'
-        run: hdiutil detach "$RUNNER_TEMP/blender-mount"
+        if: always() && runner.os == 'macOS'
+        run: |
+          if mount | grep -Fq "$RUNNER_TEMP/blender-mount"; then
+            hdiutil detach "$RUNNER_TEMP/blender-mount"
+          fi
 
   blender:
     name: Blender ${{ matrix.version }} LTS (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       LIBGL_ALWAYS_SOFTWARE: "1"
     strategy:
@@ -89,8 +126,10 @@ jobs:
             dir: "blender-5.2.4-linux-x64"
             sha: "2fd14c50987426897ba60237ee996edf2b4151f4b1a72a460ca20be58c1d2d86"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Install system dependencies
@@ -122,19 +161,40 @@ jobs:
         env:
           BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
         run: ./scripts/run_blender_tests.sh
+      - name: Build and reopen both showcase scenes
+        env:
+          BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
+        run: |
+          "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 -t 4 \
+            --python scripts/render_showcase.py -- --check-only --output "$RUNNER_TEMP/pelagos-showcase"
+          "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 -t 4 \
+            --python scripts/render_pilot_showcase.py -- --check-only --output "$RUNNER_TEMP/nereid-showcase"
+          "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 -t 4 \
+            --python tests/blender/check_showcase.py
       - name: Run BlenderMCP-Bench
         env:
           BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
         run: ./scripts/run_bench.sh --runs 1 --output bench/results/ci-${{ matrix.version }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: blender-mcp-bench-${{ matrix.version }}
           path: bench/results/ci-${{ matrix.version }}
-      - name: Build and validate extension
+      - name: Build, install and test the extension
+        timeout-minutes: 5
         env:
           BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
+          BLENDER_MCP_TEST_INSTALLED_EXTENSION: "1"
+          BLENDER_USER_RESOURCES: ${{ runner.temp }}/blender-extension-profile
+          BLENDER_MCP_TOKEN_FILE: ${{ runner.temp }}/blender-extension-profile/token
         run: |
-          ./scripts/build_extension.sh
-          archive="$(find build -maxdepth 1 -name 'blender_mcp_pro-*.zip' -print)"
-          test -f "$archive"
-          "$BLENDER_BIN" --factory-startup --command extension validate "$archive"
+          BUILD_DIR="$RUNNER_TEMP/blender-extension" ./scripts/build_extension.sh
+          archives=("$RUNNER_TEMP/blender-extension"/blender_mcp_pro-*.zip)
+          test "${#archives[@]}" -eq 1
+          test -f "${archives[0]}"
+          "$BLENDER_BIN" --factory-startup --command extension validate "${archives[0]}"
+          mkdir -p "$BLENDER_USER_RESOURCES"
+          "$BLENDER_BIN" -b --factory-startup --command extension install-file \
+            --repo user_default --enable "${archives[0]}"
+          xvfb-run -a "$BLENDER_BIN" --python-exit-code 1 --python tests/blender/smoke_gui.py \
+            | tee "$RUNNER_TEMP/blender-extension.log"
+          grep -q 'BLENDER_GUI_TEST_OK' "$RUNNER_TEMP/blender-extension.log"

@@ -1,0 +1,37 @@
+{
+  "model": "PELAGOS 07",
+  "blender": "4.5.4 LTS",
+  "objects": 224,
+  "meshes": 199,
+  "pro_modeling_and_material_calls": 122,
+  "evaluated_topology": {
+    "Hull | ceramic monocoque": {
+      "vertex_count": 304,
+      "face_count": 306,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    },
+    "Thruster R | ceramic duct": {
+      "vertex_count": 1056,
+      "face_count": 1056,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    },
+    "Thruster L | ceramic duct": {
+      "vertex_count": 1056,
+      "face_count": 1056,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    }
+  },
+  "resolution": [
+    1920,
+    1200
+  ],
+  "samples": 48,
+  "scene": "pelagos-07.blend",
+  "renders": [
+    "pelagos-07.png",
+    "pelagos-07-detail.png"
+  ]
+}

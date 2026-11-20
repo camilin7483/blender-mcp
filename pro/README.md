@@ -1,7 +1,7 @@
-# Blender MCP Pro v4.9.0-alpha.1
+# Blender MCP Pro v4.9.0-alpha.2
 
-Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 313 tools over MCP stdio. Set
-`BLENDER_MCP_PROFILE` to `core`, `modeling`, `materials`, `animation`,
+Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 313 tools over MCP stdio in the `full` profile. Set
+`BLENDER_MCP_PROFILE` to `nano`, `guided`, `core`, `modeling`, `materials`, `animation`,
 `rigging`, `geometry_nodes`, `inspection`, `export`, `assets` or `full`. It sends JSON commands to the Blender add-on on `localhost:9876`, where they run on Blender’s main thread.
 
 ## What’s new
@@ -19,15 +19,20 @@ See the [changelog](CHANGELOG.md) and [Precision 3D Modeling Protocol](MODELING_
 
 ## Set up Pro
 
-Use Blender 4.5 LTS and a separate Python 3.10+ environment for the MCP bridge. The integration was tested with Blender 4.5.4 LTS and `mcp` 1.30.0.
+Use Blender 4.5 LTS or 5.2 LTS and a separate Python 3.10+ environment for the
+MCP bridge. The Linux suites run on 4.5.4 and 5.2.4 with `mcp` 1.30.0.
 
 1. Disable the legacy Blender MCP add-on if it is active. Both editions use the same local port and Blender operator names.
-2. In Blender, open **Edit → Preferences → Add-ons → Install from Disk** and select `pro/blender_mcp.py` from the repository. Enable **Blender MCP Pro Engine** to start its local server. Open the **MCP Pro** tab in the 3D Viewport sidebar (`N`) for the server controls. [Blender add-on installation guide](https://docs.blender.org/manual/en/4.5/editors/preferences/addons.html)
-3. Install the Python dependency from the repository’s `pro/` directory.
+2. Download [the v4.9.0-alpha.2 extension ZIP](https://github.com/camilin7483/blender-mcp/releases/download/v4.9.0-alpha.2/blender_mcp_pro-4.9.0.zip).
+   In Blender, open **Edit → Preferences → Get Extensions** and select
+   **Install from Disk** from the top-right menu. Select the ZIP and enable
+   **Blender MCP Pro Engine** if prompted. Open the **MCP Pro** tab in the
+   3D Viewport sidebar (`N`) for the server controls.
+3. Install the bridge dependencies from the repository’s `pro/` directory.
 
    ```bash
    python3 -m venv .venv
-   .venv/bin/python -m pip install "mcp==1.30.0"
+   .venv/bin/python -m pip install -r requirements.txt
    ```
 
 4. Configure your MCP client to launch `mcp_server.py` over stdio using the virtual environment’s Python. Replace the example paths with the actual absolute paths. On Windows, use `.venv\Scripts\python.exe` for the executable.
@@ -48,6 +53,10 @@ Use Blender 4.5 LTS and a separate Python 3.10+ environment for the MCP bridge. 
 5. Ask the client to inspect the active scene with `get_scene_info`. Then try a work request such as “Build a table from the metric blueprint, check its ground contact, and show the four inspection views.”
 
 ## Example inspection
+
+The [showcase gallery](../docs/showcase/README.md) contains the PELAGOS 07
+vehicle and the rigged NEREID 07 humanoid with editable scenes, renders and
+verification reports.
 
 This table was built with the metric `table` blueprint and passed `audit_3d_model` with a score of 100. The image is the PNG returned by `render_multiview_inspection`.
 

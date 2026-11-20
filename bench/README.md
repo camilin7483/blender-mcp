@@ -5,7 +5,12 @@ Blender geometry. It is not optimized only for this server: tasks use public
 Blender operations and `expected.json` values, so another MCP/agent can run the
 same scenarios.
 
-## Current result
+## Published runs
+
+The [v4.9.0-alpha.2 release gate](../docs/releases/v4.9.0-alpha.2.md) passed
+46/46 tasks in each of three runs on both Blender 4.5.4 and 5.2.4. Each Linux
+CI job publishes its own benchmark artifacts. The earlier baseline
+in `bench/results/latest/` used the following setup.
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
 - **46/46 tasks passed** in every run.

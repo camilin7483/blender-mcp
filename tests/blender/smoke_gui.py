@@ -9,6 +9,7 @@ schedules commands with bpy.app.timers. --background never pumps timers.
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import shutil
@@ -21,11 +22,19 @@ import time
 import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.join(ROOT, "pro"))
 
 import bpy  # noqa: E402
 
-import blender_mcp as bm  # noqa: E402
+if os.getenv("BLENDER_MCP_TEST_INSTALLED_EXTENSION") == "1":
+    extension = "bl_ext.user_default.blender_mcp_pro"
+    assert extension in bpy.context.preferences.addons, "The installed extension did not load"
+    bm = importlib.import_module(f"{extension}.blender_mcp")
+    autostart = getattr(bpy.types, "blendermcp_server", None)
+    if autostart is not None:
+        autostart.stop()
+else:
+    sys.path.insert(0, os.path.join(ROOT, "pro"))
+    bm = importlib.import_module("blender_mcp")
 
 TOKEN_DIR = tempfile.mkdtemp(prefix="blendermcp_auth_")
 TOKEN_PATH = os.path.join(TOKEN_DIR, "token")

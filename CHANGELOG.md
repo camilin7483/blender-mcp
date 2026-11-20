@@ -2,6 +2,16 @@
 
 All notable changes to this repository are documented here.
 
+## Unreleased
+
+- Add the editable PELAGOS 07 inspection vehicle and NEREID 07 humanoid
+  showcase scenes, Cycles renders, and reproducible topology and pose checks.
+- Update installation instructions, version links and compatibility coverage.
+- Verify checksum-pinned Blender downloads through mirrors, require both
+  cross-platform headless jobs, and exercise the installed extension and
+  saved showcase files in both Linux Blender jobs.
+- Use the current product name in the Blender sidebar panel.
+
 ## 4.9.0-alpha.2 - 2026-11-20 (pre-release)
 
 - Write planar UVs in bulk and avoid repeated subdivision evaluation while

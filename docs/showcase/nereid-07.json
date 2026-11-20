@@ -1,0 +1,60 @@
+{
+  "model": "NEREID 07",
+  "blender": "4.5.4 LTS",
+  "objects": 231,
+  "meshes": 211,
+  "pro_modeling_material_and_rig_calls": 128,
+  "bones": 35,
+  "bone_parented_parts": 202,
+  "pose_check": {
+    "bone": "Forearm.L",
+    "rotation_degrees": 28,
+    "forearm_displacement": 0.193751,
+    "finger_displacement": 0.366134,
+    "chest_displacement": 0.0
+  },
+  "evaluated_topology": {
+    "Pressure cuirass": {
+      "vertex_count": 406,
+      "face_count": 411,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    },
+    "Helmet | ceramic crown": {
+      "vertex_count": 1106,
+      "face_count": 1152,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    },
+    "Forearm plate.L": {
+      "vertex_count": 296,
+      "face_count": 299,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    },
+    "Shin shell.R": {
+      "vertex_count": 272,
+      "face_count": 275,
+      "non_manifold_edges": 0,
+      "disconnected_components": 1
+    }
+  },
+  "samples": 40,
+  "scene": "nereid-07.blend",
+  "renders": [
+    {
+      "filename": "nereid-07.png",
+      "pixels": [
+        1600,
+        1800
+      ]
+    },
+    {
+      "filename": "nereid-07-detail.png",
+      "pixels": [
+        1600,
+        1800
+      ]
+    }
+  ]
+}
