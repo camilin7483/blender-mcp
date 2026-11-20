@@ -1,0 +1,5 @@
+{
+  "category": "vehicles",
+  "runner": "vehicle_blockouts",
+  "description": "Create car, bicycle, boat and drone blockouts."
+}

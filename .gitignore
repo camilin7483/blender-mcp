@@ -21,3 +21,7 @@ pro/out/
 
 # Agent scratch space
 .opencode/
+
+# Local release-gate benchmark run and logs; keep gate.json/SHA256SUMS/sbom.json
+bench/results/release-gate/bench/
+bench/results/release-gate/logs/

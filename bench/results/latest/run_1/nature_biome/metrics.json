@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "environment",
+  "duration_ms": 91.461,
+  "error": null,
+  "expected": {
+    "components": {
+      "min": 2
+    },
+    "grass": true,
+    "rocks": true,
+    "trees": 3
+  },
+  "failures": [],
+  "observed": {
+    "components": 8,
+    "grass": true,
+    "rocks": true,
+    "trees": 3
+  },
+  "passed": true,
+  "run": 1,
+  "task": "nature_biome"
+}

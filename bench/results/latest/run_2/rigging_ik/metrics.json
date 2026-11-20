@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "rigging",
+  "duration_ms": 7.578,
+  "error": null,
+  "expected": {
+    "bone_count": 2,
+    "copy_rotation": true,
+    "ik": true,
+    "limit_rotation": true,
+    "vertex_groups": {
+      "min": 1
+    }
+  },
+  "failures": [],
+  "observed": {
+    "bone_count": 2,
+    "copy_rotation": true,
+    "ik": true,
+    "limit_rotation": true,
+    "vertex_groups": 2
+  },
+  "passed": true,
+  "run": 2,
+  "task": "rigging_ik"
+}

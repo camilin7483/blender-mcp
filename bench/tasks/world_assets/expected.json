@@ -1,0 +1,18 @@
+{
+  "city_buildings": 4,
+  "road_length": {
+    "target": 20.0,
+    "tolerance": 0.1
+  },
+  "tunnel_width": {
+    "target": 4.0,
+    "tolerance": 0.1
+  },
+  "tower_height": {
+    "target": 30.0,
+    "tolerance": 0.2
+  },
+  "polygons": {
+    "min": 100
+  }
+}

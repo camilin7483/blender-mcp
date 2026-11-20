@@ -1,0 +1,9 @@
+{
+  "exported": true,
+  "export_size": {
+    "min": 100
+  },
+  "batch_count": 1,
+  "lod_count": 3,
+  "manifest": true
+}

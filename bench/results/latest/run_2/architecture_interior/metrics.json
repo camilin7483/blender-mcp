@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "architecture",
+  "duration_ms": 7.948,
+  "error": null,
+  "expected": {
+    "chair_height": {
+      "target": 0.9,
+      "tolerance": 0.01
+    },
+    "door": true,
+    "room_objects": 2,
+    "table_dimensions": [
+      {
+        "target": 1.4,
+        "tolerance": 0.01
+      },
+      {
+        "target": 0.8,
+        "tolerance": 0.01
+      },
+      {
+        "target": 0.75,
+        "tolerance": 0.01
+      }
+    ],
+    "window": true
+  },
+  "failures": [],
+  "observed": {
+    "chair_height": 0.8999999761581421,
+    "door": true,
+    "room_objects": 2,
+    "table_dimensions": [
+      1.399999976158142,
+      0.800000011920929,
+      0.75
+    ],
+    "window": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "architecture_interior"
+}

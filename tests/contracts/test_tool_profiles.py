@@ -42,7 +42,7 @@ def test_core_profile_is_smaller_and_includes_audit() -> None:
 
 
 def test_full_profile_has_every_tool() -> None:
-    assert len(_tools("full")) == 61
+    assert len(_tools("full")) == 313
 
 
 def test_unknown_profile_uses_core() -> None:
@@ -68,3 +68,11 @@ def test_legacy_wrapper_exposes_mcp() -> None:
 
     assert hasattr(mcp_server, "mcp")
     assert mcp_server.mcp is not None
+
+
+def test_nano_profile_stays_small() -> None:
+    assert len(_tools("nano")) == 13
+
+
+def test_guided_profile_is_bounded() -> None:
+    assert len(_tools("guided")) == 34

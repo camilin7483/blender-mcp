@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "hardsurface",
+  "duration_ms": 2.666,
+  "error": null,
+  "expected": {
+    "applied": 3,
+    "dimensions": [
+      {
+        "target": 2.2,
+        "tolerance": 0.1
+      },
+      {
+        "target": 1.0,
+        "tolerance": 0.1
+      },
+      {
+        "target": 1.0,
+        "tolerance": 0.1
+      }
+    ],
+    "polygon_count": {
+      "min": 6
+    }
+  },
+  "failures": [],
+  "observed": {
+    "applied": 3,
+    "dimensions": [
+      2.2,
+      1.0,
+      1.0
+    ],
+    "polygon_count": 216
+  },
+  "passed": true,
+  "run": 3,
+  "task": "hardsurface_modifiers"
+}

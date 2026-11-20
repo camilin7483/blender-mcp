@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 213.461,
+  "error": null,
+  "expected": {
+    "aaa_certified": false,
+    "passed": true,
+    "production_scope": "structural_base_only",
+    "tier": "procedural_high_detail"
+  },
+  "failures": [],
+  "observed": {
+    "aaa_certified": false,
+    "passed": true,
+    "production_scope": "structural_base_only",
+    "tier": "procedural_high_detail"
+  },
+  "passed": true,
+  "run": 3,
+  "task": "character_quality_gate"
+}

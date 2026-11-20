@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 6.757,
+  "error": null,
+  "expected": {
+    "bones": {
+      "min": 10
+    },
+    "passed": true,
+    "shape_keys": {
+      "min": 4
+    }
+  },
+  "failures": [],
+  "observed": {
+    "bones": 10,
+    "passed": true,
+    "shape_keys": 5
+  },
+  "passed": true,
+  "run": 3,
+  "task": "character_rigging"
+}

@@ -1,0 +1,5 @@
+{
+  "category": "pipeline",
+  "runner": "pipeline_export_lod",
+  "description": "Export a cube, batch export it, build a LOD chain and manifest."
+}

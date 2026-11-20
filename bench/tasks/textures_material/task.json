@@ -1,0 +1,5 @@
+{
+  "category": "textures",
+  "runner": "textures_material",
+  "description": "Create a checker texture, material nodes and save an image."
+}

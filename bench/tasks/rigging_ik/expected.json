@@ -1,0 +1,9 @@
+{
+  "bone_count": 2,
+  "ik": true,
+  "copy_rotation": true,
+  "limit_rotation": true,
+  "vertex_groups": {
+    "min": 1
+  }
+}

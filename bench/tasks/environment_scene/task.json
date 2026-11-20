@@ -1,0 +1,5 @@
+{
+  "category": "environment",
+  "runner": "environment_scene",
+  "description": "Build sky, ground, cliff and beach; verify dimensions."
+}

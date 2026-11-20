@@ -1,0 +1,10 @@
+{
+  "head_polygons": {
+    "min": 500
+  },
+  "eye_parts": 5,
+  "skin_nodes": {
+    "min": 3
+  },
+  "teeth": 16
+}

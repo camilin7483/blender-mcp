@@ -1,13 +1,12 @@
 # Release Checklist
 
-Do not publish a stable `v4.0.0` until every required item is checked with
-evidence. Items marked `[~]` are implemented but not validated in the target
-environment.
+A stable v4 release requires evidence for every item. Open boxes describe the
+coverage still pending.
 
 ## Required gate
 
 - [x] Every FastMCP tool has a matching add-on handler.
-- [x] Required parameters match 1:1 (61 tools; `tests/contracts/test_tool_parity.py`).
+- [x] Required parameters match 1:1 (313 tools; `tests/contracts/test_tool_parity.py`).
 - [x] Every tool has a docstring and a profile assignment.
 - [x] `bpy` command execution runs on Blender's main thread; background start
       fails fast.
@@ -29,21 +28,36 @@ environment.
 - [x] Blender 4.5.4 headless + GUI tests pass.
 - [x] Blender 5.2.4 headless + GUI tests pass.
 - [x] Extension builds, validates and installs in Blender 4.5 and 5.2.
-- [~] GitHub Actions workflow exists; it has not been executed on GitHub from
-      this machine.
-- [~] Windows/macOS Blender headless jobs are experimental and not a required
-      gate.
+- [x] GitHub Actions completed all seven jobs for
+      [v4.9.0-alpha.2](https://github.com/camilin7483/blender-mcp/actions/runs/44691708164).
+- [x] Windows x64 and macOS arm64 headless smoke checks passed in CI.
+- [ ] Native Windows/macOS interactive socket, rendering, and extension
+      installation tests. Windows CI skips render cases.
 - [ ] External benchmark comparison against another server.
-- [x] 11-category benchmark suite (14 tasks; 3 local runs at 14/14).
-- [ ] Behavioral tests for every legacy tool (schema parity is covered;
-      behavior is targeted).
+- [x] 46-task benchmark covering the 11 baseline categories and additional
+      domain packs. Each of the three runs per Linux Blender version passed 46/46.
+- [ ] Behavioral tests for every tool. Current coverage includes handler and
+      schema parity for 313 tools, 34 host tests, real-Blender suites, and the
+      46-task benchmark.
 - [ ] Stable release approval after the open items close.
+
+## Local release gate
+
+`scripts/release_gate.sh` runs host tests, lint, Blender 4.5/5.2 headless+GUI,
+the 46-task benchmark (3 runs per supplied Blender version), extension
+build/validation and a bridge dependency inventory. Use `RELEASE_GATE_OUT`
+to isolate a run. A missing Blender 5.2 binary produces a partial result.
+The gate records both version strings and verifies identical normalized ZIPs
+when both versions are supplied.
+The [published alpha.2 evidence](releases/v4.9.0-alpha.2.md) records the commit,
+extension checksum and CI run. A local rerun writes `gate.json`, `SHA256SUMS`,
+`sbom.json`, logs, and benchmark results to the configured output directory.
 
 ## Release candidates
 
 | Tag | Meaning |
 |---|---|
-| `v4.0.0-alpha.4` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
-| `v4.0.0-beta` | After CI runs green on Linux 4.5/5.2 and cross-platform Blender is validated. |
-| `v4.0.0-rc` | After the external benchmark protocol is published and no critical defect remains. |
-| `v4.0.0` | Only when every required item above is checked. |
+| `v4.9.0-alpha.2` | Published prerelease with 313 registered tools and verified Linux gate. |
+| Beta | After the full cross-platform Blender checks are validated. |
+| Release candidate | After an external benchmark comparison is published and critical defects are resolved. |
+| Stable | After all required checks pass. |

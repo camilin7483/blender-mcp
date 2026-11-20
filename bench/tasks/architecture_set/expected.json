@@ -1,0 +1,12 @@
+{
+  "bathroom": true,
+  "kitchen_height": {
+    "target": 0.9,
+    "tolerance": 0.05
+  },
+  "fireplace": true,
+  "pool": true,
+  "polygons": {
+    "min": 100
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "water",
+  "duration_ms": 4.661,
+  "error": null,
+  "expected": {
+    "has_material": true,
+    "pond_faces": {
+      "min": 1
+    },
+    "river_faces": {
+      "min": 1
+    },
+    "water_dimensions": [
+      3.0,
+      3.0
+    ]
+  },
+  "failures": [],
+  "observed": {
+    "has_material": true,
+    "pond_faces": 36,
+    "river_faces": 8,
+    "water_dimensions": [
+      3.0,
+      3.0
+    ]
+  },
+  "passed": true,
+  "run": 1,
+  "task": "water_surface"
+}

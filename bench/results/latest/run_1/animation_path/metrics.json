@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "animation",
+  "duration_ms": 3.257,
+  "error": null,
+  "expected": {
+    "camera": true,
+    "frame_end": 60,
+    "keyframes": {
+      "min": 1
+    },
+    "rig": true,
+    "turntable": true
+  },
+  "failures": [],
+  "observed": {
+    "camera": true,
+    "frame_end": 60,
+    "keyframes": 12,
+    "rig": true,
+    "turntable": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "animation_path"
+}

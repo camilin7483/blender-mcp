@@ -2,32 +2,24 @@
 
 ## Status
 
-**No benchmark results are published yet.** This document defines the
-methodology. Do not claim savings or superiority without a published run.
-
-The only baseline facts currently measured are:
-
-- 53 registered MCP tools.
-- 47,792 characters of tool-schema JSON, measured with
-  `FastMCP.list_tools()` on `mcp==1.30.0`.
-- 53 add-on handlers with 1:1 name parity (see
-  `tests/contracts/test_tool_parity.py`).
-
-These are baseline measurements, not improvements. The current branch
-registers 61 tools; remeasure schema size before publishing any comparison.
+The [v4.9.0-alpha.2 release gate](releases/v4.9.0-alpha.2.md) passed 46 of 46
+tasks in each of three runs on Blender 4.5.4 and 5.2.4. GitHub Actions retains
+per-version task artifacts with the workflow run. Tool registration is
+verified separately through MCP stdio and the schema/handler contract tests.
 
 ## Published baseline
 
 A first local run is published in `bench/results/latest/`:
 
 - Blender 4.5.4 LTS, Linux x64, 3 runs.
-- 14/14 tasks passed in every run.
+- 46/46 tasks passed in every run.
 - `summary.json` contains medians and per-run results; `trace.jsonl` contains
   the per-task trace; `run_1/` contains `.blend`, `.glb` and render artifacts.
-- No external comparison has been performed. Categories not covered yet:
-  All 11 requested categories are covered by at least one task.
+- All 11 baseline categories are covered by at least one task. External
+  comparison remains open.
 
-These are functional measurements, not evidence of superiority.
+The [showcase](showcase/README.md) includes art, editable projects and
+scene-specific checks alongside the functional benchmark.
 
 ## BlenderMCP-Bench
 

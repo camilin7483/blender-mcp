@@ -15,6 +15,7 @@ import sys
 import tempfile
 import traceback
 import zipfile
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -77,10 +78,11 @@ def make_ring(name: str, outer: float = 2.0, inner: float = 1.0, height: float =
 
 
 def main() -> None:
+    skip_render = os.environ.get("BLENDER_MCP_TEST_SKIP_RENDER") == "1"
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 0, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 9, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -280,6 +282,35 @@ def main() -> None:
             server.export_scene("noext", "GLB")
             if not os.path.exists(os.path.join(export_dir, "noext.glb")):
                 fail("export did not append the expected extension")
+
+            with tempfile.TemporaryDirectory() as outside:
+                target = os.path.join(outside, "unmodified.glb")
+                marker = b"existing, unrelated file"
+                with open(target, "wb") as handle:
+                    handle.write(marker)
+                link = os.path.join(export_dir, "alias.glb")
+                try:
+                    os.symlink(target, link)
+                except OSError:
+                    if os.name != "nt":
+                        raise
+                else:
+                    try:
+                        bm.resolve_output_path("alias", {".glb"})
+                    except PermissionError:
+                        pass
+                    else:
+                        fail("export sandbox did not check the final filename")
+                    with open(target, "rb") as handle:
+                        assert handle.read() == marker
+
+            operators = SimpleNamespace(export_scene=SimpleNamespace(gltf=lambda **kwargs: {"CANCELLED"}))
+            export_bpy = SimpleNamespace(ops=operators)
+            with patch.object(bm, "bpy", export_bpy), patch.object(server, "_validate_export", return_value={
+                "passed": True,
+            }):
+                cancelled = server.export_scene("noext.glb", "GLB")
+            assert cancelled["success"] is False, cancelled
 
             try:
                 server.export_scene("../escape.glb", "GLB")
@@ -924,6 +955,740 @@ def main() -> None:
                 f"{bracket.get('audit', {}).get('failures')} {bracket.get('constraints')}"
             )
 
+        # --- domain packs: terrain, vegetation, water, materials, lighting, physics ---
+        clear_scene()
+        domain_dir = tempfile.mkdtemp(prefix="blendermcp_domain_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = domain_dir
+        try:
+            terrain = server.create_terrain(
+                "DomainTerrain", size=4.0, subdivisions=16, height=0.5, seed=2
+            )
+            assert terrain["success"] and terrain["dimensions"][0] == 4.0, terrain
+            sculpted = server.sculpt_terrain_region(
+                "DomainTerrain", center=[0.0, 0.0, 0.0], radius=1.0,
+                strength=0.1, direction="UP",
+            )
+            assert sculpted["success"] and sculpted["moved_count"] > 0, sculpted
+            rock = server.create_rock("DomainRock", size=0.5, subdivisions=1, seed=2)
+            assert rock["success"] and max(rock["dimensions"]) > 0.0, rock
+            scattered = server.scatter_objects(
+                "DomainRock", "DomainTerrain", count=4, seed=2
+            )
+            assert scattered["success"] and scattered["count"] == 4, scattered
+            tree = server.create_tree("DomainTree", height=2.0, crown_radius=0.5, seed=2)
+            assert tree["success"] and tree["polygon_count"] > 0, tree
+            bush = server.create_bush("DomainBush", radius=0.3, height=0.3, seed=2)
+            assert bush["success"] and bush["polygon_count"] > 0, bush
+            grass = server.create_grass_patch(
+                "DomainGrass", radius=0.3, blade_count=10, seed=2
+            )
+            assert grass["success"] and grass["polygon_count"] > 0, grass
+            flowers = server.create_flower_patch(
+                "DomainFlowers", radius=0.3, count=3, seed=2
+            )
+            assert flowers["success"] and flowers["polygon_count"] > 0, flowers
+            water = server.create_water_plane("DomainWater", size=3.0, subdivisions=8)
+            assert water["success"] and water["dimensions"] == [3.0, 3.0], water
+            river = server.create_river("DomainRiver", width=0.5, segments=4)
+            assert river["success"] and river["length"] > 0.0, river
+            pond = server.create_pond("DomainPond", radius=1.0, segments=12)
+            assert pond["success"] and pond["face_count"] > 0, pond
+            water_material = server.create_water_material("DomainWaterMaterial")
+            assert water_material["success"], water_material
+            procedural = server.create_procedural_material("DomainProcedural")
+            assert procedural["success"], procedural
+
+            server.create_parametric_part(
+                "DomainCube", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+                location=[0.0, 0.0, 0.25],
+            )
+            uv = server.smart_uv_unwrap("DomainCube")
+            assert uv["success"] and uv["uv_layer"], uv
+            packed = server.pack_uv_islands("DomainCube")
+            assert packed["success"], packed
+            materials = server.list_materials()
+            assert materials["success"] and materials["count"] > 0, materials
+
+            light = server.create_light("DomainLight", energy=50.0)
+            assert light["success"] and light["type"] == "POINT", light
+            camera = server.create_camera(
+                "DomainCamera", location=[3.0, -3.0, 2.0], look_at=[0.0, 0.0, 0.5]
+            )
+            assert camera["success"] and camera["type"] == "PERSP", camera
+            world = server.setup_world_background(color=[0.05, 0.05, 0.05])
+            assert world["success"], world
+            if skip_render:
+                print("BLENDER_HEADLESS_TEST_SKIP_RENDER: domain still")
+            else:
+                render = server.render_still(
+                    "domain.png", camera_name="DomainCamera",
+                    resolution_x=64, resolution_y=64, samples=4,
+                )
+                assert render["success"] and os.path.exists(render["filepath"]), render
+
+            rigid = server.add_rigid_body("DomainCube", body_type="ACTIVE")
+            assert rigid["success"], rigid
+            collision = server.add_collision("DomainCube")
+            assert collision["success"], collision
+            server.create_parametric_part(
+                "DomainCloth", shape="ROUNDED_BOX", dimensions=[0.5, 0.5, 0.02],
+                location=[0.0, 0.0, 1.0],
+            )
+            cloth = server.add_cloth("DomainCloth")
+            assert cloth["success"], cloth
+            baked = server.bake_simulation(1, 1)
+            assert baked["success"] and baked["baked"], baked
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(domain_dir, ignore_errors=True)
+
+        # --- v4.2 architecture and hard-surface packs ---
+        clear_scene()
+        room = server.create_room_shell(
+            "V42Room", width=5.0, depth=4.0, height=3.0
+        )
+        assert room["success"] and bpy.data.objects.get("V42Room_Floor"), room
+        assert bpy.data.objects.get("V42Room_Walls"), room
+        door = server.create_door("V42Door", location=[0.0, -2.0, 0.0])
+        assert door["success"] and bpy.data.objects.get("V42Door"), door
+        window = server.create_window("V42Window", location=[2.5, 0.0, 1.0])
+        assert window["success"] and bpy.data.objects.get("V42Window"), window
+        for name, factory in (
+            ("V42Table", server.create_table),
+            ("V42Chair", server.create_chair),
+            ("V42Shelf", server.create_shelf),
+            ("V42Bed", server.create_bed),
+            ("V42Sofa", server.create_sofa),
+            ("V42Kitchen", server.create_kitchen_block),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.objects.get(name), result
+            assert result["polygon_count"] > 0, result
+
+        server.create_parametric_part(
+            "V42Hard", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+            location=[0.0, 0.0, 0.25],
+        )
+        for modifier in (
+            server.add_bevel_modifier("V42Hard", width=0.01),
+            server.add_solidify_modifier("V42Hard", thickness=0.01),
+            server.add_array_modifier("V42Hard", count=2, offset=[0.6, 0.0, 0.0]),
+            server.add_mirror_modifier("V42Hard", axis="X"),
+        ):
+            assert modifier["success"], modifier
+        applied = server.apply_all_modifiers("V42Hard")
+        assert applied["success"] and len(applied["applied"]) == 4, applied
+
+        text = server.create_text_object("V42", name="V42Text", size=0.5)
+        assert text["success"] and bpy.data.objects.get("V42Text"), text
+        tube = server.create_curve_tube(
+            "V42Tube", points=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]], radius=0.05
+        )
+        assert tube["success"] and bpy.data.objects.get("V42Tube"), tube
+        meta = server.create_metaball("V42Meta", radius=0.4)
+        assert meta["success"] and bpy.data.objects.get("V42Meta"), meta
+        converted_tube = server.convert_to_mesh("V42Tube")
+        assert converted_tube["success"] and converted_tube["type"] == "MESH", converted_tube
+        converted_meta = server.convert_to_mesh("V42Meta")
+        assert converted_meta["success"] and converted_meta["type"] == "MESH", converted_meta
+
+        # --- v4.3 environment, character, PBR and animation packs ---
+        clear_scene()
+        sky = server.create_sky_lighting("V43Sky", sun_elevation=30.0)
+        assert sky["success"] and bpy.data.objects.get("V43Sky_Sun"), sky
+        fog = server.create_fog_volume("V43Fog", size=5.0, density=0.01)
+        assert fog["success"] and bpy.data.objects.get("V43Fog"), fog
+        clouds = server.create_cloud_layer("V43Clouds", size=5.0, altitude=3.0)
+        assert clouds["success"] and bpy.data.objects.get("V43Clouds"), clouds
+        ground = server.create_ground(
+            "V43Ground", size=6.0, subdivisions=8, style="grass"
+        )
+        assert ground["success"] and bpy.data.objects.get("V43Ground"), ground
+        cliff = server.create_cliff(
+            "V43Cliff", width=2.0, height=1.5, depth=1.0
+        )
+        assert cliff["success"] and bpy.data.objects.get("V43Cliff"), cliff
+        beach = server.create_beach("V43Beach", width=5.0, depth=3.0)
+        assert beach["success"] and bpy.data.objects.get("V43Beach"), beach
+        shore = server.create_water_shore("V43Shore", radius=2.0)
+        assert shore["success"] and bpy.data.objects.get("V43Shore"), shore
+        server.create_tree("V43Tree", height=2.0, crown_radius=0.5, seed=3)
+        server.create_bush("V43Bush", radius=0.3, height=0.3, seed=3)
+        biome = server.create_biome_scatter(
+            "V43Ground", "V43Tree", "V43Bush", count=4, seed=3
+        )
+        assert biome["success"] and biome["count"] == 4, biome
+
+        humanoid = server.create_humanoid_blockout(
+            "V43Human", height=1.75, build="average"
+        )
+        assert humanoid["success"] and humanoid["actual_height"] == 1.75, humanoid
+        eyes = server.create_eye_pair("V43Eyes", height=1.62)
+        assert eyes["success"] and len(eyes["eyes"]) == 2, eyes
+        teeth = server.create_teeth_set("V43Teeth")
+        assert teeth["success"] and teeth["tooth_count"] == 16, teeth
+        hair = server.create_hair_cap(
+            "V43Hair", head_object="V43Human", radius=0.10,
+            strand_count=10, seed=3,
+        )
+        assert hair["success"] and bpy.data.objects.get("V43Hair"), hair
+        garment = server.create_garment("V43Shirt", garment_type="shirt")
+        assert garment["success"] and bpy.data.objects.get("V43Shirt"), garment
+        landmarks = server.create_face_landmarks("V43Human")
+        assert landmarks["success"] and len(landmarks["landmarks"]) == 7, landmarks
+        hand = server.create_hand_blockout("V43Hand", side="L")
+        assert hand["success"] and bpy.data.objects.get("V43Hand_L"), hand
+        foot = server.create_foot_blockout("V43Foot", side="L")
+        assert foot["success"] and bpy.data.objects.get("V43Foot_L"), foot
+
+        for material_name, factory in (
+            ("V43Metal", server.create_metal_material),
+            ("V43Wood", server.create_wood_material),
+            ("V43Fabric", server.create_fabric_material),
+            ("V43Glass", server.create_glass_material),
+            ("V43Skin", server.create_skin_material),
+            ("V43Concrete", server.create_concrete_material),
+            ("V43Emission", server.create_emission_material),
+        ):
+            material = factory(material_name)
+            assert material["success"] and bpy.data.materials.get(material_name), material
+        assigned = server.assign_material_to_faces("V43Human", "V43Metal")
+        assert assigned["success"] and assigned["assigned_count"] > 0, assigned
+
+        frame = server.set_frame_range(1, 60, 24)
+        assert frame["success"] and frame["frame_end"] == 60, frame
+        path = server.keyframe_path(
+            "V43Human", points=[[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+            frame_start=1, frame_end=30,
+        )
+        assert path["success"] and path["keyframes"] > 0, path
+        turntable = server.create_turntable_animation("V43Human", frames=60)
+        assert turntable["success"], turntable
+        rig = server.create_camera_rig(
+            "V43CamRig", target=[0.0, 0.0, 1.0], distance=4.0, height=2.0
+        )
+        assert rig["success"] and bpy.data.objects.get("V43CamRig_Camera"), rig
+        server.create_curve_tube(
+            "V43AnimPath", points=[[0, 0, 0], [0, 2, 0], [0, 4, 0]],
+            radius=0.03,
+        )
+        follow = server.add_follow_path_constraint(
+            "V43Human", "V43AnimPath", offset=0.0
+        )
+        assert follow["success"], follow
+        interpolation = server.set_keyframe_interpolation("V43Human", "LINEAR")
+        assert interpolation["success"], interpolation
+        action = server.create_action("V43Human", "V43Action")
+        assert action["success"] and action["action"] == "V43Action", action
+        cleared = server.clear_animation("V43Human")
+        assert cleared["success"], cleared
+
+        # --- v4.4 pipeline, render QA, rigging and texture packs ---
+        clear_scene()
+        v44_dir = tempfile.mkdtemp(prefix="blendermcp_v44_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = v44_dir
+        try:
+            server.create_parametric_part(
+                "V44Cube", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+                location=[0.0, 0.0, 0.5],
+            )
+            bpy.ops.object.select_all(action="DESELECT")
+            bpy.data.objects["V44Cube"].select_set(True)
+            bpy.context.view_layer.objects.active = bpy.data.objects["V44Cube"]
+            exported = server.export_selected("exports/v44_cube.glb", "GLB")
+            assert exported["success"] and os.path.exists(exported["filepath"]), exported
+            imported = server.import_model(exported["filepath"], "AUTO")
+            assert imported["success"] and imported["object_count"] >= 1, imported
+            batch = server.batch_export(["V44Cube"], "batch", "GLB")
+            assert batch["success"] and batch["count"] == 1, batch
+            lod = server.create_lod_chain("V44Cube", [1.0, 0.5, 0.25])
+            assert lod["success"] and len(lod["lod_names"]) == 3, lod
+            lod_check = server.validate_lod_chain("V44Cube")
+            assert lod_check["success"] and isinstance(lod_check["passed"], bool), lod_check
+            manifest = server.generate_asset_manifest(
+                ["V44Cube"], "v44_manifest.json"
+            )
+            assert manifest["success"] and os.path.exists(manifest["filepath"]), manifest
+
+            image = server.create_image(
+                "V44Solid", 64, 64, [0.8, 0.2, 0.2, 1.0], False
+            )
+            assert image["success"], image
+            checker = server.create_checker_texture("V44Checker", 64, 64, cells=8)
+            assert checker["success"], checker
+            material = server.image_to_material("V44Checker", "V44CheckMat", 0.4)
+            assert material["success"], material
+            image_node = server.add_image_texture_node("V44CheckMat", "V44Checker")
+            assert image_node["success"], image_node
+            resized = server.resize_image("V44Solid", 32, 32)
+            assert resized["success"], resized
+            colorspace = server.set_image_colorspace("V44Solid", "sRGB")
+            assert colorspace["success"], colorspace
+            packed = server.pack_image("V44Solid")
+            assert packed["success"], packed
+            saved_image = server.save_image(
+                "V44Checker", "textures/v44_checker.png", "PNG"
+            )
+            assert saved_image["success"] and os.path.exists(saved_image["filepath"]), saved_image
+            packed_all = server.pack_images()
+            assert packed_all["success"], packed_all
+            saved_all = server.save_images("textures/all", "PNG")
+            assert saved_all["success"], saved_all
+
+            backdrop = server.create_studio_backdrop("V44Backdrop")
+            assert backdrop["success"], backdrop
+            configured = server.configure_render(
+                "BLENDER_EEVEE_NEXT", 2, 64, 64, False, 24
+            )
+            assert configured["success"], configured
+            render_pass = server.enable_render_pass("AO", True)
+            assert render_pass["success"], render_pass
+            glare = server.setup_compositor_glare(1.0, 6, 0.0)
+            assert glare["success"], glare
+            if skip_render:
+                print("BLENDER_HEADLESS_TEST_SKIP_RENDER: turntable and render QA")
+            else:
+                turntable = server.render_turntable(
+                    "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
+                )
+                assert turntable["success"] and len(turntable["files"]) == 1, turntable
+                turntable_file = turntable["files"][0]
+                sheet = server.render_contact_sheet(
+                    [turntable_file, turntable_file], "v44_contact.png", 2
+                )
+                assert sheet["success"] and os.path.exists(sheet["filepath"]), sheet
+                render_valid = server.validate_render("v44_contact.png", 64, 64)
+                assert render_valid["success"] and render_valid["valid"], render_valid
+                compared = server.compare_renders(turntable_file, turntable_file)
+                assert compared["success"] and compared["identical"], compared
+
+            rig = server.create_armature("V44Rig", [
+                {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+            ])
+            assert rig["success"], rig
+            bone = server.create_bone(
+                "V44Rig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+            )
+            assert bone["success"], bone
+            bones = server.list_bones("V44Rig")
+            assert bones["success"] and bones["bone_count"] == 2, bones
+            ik = server.create_ik_chain("V44Rig", "Tip", "V44Cube", 2)
+            assert ik["success"], ik
+            copy_rotation = server.add_copy_rotation_constraint(
+                "V44Rig", "Tip", "V44Cube", 0.5
+            )
+            assert copy_rotation["success"], copy_rotation
+            limit_rotation = server.add_limit_rotation_constraint(
+                "V44Rig", "Tip", ["X", "Y", "Z"], [-45.0, 45.0]
+            )
+            assert limit_rotation["success"], limit_rotation
+            bone_rotation = server.set_bone_rotation("V44Rig", "Tip", [10.0, 0.0, 0.0])
+            assert bone_rotation["success"], bone_rotation
+            bone_location = server.set_bone_location("V44Rig", "Tip", [0.1, 0.0, 0.0])
+            assert bone_location["success"], bone_location
+            skinned = server.skin_mesh_to_armature("V44Cube", "V44Rig", True)
+            assert skinned["success"] and skinned["vertex_group_count"] > 0, skinned
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(v44_dir, ignore_errors=True)
+
+        # --- v4.5 props, furniture, vehicles and character detail ---
+        clear_scene()
+        for name, factory in (
+            ("V45Barrel", server.create_barrel),
+            ("V45Crate", server.create_crate),
+            ("V45Chest", server.create_chest),
+            ("V45Lantern", server.create_lantern),
+            ("V45Lamp", server.create_streetlamp),
+            ("V45Sword", server.create_sword),
+            ("V45Shield", server.create_shield),
+            ("V45Potion", server.create_potion_bottle),
+            ("V45Desk", server.create_desk),
+            ("V45Wardrobe", server.create_wardrobe),
+            ("V45Dresser", server.create_dresser),
+            ("V45Nightstand", server.create_nightstand),
+            ("V45Coffee", server.create_coffee_table),
+            ("V45Bench", server.create_bench),
+            ("V45Stool", server.create_bar_stool),
+            ("V45Bookshelf", server.create_bookshelf),
+            ("V45Wheel", server.create_wheel),
+            ("V45Car", server.create_car_blockout),
+            ("V45Bicycle", server.create_bicycle_blockout),
+            ("V45Motorcycle", server.create_motorcycle_blockout),
+            ("V45Boat", server.create_boat_blockout),
+            ("V45Aircraft", server.create_aircraft_blockout),
+            ("V45Robot", server.create_robot_blockout),
+            ("V45Drone", server.create_drone_blockout),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.objects.get(name), result
+            assert result["polygon_count"] > 0, result
+        for name, factory in (
+            ("V45Nose", server.create_nose),
+            ("V45Ears", server.create_ear_pair),
+            ("V45Mouth", server.create_mouth),
+            ("V45Brows", server.create_brow_pair),
+            ("V45Lashes", server.create_eyelash_pair),
+            ("V45Hair", server.create_hair_strands),
+            ("V45Nails", server.create_fingernails),
+        ):
+            kwargs = {"strand_count": 8} if name in {"V45Lashes", "V45Hair"} else {}
+            result = factory(name, **kwargs)
+            assert result["success"], result
+        server.create_humanoid_blockout("V45Char", height=1.75)
+        proportions = server.create_face_proportions("V45Char")
+        assert proportions["success"] and len(proportions["landmarks"]) == 8, proportions
+
+        # --- v4.6 advanced materials, nature, architecture and rigging ---
+        clear_scene()
+        server.create_parametric_part(
+            "V46Bake", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.create_material("V46BakeMat", [0.8, 0.3, 0.2, 1.0], 0.0, 0.5)
+        server.assign_material("V46Bake", "V46BakeMat")
+        if skip_render:
+            print("BLENDER_HEADLESS_TEST_SKIP_RENDER: material bakes")
+        else:
+            for _bake_name, bake_call in (
+                ("V46AO", lambda: server.bake_ambient_occlusion("V46Bake", 32, 1)),
+                ("V46Normal", lambda: server.bake_normal_map("V46Bake", 32)),
+                ("V46Diffuse", lambda: server.bake_diffuse("V46Bake", 32)),
+            ):
+                baked = bake_call()
+                assert baked["success"] and baked["baked"], baked
+        udim = server.create_udim_tiles("V46UDIM", [1001, 1002], 32)
+        assert udim["success"] and udim["tile_count"] == 2, udim
+        displacement = server.add_displacement("V46BakeMat", 0.1, 0.5)
+        assert displacement["success"], displacement
+        layer_mix = server.create_layer_weight_mix("V46LayerMix")
+        assert layer_mix["success"], layer_mix
+        parallax = server.create_parallax_bump("V46LayerMix", 0.05)
+        assert parallax["success"], parallax
+        optimized = server.optimize_material("V46LayerMix")
+        assert optimized["success"], optimized
+
+        forest = server.create_forest("V46Forest", radius=3.0, tree_count=3)
+        assert forest["success"] and forest["count"] == 3, forest
+        grass = server.create_grass_field("V46Grass", size=3.0, blade_count=10)
+        assert grass["success"], grass
+        rocks = server.create_rock_cluster("V46Rocks", radius=2.0, count=3)
+        assert rocks["success"], rocks
+        mountain = server.create_mountain_range(
+            "V46Mountains", width=6.0, depth=3.0, peak_height=1.5
+        )
+        assert mountain["success"], mountain
+        cave = server.create_cave("V46Cave", width=3.0, depth=2.0, height=2.0)
+        assert cave["success"], cave
+        island = server.create_island("V46Island", radius=3.0)
+        assert island["success"], island
+        waterfall = server.create_waterfall("V46Waterfall", width=1.0, height=2.0)
+        assert waterfall["success"], waterfall
+        biome = server.create_biome("V46Biome", size=4.0)
+        assert biome["success"], biome
+
+        bathroom = server.create_bathroom_set("V46Bathroom", 2.0, 2.0)
+        assert bathroom["success"], bathroom
+        kitchen = server.create_kitchen_island("V46Kitchen", 1.5, 0.8, 0.9)
+        assert kitchen["success"], kitchen
+        fireplace = server.create_fireplace("V46Fireplace", 1.2, 1.0, 0.3)
+        assert fireplace["success"], fireplace
+        balcony = server.create_balcony("V46Balcony", 2.5, 1.0, 1.0)
+        assert balcony["success"], balcony
+        fence = server.create_fence("V46Fence", 4.0, 1.0, 5)
+        assert fence["success"], fence
+        gate = server.create_gate("V46Gate", 2.5, 1.8)
+        assert gate["success"], gate
+        garage = server.create_garage("V46Garage", 4.0, 4.0, 2.5)
+        assert garage["success"], garage
+        pool = server.create_pool("V46Pool", 4.0, 2.0, 1.0)
+        assert pool["success"], pool
+
+        server.create_armature("V46Rig", [
+            {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+        ])
+        server.create_bone(
+            "V46Rig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+        )
+        server.create_parametric_part(
+            "V46Target", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 1.0],
+        )
+        for _constraint_name, constraint_call in (
+            ("V46ChildOf", lambda: server.add_child_of_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+            ("V46CopyLoc", lambda: server.add_copy_location_constraint(
+                "V46Rig", "Tip", "V46Target", 0.5
+            )),
+            ("V46Damped", lambda: server.add_damped_track_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+            ("V46Stretch", lambda: server.add_stretch_to_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+        ):
+            constraint = constraint_call()
+            assert constraint["success"], constraint
+        shape = server.set_bone_custom_shape("V46Rig", "Tip", "V46Target")
+        assert shape["success"], shape
+        pose = server.create_pose_library_action("V46Rig", "V46Pose")
+        assert pose["success"] and pose["keyframed_bones"] == 2, pose
+        mirrored = server.mirror_pose("V46Rig", "X")
+        assert mirrored["success"], mirrored
+        rig_check = server.validate_rig("V46Rig")
+        assert rig_check["success"], rig_check
+
+        # --- v4.7 advanced animation, physics, QA and weather ---
+        clear_scene()
+        server.create_parametric_part(
+            "V47Cube", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.create_action("V47Cube", "V47Action")
+        server.keyframe_object("V47Cube", "location", 1, [0.0, 0.0, 0.5])
+        server.keyframe_object("V47Cube", "location", 10, [1.0, 0.0, 0.5])
+        server.create_camera("V47Cam1", location=[4.0, -4.0, 3.0], look_at=[0.0, 0.0, 0.5])
+        server.create_camera("V47Cam2", location=[-4.0, -4.0, 3.0], look_at=[0.0, 0.0, 0.5])
+        nla = server.create_nla_track("V47Cube", "V47Action", 1)
+        assert nla["success"], nla
+        shake = server.add_camera_shake("V47Cam1", 0.03, 1, 5, 2)
+        assert shake["success"], shake
+        marker = server.add_timeline_marker("V47Start", 1)
+        assert marker["success"], marker
+        motion = server.set_motion_paths("V47Cube", True)
+        assert motion["success"] and motion["curve"], motion
+        preset = server.set_animation_curve_preset("V47Cube", "ease_in_out")
+        assert preset["success"], preset
+        retime = server.retime_action("V47Cube", 1.2)
+        assert retime["success"], retime
+        cut = server.create_camera_cut(
+            ["V47Cam1", "V47Cam2"], [[1, 5], [6, 10]]
+        )
+        assert cut["success"] and cut["cut_count"] == 2, cut
+        animation_check = server.validate_animation("V47Cube")
+        assert animation_check["success"], animation_check
+
+        force = server.add_force_field("V47Wind", "WIND", 2.0, [0.0, 0.0, 0.0])
+        assert force["success"], force
+        rigid = server.create_rigid_body_chain(["V47Cube"], 1.0)
+        assert rigid["success"] and rigid["count"] == 1, rigid
+        server.create_parametric_part(
+            "V47Cloth", shape="BOX", dimensions=[1.0, 1.0, 0.01],
+            location=[0.0, 0.0, 1.0],
+        )
+        cloth = server.create_cloth_preset("V47Cloth", "silk")
+        assert cloth["success"], cloth
+        domain = server.create_fluid_domain("V47Fluid", [2.0, 2.0, 2.0], 16)
+        assert domain["success"], domain
+        inflow = server.create_fluid_inflow(
+            "V47Cube", "V47Fluid", [0.0, 0.0, -1.0]
+        )
+        assert inflow["success"], inflow
+        collision = server.create_collision_object("V47Cloth", 0.02)
+        assert collision["success"], collision
+        baked = server.bake_physics(2)
+        assert baked["success"], baked
+        physics_check = server.validate_physics("V47Cube")
+        assert physics_check["success"], physics_check
+
+        scene_audit = server.scene_audit(False)
+        assert scene_audit["success"], scene_audit
+        material_audit = server.material_audit()
+        assert material_audit["success"], material_audit
+        texture_audit = server.texture_audit()
+        assert texture_audit["success"], texture_audit
+        budget = server.performance_budget(100000, 256.0)
+        assert budget["success"], budget
+        preflight = server.export_preflight("generic-gltf")
+        assert preflight["success"], preflight
+        floating = server.detect_floating_objects(0.001)
+        assert floating["success"], floating
+        duplicates = server.detect_duplicate_geometry(0.0001)
+        assert duplicates["success"], duplicates
+        repair = server.scene_repair_plan()
+        assert repair["success"], repair
+
+        rain = server.create_rain_system("V47Rain", 50, 5.0, 1)
+        assert rain["success"], rain
+        snow = server.create_snow_system("V47Snow", 50, 5.0, 1)
+        assert snow["success"], snow
+        lightning = server.create_lightning_rig("V47Lightning", [0.0, 0.0, 4.0], 500.0)
+        assert lightning["success"], lightning
+        wind = server.create_wind_field("V47WindField", 2.0, [1.0, 0.0, 0.0])
+        assert wind["success"], wind
+        haze = server.create_atmospheric_haze(0.01, [0.8, 0.85, 0.9])
+        assert haze["success"], haze
+        sunset = server.create_sunset_lighting()
+        assert sunset["success"], sunset
+        night = server.create_night_lighting(0.5)
+        assert night["success"], night
+        weather = server.create_weather_scene("rain", 6.0, 1)
+        assert weather["success"], weather
+
+        # --- v4.8 character rig, world, material library and FX ---
+        clear_scene()
+        server.create_humanoid_blockout("V48Char", height=1.75)
+        face_rig = server.create_face_rig("V48Char", "V48FaceRig")
+        assert face_rig["success"] and face_rig["bone_count"] >= 10, face_rig
+        server.create_armature("V48JawRig", [
+            {"name": "Root", "head": [0.0, 0.0, 0.0], "tail": [0.0, 0.0, 0.5]}
+        ])
+        jaw = server.create_jaw_bone(
+            "V48JawRig", [0.0, -0.05, 1.6], [0.0, -0.05, 1.5]
+        )
+        assert jaw["success"], jaw
+        eyelids = server.create_eyelid_bones("V48JawRig", 0.065, 0.22)
+        assert eyelids["success"], eyelids
+        fingers = server.create_finger_rig("V48JawRig", "L", 1.0)
+        assert fingers["success"] and fingers["bone_count"] == 15, fingers
+        server.create_parametric_part(
+            "V48Target", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 1.0],
+        )
+        leg_ik = server.create_ik_leg_rig(
+            "V48JawRig", [0.1, 0.0, 0.9], [0.1, 0.1, 0.5],
+            [0.1, 0.2, 0.1], "V48Target",
+        )
+        assert leg_ik["success"], leg_ik
+        arm_ik = server.create_ik_arm_rig(
+            "V48JawRig", [0.2, 0.0, 1.4], [0.4, 0.0, 1.1],
+            [0.6, 0.0, 0.8], "V48Target",
+        )
+        assert arm_ik["success"], arm_ik
+        shape_keys = server.add_face_shape_keys("V48Char")
+        assert shape_keys["success"] and len(shape_keys["created"]) >= 4, shape_keys
+        character_check = server.validate_character_rig("V48FaceRig", "V48Char")
+        assert character_check["success"], character_check
+
+        for name, factory, args in (
+            ("V48City", server.create_city_block, (20.0, 20.0, 4, 1)),
+            ("V48Road", server.create_road, (20.0, 7.0, 2)),
+            ("V48Street", server.create_street, (20.0, 8.0, 1)),
+            ("V48Bridge", server.create_bridge, (10.0, 6.0, 3.0)),
+            ("V48Tunnel", server.create_tunnel, (10.0, 4.0, 3.0)),
+            ("V48Tower", server.create_skyscraper, (8.0, 8.0, 30.0, 10)),
+            ("V48Park", server.create_park, (15.0, 15.0, 4, 1)),
+            ("V48Plaza", server.create_plaza, (15.0, 15.0, 1)),
+        ):
+            result = factory(name, *args)
+            assert result["success"] and bpy.data.objects.get(name), result
+
+        for name, factory in (
+            ("V48Marble", server.create_marble_material),
+            ("V48Brick", server.create_brick_material),
+            ("V48Asphalt", server.create_asphalt_material),
+            ("V48GrassMat", server.create_grass_material),
+            ("V48SandMat", server.create_sand_material),
+            ("V48Rust", server.create_rust_material),
+            ("V48Chrome", server.create_chrome_material),
+            ("V48Ceramic", server.create_ceramic_material),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.materials.get(name), result
+
+        server.create_parametric_part(
+            "V48Emitter", shape="BOX", dimensions=[0.2, 0.2, 0.2],
+            location=[0.0, 0.0, 0.1],
+        )
+        particles = server.create_particle_system("V48Emitter", "V48Particles", 50, 20)
+        assert particles["success"], particles
+        server.create_parametric_part(
+            "V48TrailObj", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.keyframe_object("V48TrailObj", "location", 1, [0.0, 0.0, 0.5])
+        server.keyframe_object("V48TrailObj", "location", 10, [1.0, 0.0, 0.5])
+        trail = server.create_trail("V48TrailObj", "V48Trail", 10)
+        assert trail["success"], trail
+        for name, factory, args in (
+            ("V48Muzzle", server.create_muzzle_flash, ([0.0, 0.0, 1.0], 200.0)),
+            ("V48Explosion", server.create_explosion, ([0.0, 0.0, 1.0], 2.0)),
+            ("V48Smoke", server.create_smoke_plume, ([0.0, 0.0, 0.0], 3.0, 1)),
+            ("V48Fire", server.create_fire_effect, (0.5, 1.5)),
+            ("V48Sparks", server.create_spark_burst, ([0.0, 0.0, 1.0], 50, 1)),
+            ("V48Shockwave", server.create_shockwave, ([0.0, 0.0, 1.0], 3.0)),
+        ):
+            result = factory(name, *args)
+            assert result["success"], result
+        project = server.project_info()
+        assert project["success"] and project["object_count"] > 0, project
+        health = server.health_check()
+        assert health["success"] and health["passed"], health
+
+        # --- v4.9 high-detail character base, grooming and quality gate ---
+        clear_scene()
+        head = server.create_anatomical_head("V49Head")
+        assert head["success"] and head["polygon_count"] > 500, head
+        eye = server.create_eye_assembly("V49Eye")
+        assert eye["success"] and len(eye["parts"]) == 5, eye
+        skin = server.create_skin_material_pro("V49Skin")
+        assert skin["success"] and "ShaderNodeBsdfPrincipled" in skin["nodes"].values(), skin
+        dental = server.create_dental_arch("V49Dental", tooth_count=16)
+        assert dental["success"] and dental["tooth_count"] == 16, dental
+        body = server.create_character_body_pro("V49Body", 1.75, "average", 1)
+        assert body["success"] and abs(body["actual_height"] - 1.75) < 0.001, body
+        garment = server.create_garment_shell_pro("V49Garment", 0.4, 0.22, 0.55)
+        assert garment["success"], garment
+        hair = server.create_hair_groom("V49Hair", "V49Head", 100, 0.15, 1)
+        assert hair["success"] and hair["spline_count"] == 100, hair
+        brows = server.create_eyebrow_groom("V49Brows", "V49Head", 30, 1)
+        assert brows["success"] and brows["spline_count"] == 30, brows
+        lashes = server.create_eyelash_groom("V49Lashes", "V49Head", 30, 0.014, 1)
+        assert lashes["success"] and lashes["spline_count"] == 30, lashes
+        body_object = bpy.data.objects[body["object"]]
+        existing_subdivision = body_object.modifiers[0]
+        selected_before_rig = set(bpy.context.selected_objects)
+        active_before_rig = bpy.context.view_layer.objects.active
+        rig = server.create_character_rig_pro("V49Body", "V49Rig")
+        assert existing_subdivision.show_viewport and existing_subdivision.levels == 1
+        assert set(bpy.context.selected_objects) == selected_before_rig
+        assert bpy.context.view_layer.objects.active == active_before_rig
+        assert rig["success"] and rig["bone_count"] >= 39, rig
+        studio = server.create_character_studio("V49Studio", [0.0, 0.0, 0.9])
+        assert studio["success"] and len(studio["lights"]) == 3, studio
+        quality = server.character_quality_report(
+            "V49Body", "V49Rig", ["V49Hair", "V49Brows", "V49Lashes"]
+        )
+        assert quality["success"] and quality["aaa_certified"] is False, quality
+        assert quality["tier"] == "procedural_high_detail", quality
+        assert quality["passed"], quality
+        topology = bm.GeometryService.topology_metrics(body_object)
+        assert topology["disconnected_components"] == 1, topology
+        assert topology["non_manifold_edges"] == 0, topology
+        for build in ("slim", "heavy"):
+            variant = server.create_character_body_pro(f"V49{build}", 1.25, build, 0)
+            metrics = bm.GeometryService.topology_metrics(bpy.data.objects[variant["object"]])
+            assert metrics["disconnected_components"] == 1 and metrics["non_manifold_edges"] == 0, metrics
+
+        body_object.location.x += 2.0
+        bpy.context.view_layer.update()
+        moved = server.create_character_body_pro("V49Moved", 1.25, "average", 0)
+        moved_object = bpy.data.objects[moved["object"]]
+        moved_object.location.x += 3.0
+        bpy.context.view_layer.update()
+        moved_rig = server.create_character_rig_pro(moved_object.name, "V49MovedRig")
+        assert abs(bpy.data.objects[moved_rig["armature"]].location.x - 3.0) < 0.001, moved_rig
+        unrelated = server.character_quality_report(body_object.name, moved_rig["armature"])
+        assert not unrelated["passed"], unrelated
+        assert any(not check["passed"] for check in unrelated["checks"] if check["check"] == "armature_bound")
+
+
+        clear_scene()
+        body = server.create_character_body_pro("V49ExportBody", subdivisions=1)
+        server.create_character_rig_pro(body["object"], "V49ExportRig")
+        unused = bpy.data.meshes.new("PreserveUnusedMesh")
+        unused_material = bpy.data.materials.new("PreserveUnusedMaterial")
+        selected_before = set(bpy.context.selected_objects)
+        with tempfile.TemporaryDirectory(prefix="blendermcp_character_export_") as output:
+            with patch.dict(os.environ, {"BLENDER_MCP_OUTPUT_DIR": output}):
+                exported = server.export_scene("body.glb", profile="godot")
+            assert exported["success"] and exported["reimport"]["passed"], exported
+            assert exported["reimport"]["meshes"] == exported["reimport"]["armatures"] == 1, exported
+        assert bpy.data.meshes.get(unused.name) == unused
+        assert bpy.data.materials.get(unused_material.name) == unused_material
+        assert set(bpy.context.selected_objects) == selected_before
+
         # --- animation and rigging primitives ---
         clear_scene()
         anim_cube = make_cube("AnimCube", 0.5)
@@ -952,7 +1717,7 @@ def main() -> None:
         if armature.data.bones["Tip"].parent is None or armature.data.bones["Tip"].parent.name != "Root":
             fail("armature parent relationship is wrong")
 
-        if os.environ.get("BLENDER_MCP_TEST_SKIP_RENDER") == "1":
+        if skip_render:
             print("BLENDER_HEADLESS_TEST_SKIP_RENDER: no supported graphics context on this runner")
         else:
             # --- deterministic inspection renders ---

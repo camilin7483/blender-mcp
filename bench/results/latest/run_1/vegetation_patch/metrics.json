@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "vegetation",
+  "duration_ms": 61.533,
+  "error": null,
+  "expected": {
+    "bush_polygons": {
+      "min": 1
+    },
+    "flower_polygons": {
+      "min": 1
+    },
+    "grass_polygons": {
+      "min": 1
+    },
+    "tree_polygons": {
+      "min": 1
+    }
+  },
+  "failures": [],
+  "observed": {
+    "bush_polygons": 400,
+    "flower_polygons": 1029,
+    "grass_polygons": 30,
+    "tree_polygons": 331
+  },
+  "passed": true,
+  "run": 1,
+  "task": "vegetation_patch"
+}

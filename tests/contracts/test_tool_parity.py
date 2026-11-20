@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MCP_SERVER = ROOT / "src" / "blender_mcp" / "server.py"
 ADDON = ROOT / "pro" / "blender_mcp.py"
 
-EXPECTED_TOOL_COUNT = 61
+EXPECTED_TOOL_COUNT = 313
 
 
 def _parse(path: Path) -> ast.Module:
@@ -77,6 +77,9 @@ def _addon_methods(server_class: ast.ClassDef) -> dict[str, dict[str, list[str]]
     return methods
 
 
+BRIDGE_ONLY_TOOLS = {"tools_catalog", "tools_search", "tools_describe"}
+
+
 def test_tool_surface_parity() -> None:
     tools = _mcp_tools(_parse(MCP_SERVER))
     server_class = _addon_class(_parse(ADDON))
@@ -84,10 +87,13 @@ def test_tool_surface_parity() -> None:
     methods = _addon_methods(server_class)
 
     assert len(tools) == EXPECTED_TOOL_COUNT, "update EXPECTED_TOOL_COUNT with the new contract"
-    assert set(tools) == handlers
-    assert set(tools) <= set(methods)
+    assert set(tools) - BRIDGE_ONLY_TOOLS == handlers
+    assert set(tools) - BRIDGE_ONLY_TOOLS <= set(methods)
+    assert BRIDGE_ONLY_TOOLS <= set(tools)
 
     for name, tool in tools.items():
+        if name in BRIDGE_ONLY_TOOLS:
+            continue
         assert tool["required"] == methods[name]["required"], (
             f"required parameters differ for {name}: "
             f"bridge={tool['required']} addon={methods[name]['required']}"

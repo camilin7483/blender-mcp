@@ -1,0 +1,8 @@
+{
+  "currency": "USD",
+  "notes": "No paid API calls are required for the local pipeline.",
+  "measured": {
+    "mcp_calls": null,
+    "tokens": null
+  }
+}

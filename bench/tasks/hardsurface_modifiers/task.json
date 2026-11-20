@@ -1,0 +1,5 @@
+{
+  "category": "hardsurface",
+  "runner": "hardsurface_modifiers",
+  "description": "Apply bevel, solidify and array modifiers to a cube."
+}

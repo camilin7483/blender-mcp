@@ -1,0 +1,5 @@
+{
+  "category": "furniture",
+  "runner": "furniture_library",
+  "description": "Create desk, wardrobe, dresser and bookshelf; verify dimensions."
+}

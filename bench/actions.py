@@ -298,3 +298,537 @@ def rigging_armature(server: BlenderMCPServer, _artifact_dir: str) -> dict:
     }
 
 
+
+
+def terrain_landscape(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    terrain = server.create_terrain(
+        "BenchTerrain", size=4.0, subdivisions=16, height=0.5, seed=7
+    )
+    rock = server.create_rock("BenchRock", size=0.3, seed=7)
+    tree = server.create_tree("BenchTree", height=2.0, crown_radius=0.5, seed=7)
+    scattered = server.scatter_objects("BenchRock", "BenchTerrain", count=6, seed=7)
+    return {
+        "terrain_dimensions": terrain["dimensions"][:2],
+        "height": terrain["dimensions"][2],
+        "rock_vertices": rock["vertex_count"],
+        "tree_polygons": tree["polygon_count"],
+        "scattered": scattered["count"],
+    }
+
+
+def water_surface(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    water = server.create_water_plane("BenchWater", size=3.0, subdivisions=8)
+    river = server.create_river("BenchRiver", width=0.5, segments=4)
+    pond = server.create_pond("BenchPond", radius=1.0, segments=12)
+    return {
+        "water_dimensions": water["dimensions"],
+        "has_material": bool(water.get("material")),
+        "river_faces": river["face_count"],
+        "pond_faces": pond["face_count"],
+    }
+
+
+def vegetation_patch(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    tree = server.create_tree("BenchTree", height=2.0, crown_radius=0.5, seed=8)
+    bush = server.create_bush("BenchBush", radius=0.3, height=0.3, seed=8)
+    grass = server.create_grass_patch(
+        "BenchGrass", radius=0.3, blade_count=10, seed=8
+    )
+    flowers = server.create_flower_patch(
+        "BenchFlowers", radius=0.3, count=3, seed=8
+    )
+    return {
+        "tree_polygons": tree["polygon_count"],
+        "bush_polygons": bush["polygon_count"],
+        "grass_polygons": grass["polygon_count"],
+        "flower_polygons": flowers["polygon_count"],
+    }
+
+
+def materials_uv(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_parametric_part(
+        "BenchUV", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+        location=[0.0, 0.0, 0.25],
+    )
+    server.create_procedural_material("BenchProcedural")
+    server.assign_material("BenchUV", "BenchProcedural")
+    uv = server.smart_uv_unwrap("BenchUV")
+    server.pack_uv_islands("BenchUV")
+    materials = server.list_materials()
+    mesh = bpy.data.objects["BenchUV"].data
+    material_data = bpy.data.materials["BenchProcedural"]
+    return {
+        "uv_layer_present": bool(uv.get("uv_layer")) and len(mesh.uv_layers) > 0,
+        "material_assigned": len(mesh.materials) > 0,
+        "material_nodes": len(material_data.node_tree.nodes),
+        "materials_count": materials["count"],
+    }
+
+
+def physics_rigid(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.add_rigid_body(
+        "BenchCube", body_type="ACTIVE", mass=2.0, friction=0.4
+    )
+    collision = server.add_collision("BenchCube")
+    body = bpy.data.objects["BenchCube"].rigid_body
+    return {
+        "rigid_body_type": body.type if body else None,
+        "mass": float(body.mass) if body else 0.0,
+        "collision_modifier": bool(
+            bpy.data.objects["BenchCube"].modifiers.get("Collision")
+        )
+        and collision["success"],
+        "friction": float(body.friction) if body else 0.0,
+    }
+
+
+def lighting_render(server: BlenderMCPServer, artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_light("BenchLight", energy=50.0)
+    server.create_camera(
+        "BenchCamera", location=[3.0, -3.0, 2.0], look_at=[0.0, 0.0, 0.5]
+    )
+    server.setup_world_background(color=[0.05, 0.05, 0.05], strength=1.0)
+    render = server.render_still(
+        "bench_render.png", camera_name="BenchCamera",
+        resolution_x=64, resolution_y=64, samples=4,
+    )
+    return {
+        "file_exists": os.path.exists(render["filepath"]),
+        "resolution": render["resolution"],
+        "engine_nonempty": bool(render["engine"]),
+    }
+
+
+def architecture_interior(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    room = server.create_room_shell(
+        "BenchRoom", width=5.0, depth=4.0, height=3.0
+    )
+    table = server.create_table("BenchTable")
+    chair = server.create_chair("BenchChair")
+    door = server.create_door("BenchDoor", location=[0.0, -2.0, 0.0])
+    window = server.create_window("BenchWindow", location=[2.5, 0.0, 1.0])
+    return {
+        "room_objects": len(room["objects"]),
+        "table_dimensions": table["dimensions"],
+        "chair_height": chair["dimensions"][2],
+        "door": door["success"],
+        "window": window["success"],
+    }
+
+
+def hardsurface_modifiers(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.add_bevel_modifier("BenchCube", width=0.02, segments=2)
+    server.add_solidify_modifier("BenchCube", thickness=0.01)
+    server.add_array_modifier(
+        "BenchCube", count=2, offset=[1.2, 0.0, 0.0]
+    )
+    applied = server.apply_all_modifiers("BenchCube")
+    cube = bpy.data.objects["BenchCube"]
+    return {
+        "applied": len(applied.get("applied", [])),
+        "polygon_count": len(cube.data.polygons),
+        "dimensions": [round(float(value), 4) for value in cube.dimensions],
+    }
+
+
+def environment_scene(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    sky = server.create_sky_lighting("BenchSky", sun_elevation=30.0)
+    ground = server.create_ground("BenchGround", size=6.0, subdivisions=8)
+    cliff = server.create_cliff("BenchCliff", width=2.0, height=1.5)
+    beach = server.create_beach("BenchBeach", width=5.0, depth=3.0)
+    return {
+        "sky": sky["success"],
+        "sun": bpy.data.objects.get("BenchSky_Sun") is not None,
+        "ground_dimensions": ground["dimensions"][:2],
+        "cliff_height": cliff["dimensions"][2],
+        "beach_dimensions": beach["dimensions"][:2],
+    }
+
+
+def character_blockout(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    humanoid = server.create_humanoid_blockout("BenchHuman", height=1.75)
+    eyes = server.create_eye_pair("BenchEyes", height=1.62)
+    teeth = server.create_teeth_set("BenchTeeth")
+    hair = server.create_hair_cap(
+        "BenchHair", head_object="BenchHuman", radius=0.10,
+        strand_count=10, seed=3,
+    )
+    garment = server.create_garment("BenchShirt", garment_type="shirt")
+    return {
+        "height": humanoid["actual_height"],
+        "eye_count": len(eyes["eyes"]),
+        "tooth_count": teeth["tooth_count"],
+        "hair_dimensions": hair["dimensions"],
+        "garment": garment["success"],
+    }
+
+
+def pbr_materials(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    metal = server.create_metal_material("BenchMetal")
+    wood = server.create_wood_material("BenchWood")
+    glass = server.create_glass_material("BenchGlass")
+    skin = server.create_skin_material("BenchSkin")
+    assigned = server.assign_material_to_faces("BenchCube", "BenchMetal")
+    return {
+        "metal_nodes": len(metal["nodes"]),
+        "wood_nodes": len(wood["nodes"]),
+        "glass_nodes": len(glass["nodes"]),
+        "skin_nodes": len(skin["nodes"]),
+        "assigned": assigned["assigned_count"],
+    }
+
+
+def animation_path(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    frame = server.set_frame_range(1, 60, 24)
+    path = server.keyframe_path(
+        "BenchCube", points=[[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+        frame_start=1, frame_end=30,
+    )
+    turntable = server.create_turntable_animation("BenchCube", frames=60)
+    rig = server.create_camera_rig(
+        "BenchCamRig", target=[0.0, 0.0, 0.5], distance=4.0, height=2.0
+    )
+    return {
+        "frame_end": frame["frame_end"],
+        "keyframes": path["keyframes"],
+        "turntable": turntable["success"],
+        "camera": bpy.data.objects.get("BenchCamRig_Camera") is not None,
+        "rig": rig["success"],
+    }
+
+
+def pipeline_export_lod(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.data.objects["BenchCube"].select_set(True)
+    bpy.context.view_layer.objects.active = bpy.data.objects["BenchCube"]
+    exported = server.export_selected("exports/bench_cube.glb", "GLB")
+    batch = server.batch_export(["BenchCube"], "batch", "GLB")
+    lod = server.create_lod_chain("BenchCube", [1.0, 0.5, 0.25])
+    manifest = server.generate_asset_manifest(
+        ["BenchCube"], "bench_manifest.json"
+    )
+    return {
+        "exported": exported["success"],
+        "export_size": exported["file_size_bytes"],
+        "batch_count": batch["count"],
+        "lod_count": len(lod["lod_names"]),
+        "manifest": manifest["success"],
+    }
+
+
+def render_turntable(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_studio_backdrop("BenchBackdrop")
+    server.configure_render("BLENDER_EEVEE_NEXT", 2, 64, 64, False, 24)
+    result = server.render_turntable(
+        "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
+    )
+    filepath = result["files"][0]
+    valid = server.validate_render(filepath, 64, 64)
+    return {
+        "frames": len(result["files"]),
+        "valid": valid["valid"],
+        "width": valid["width"],
+    }
+
+
+def rigging_ik(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_armature("BenchRig", [
+        {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+    ])
+    server.create_bone(
+        "BenchRig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+    )
+    ik = server.create_ik_chain("BenchRig", "Tip", "BenchCube", 2)
+    copy_rotation = server.add_copy_rotation_constraint(
+        "BenchRig", "Tip", "BenchCube", 0.5
+    )
+    limit_rotation = server.add_limit_rotation_constraint(
+        "BenchRig", "Tip", ["X", "Y", "Z"], [-45.0, 45.0]
+    )
+    skinned = server.skin_mesh_to_armature("BenchCube", "BenchRig", True)
+    return {
+        "bone_count": len(server.list_bones("BenchRig")["bones"]),
+        "ik": ik["success"],
+        "copy_rotation": copy_rotation["success"],
+        "limit_rotation": limit_rotation["success"],
+        "vertex_groups": skinned["vertex_group_count"],
+    }
+
+
+def textures_material(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_checker_texture("BenchChecker", 64, 64, cells=8)
+    material = server.image_to_material("BenchChecker", "BenchCheckMat", 0.4)
+    node = server.add_image_texture_node("BenchCheckMat", "BenchChecker")
+    resized = server.resize_image("BenchChecker", 32, 32)
+    saved = server.save_image("BenchChecker", "textures/checker.png", "PNG")
+    return {
+        "material": material["success"],
+        "node": node["success"],
+        "width": resized["width"],
+        "file_exists": os.path.exists(saved["filepath"]),
+    }
+
+
+def props_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    results = [
+        server.create_barrel("BenchBarrel"),
+        server.create_crate("BenchCrate"),
+        server.create_chest("BenchChest"),
+        server.create_lantern("BenchLantern"),
+        server.create_sword("BenchSword"),
+        server.create_shield("BenchShield"),
+    ]
+    return {
+        "count": len(results),
+        "all_success": all(item["success"] for item in results),
+        "polygons": sum(item["polygon_count"] for item in results),
+    }
+
+
+def furniture_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    desk = server.create_desk("BenchDesk")
+    wardrobe = server.create_wardrobe("BenchWardrobe")
+    dresser = server.create_dresser("BenchDresser")
+    bookshelf = server.create_bookshelf("BenchBookshelf")
+    return {
+        "desk_dimensions": desk["dimensions"],
+        "wardrobe_height": wardrobe["dimensions"][2],
+        "dresser_height": dresser["dimensions"][2],
+        "bookshelf_height": bookshelf["dimensions"][2],
+        "polygons": sum(
+            item["polygon_count"] for item in (desk, wardrobe, dresser, bookshelf)
+        ),
+    }
+
+
+def vehicle_blockouts(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    car = server.create_car_blockout("BenchCar")
+    bicycle = server.create_bicycle_blockout("BenchBicycle")
+    boat = server.create_boat_blockout("BenchBoat")
+    drone = server.create_drone_blockout("BenchDrone")
+    return {
+        "car_length": car["dimensions"][0],
+        "bicycle_height": bicycle["dimensions"][2],
+        "boat_width": boat["dimensions"][1],
+        "drone_span": drone["dimensions"][0],
+        "polygons": sum(
+            item["polygon_count"] for item in (car, bicycle, boat, drone)
+        ),
+    }
+
+
+def character_details(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_humanoid_blockout("BenchChar", height=1.75)
+    nose = server.create_nose("BenchNose")
+    ears = server.create_ear_pair("BenchEars")
+    mouth = server.create_mouth("BenchMouth")
+    brows = server.create_brow_pair("BenchBrows")
+    nails = server.create_fingernails("BenchNails")
+    proportions = server.create_face_proportions("BenchChar")
+    return {
+        "nose": nose["success"],
+        "ears": len(ears["ears"]),
+        "mouth": mouth["success"],
+        "brows": len(brows["brows"]),
+        "nails": nails["count"],
+        "landmarks": len(proportions["landmarks"]),
+    }
+
+
+def materials_bake(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_material("BenchBakeMat", [0.8, 0.3, 0.2, 1.0], 0.0, 0.5)
+    server.assign_material("BenchCube", "BenchBakeMat")
+    ao = server.bake_ambient_occlusion("BenchCube", 32, 1)
+    normal = server.bake_normal_map("BenchCube", 32)
+    diffuse = server.bake_diffuse("BenchCube", 32)
+    udim = server.create_udim_tiles("BenchUDIM", [1001, 1002], 32)
+    return {
+        "ao": ao["baked"],
+        "normal": normal["baked"],
+        "diffuse": diffuse["baked"],
+        "udim_tiles": udim["tile_count"],
+    }
+
+
+def nature_biome(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    forest = server.create_forest("BenchForest", radius=3.0, tree_count=3)
+    grass = server.create_grass_field("BenchGrass", size=3.0, blade_count=10)
+    rocks = server.create_rock_cluster("BenchRocks", radius=2.0, count=3)
+    biome = server.create_biome("BenchBiome", size=4.0)
+    return {
+        "trees": forest["count"],
+        "grass": grass["success"],
+        "rocks": rocks["success"],
+        "components": len(biome["components"]),
+    }
+
+
+def architecture_set(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    bathroom = server.create_bathroom_set("BenchBathroom", 2.0, 2.0)
+    kitchen = server.create_kitchen_island("BenchKitchen", 1.5, 0.8, 0.9)
+    fireplace = server.create_fireplace("BenchFireplace", 1.2, 1.0, 0.3)
+    pool = server.create_pool("BenchPool", 4.0, 2.0, 1.0)
+    return {
+        "bathroom": bathroom["success"],
+        "kitchen_height": kitchen["dimensions"][2],
+        "fireplace": fireplace["success"],
+        "pool": pool["success"],
+        "polygons": sum(
+            item["polygon_count"]
+            for item in (bathroom, kitchen, fireplace, pool)
+        ),
+    }
+
+
+def rigging_advanced(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_armature("BenchRig", [
+        {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+    ])
+    server.create_bone(
+        "BenchRig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+    )
+    server.add_child_of_constraint("BenchRig", "Tip", "BenchCube")
+    server.add_copy_location_constraint("BenchRig", "Tip", "BenchCube", 0.5)
+    server.add_damped_track_constraint("BenchRig", "Tip", "BenchCube")
+    server.add_stretch_to_constraint("BenchRig", "Tip", "BenchCube")
+    pose = server.create_pose_library_action("BenchRig", "BenchPose")
+    mirrored = server.mirror_pose("BenchRig", "X")
+    validation = server.validate_rig("BenchRig")
+    return {
+        "constraints": len(
+            server.list_bones("BenchRig")["bones"]
+        ),
+        "pose_bones": pose["keyframed_bones"],
+        "mirrored": mirrored["mirrored_count"],
+        "validate": validation["success"],
+    }
+
+
+def character_rigging(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_humanoid_blockout("BenchChar", height=1.75)
+    face = server.create_face_rig("BenchChar", "BenchFaceRig")
+    shapes = server.add_face_shape_keys("BenchChar")
+    validation = server.validate_character_rig("BenchFaceRig", "BenchChar")
+    return {
+        "bones": face["bone_count"],
+        "shape_keys": len(shapes["created"]),
+        "passed": validation["passed"],
+    }
+
+
+def world_assets(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    city = server.create_city_block("BenchCity", 20.0, 20.0, 4, 1)
+    road = server.create_road("BenchRoad", 20.0, 7.0, 2)
+    tunnel = server.create_tunnel("BenchTunnel", 10.0, 4.0, 3.0)
+    tower = server.create_skyscraper("BenchTower", 8.0, 8.0, 30.0, 10)
+    return {
+        "city_buildings": city["building_count"],
+        "road_length": road["length"],
+        "tunnel_width": tunnel["width"],
+        "tower_height": tower["dimensions"][2],
+        "polygons": sum(
+            item["polygon_count"] for item in (city, road, tunnel, tower)
+        ),
+    }
+
+
+def material_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    results = [
+        server.create_marble_material("BenchMarble"),
+        server.create_brick_material("BenchBrick"),
+        server.create_asphalt_material("BenchAsphalt"),
+        server.create_grass_material("BenchGrassMat"),
+        server.create_sand_material("BenchSandMat"),
+        server.create_rust_material("BenchRust"),
+        server.create_chrome_material("BenchChrome"),
+        server.create_ceramic_material("BenchCeramic"),
+    ]
+    return {
+        "count": len(results),
+        "all_success": all(item["success"] for item in results),
+        "min_nodes": min(len(item["nodes"]) for item in results),
+    }
+
+
+def animation_fx(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    particles = server.create_particle_system("BenchCube", "BenchParticles", 50, 20)
+    explosion = server.create_explosion("BenchExplosion", [0.0, 0.0, 1.0], 2.0)
+    fire = server.create_fire_effect("BenchFire", 0.5, 1.5)
+    sparks = server.create_spark_burst("BenchSparks", [0.0, 0.0, 1.0], 50, 1)
+    shockwave = server.create_shockwave("BenchShockwave", [0.0, 0.0, 1.0], 3.0)
+    return {
+        "particles": particles["success"],
+        "explosion": explosion["success"],
+        "fire": fire["success"],
+        "sparks": sparks["success"],
+        "shockwave": shockwave["success"],
+    }
+
+
+def character_head_layers(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    head = server.create_anatomical_head("BenchHeadPro")
+    eye = server.create_eye_assembly("BenchEyePro")
+    skin = server.create_skin_material_pro("BenchSkinPro")
+    dental = server.create_dental_arch("BenchDentalPro")
+    return {
+        "head_polygons": head["polygon_count"],
+        "eye_parts": len(eye["parts"]),
+        "skin_nodes": len(skin["nodes"]),
+        "teeth": dental["tooth_count"],
+    }
+
+
+def character_groom(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_anatomical_head("BenchGroomHead")
+    hair = server.create_hair_groom("BenchHairPro", "BenchGroomHead", 100, 0.15, 1)
+    brows = server.create_eyebrow_groom("BenchBrowsPro", "BenchGroomHead", 30, 1)
+    lashes = server.create_eyelash_groom("BenchLashesPro", "BenchGroomHead", 30)
+    return {
+        "hair_splines": hair["spline_count"],
+        "brow_splines": brows["spline_count"],
+        "lash_splines": lashes["spline_count"],
+    }
+
+
+def character_body_rig(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    body = server.create_character_body_pro("BenchBodyPro", 1.75, "average", 1)
+    garment = server.create_garment_shell_pro("BenchGarmentPro")
+    rig = server.create_character_rig_pro("BenchBodyPro", "BenchCharacterRig")
+    studio = server.create_character_studio("BenchCharacterStudio", [0.0, 0.0, 0.9])
+    from blender_mcp import GeometryService
+
+    topology = GeometryService.topology_metrics(bpy.data.objects[body["object"]])
+    return {
+        "height": body["actual_height"],
+        "components": topology["disconnected_components"],
+        "non_manifold_edges": topology["non_manifold_edges"],
+        "garment": garment["success"],
+        "bones": rig["bone_count"],
+        "lights": len(studio["lights"]),
+    }
+
+
+def character_quality_gate(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_character_body_pro("BenchQualityBody", 1.75, "average", 1)
+    server.create_character_rig_pro("BenchQualityBody", "BenchQualityRig")
+    report = server.character_quality_report(
+        "BenchQualityBody", "BenchQualityRig"
+    )
+    return {
+        "tier": report["tier"],
+        "aaa_certified": report["aaa_certified"],
+        "production_scope": report["production_ready_scope"],
+        "passed": report["passed"],
+    }

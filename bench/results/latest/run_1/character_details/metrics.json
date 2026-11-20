@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 65.959,
+  "error": null,
+  "expected": {
+    "brows": 2,
+    "ears": 2,
+    "landmarks": 8,
+    "mouth": true,
+    "nails": 10,
+    "nose": true
+  },
+  "failures": [],
+  "observed": {
+    "brows": 2,
+    "ears": 2,
+    "landmarks": 8,
+    "mouth": true,
+    "nails": 10,
+    "nose": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "character_details"
+}

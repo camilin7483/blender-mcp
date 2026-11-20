@@ -2,10 +2,104 @@
 
 All notable changes to this repository are documented here.
 
-## 4.0.0-alpha.4 - 2026-11-19 (unreleased)
+## Unreleased
+
+- Add the editable PELAGOS 07 inspection vehicle and NEREID 07 humanoid
+  showcase scenes, Cycles renders, and reproducible topology and pose checks.
+- Update installation instructions, version links and compatibility coverage.
+- Verify checksum-pinned Blender downloads through mirrors, require both
+  cross-platform headless jobs, and exercise the installed extension and
+  saved showcase files in both Linux Blender jobs.
+- Use the current product name in the Blender sidebar panel.
+
+## 4.9.0-alpha.2 - 2026-11-20 (pre-release)
+
+- Write planar UVs in bulk and avoid repeated subdivision evaluation while
+  Blender computes the same automatic skin weights.
+- Preserve scene selection, modifier visibility and active object after rigging.
+- Integrate the upstream CI timeout fixes and the independent geometry/export audit.
+
+## 4.9.0-alpha.1 - 2026-11-20 (unreleased)
+
+### Independent audit fixes
+
+- Fuse the procedural body into a closed connected mesh and validate rig
+  binding against the requested armature and its actual vertex weights.
+- Constrain the final export filename and check the exporter result before
+  accepting a file. Verify the twelve character commands over the GUI socket.
+- Fail benchmarks on invalid measurements or missing scene artifacts. Run
+  the benchmark on both Blender versions and normalize the extension ZIP.
 
 ### Added
 
+- Tool catalog and discovery: `tools_catalog`, `tools_search`, `tools_describe`
+  with category, safety, cost, units, profiles and JSON schemas.
+- `run_workflow` bounded batch execution in one main-thread command; rejects
+  recursive workflows and `execute_code`.
+- Domain packs loaded dynamically from `pro/domain/`: terrain (terrain, sculpt,
+  scatter, rock), vegetation (tree, bush, grass, flowers), water (plane, river,
+  pond, material), materials/UV (procedural material, smart UV, pack, list),
+  lighting (light, camera, world, still render) and physics (rigid body,
+  collision, cloth, bake).
+- Architecture pack: room shell with real door/window openings, door, window,
+  table, chair, shelf, bed, sofa and kitchen block.
+- Hard-surface pack: bevel, solidify, array and mirror modifiers, apply-all,
+  text objects, bevelled curve tubes, metaballs and conversion to mesh.
+- Environment pack: sky lighting, fog volume, clouds, ground, cliff, beach,
+  biome scatter and water shore.
+- Character blockout pack: humanoid, eyes, teeth, hair cap, garment, face
+  landmarks, hand and foot. Explicitly a blockout, not an AAA character.
+- PBR material pack: metal, wood, fabric, glass, skin, concrete, emission and
+  per-face material assignment.
+- Animation pack: frame range, path keyframes, turntable, camera rig,
+  follow-path constraint, interpolation, actions and animation clearing.
+- Pipeline pack: model import, selected export, batch export, LOD chains,
+  LOD validation, image packing, image saving and asset manifests.
+- Render QA pack: render configuration, passes, turntables, contact sheets,
+  studio backdrop, compositor glare, render validation and image comparison.
+- Rigging utilities: bone listing, bone creation, IK, copy/limit rotation,
+  pose transforms and automatic skinning.
+- Texture utilities: generated images, checker textures, image material nodes,
+  resize, colorspace, packing, saving and image-to-material.
+- Prop library: barrel, crate, chest, lantern, street lamp, sword, shield and
+  potion bottle.
+- Extra furniture: desk, wardrobe, dresser, nightstand, coffee table, bench,
+  bar stool and bookshelf.
+- Vehicle blockouts: wheel, car, bicycle, motorcycle, boat, aircraft, robot
+  and drone. Explicitly blockouts, not production vehicles.
+- Character detail: nose, ears, mouth, brows, eyelashes, hair strands,
+  fingernails and face proportions.
+- Advanced materials: AO/normal/diffuse baking, UDIM tiles, displacement,
+  layer-weight mixes, parallax bump and material cleanup.
+- Nature extras: forest, grass field, rock cluster, mountain range, cave,
+  island, waterfall and composed biome.
+- Architecture extras: bathroom set, kitchen island, fireplace, balcony,
+  fence, gate, garage and pool.
+- Advanced rigging: Child Of, Copy Location, Damped Track, Stretch To,
+  custom shapes, pose actions, pose mirroring and rig validation.
+- Advanced animation: NLA strips, camera shake, markers, motion path previews,
+  curve presets, retiming and camera cuts.
+- Physics extras: force fields, rigid chains, cloth presets, fluid domain and
+  inflow, collision and physics validation.
+- QA extras: scene/material/texture audits, budgets, export preflight,
+  floating/duplicate detection and repair plans.
+- Weather: rain, snow, lightning, wind, haze, sunset and night lighting.
+- Character rigging: face rig, jaw/eyelid/finger bones, IK leg/arm chains,
+  face shape keys and rig validation.
+- World building: city block, road, street, bridge, tunnel, skyscraper, park
+  and plaza.
+- Material library: marble, brick, asphalt, grass, sand, rust, chrome and
+  ceramic.
+- Animation FX: particle systems, trails, muzzle flashes, explosions, smoke,
+  fire, sparks and shockwaves.
+- High-detail character base: anatomical head, layered eyes, skin SSS/pore
+  shader, typed dental arch, unified body and garment shell.
+- Curve grooming: hair, eyebrows and eyelashes with deterministic splines.
+- 39-bone body rig with automatic weights and a character studio.
+- Character quality gate: explicit `aaa_certified: false`, structural scope and
+  missing AAA requirements, never a false certification. Total: 313 tools.
+- Utility tools: project_info and health_check. Total: 301 tools.
+- `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
   relative tolerance model.
@@ -30,9 +124,9 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 14 deterministic tasks covering all 11 requested
-  categories (plus inspection, anchors and constraints), published raw
-  artifacts in `bench/results/latest/` and 3 local runs at 14/14.
+- BlenderMCP-Bench runner with 46 deterministic tasks covering all 11 requested
+  categories plus terrain, water, vegetation, materials/UV, physics and
+  lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
   portability, CI matrix for 4.5.4 and 5.2.4.
 - Release checklist documenting the remaining stable-release gates.

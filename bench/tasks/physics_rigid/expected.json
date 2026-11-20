@@ -1,0 +1,8 @@
+{
+  "rigid_body_type": "ACTIVE",
+  "mass": {
+    "target": 2.0,
+    "tolerance": 0.001
+  },
+  "collision_modifier": true
+}

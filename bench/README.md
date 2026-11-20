@@ -5,10 +5,15 @@ Blender geometry. It is not optimized only for this server: tasks use public
 Blender operations and `expected.json` values, so another MCP/agent can run the
 same scenarios.
 
-## Current result
+## Published runs
+
+The [v4.9.0-alpha.2 release gate](../docs/releases/v4.9.0-alpha.2.md) passed
+46/46 tasks in each of three runs on both Blender 4.5.4 and 5.2.4. Each Linux
+CI job publishes its own benchmark artifacts. The earlier baseline
+in `bench/results/latest/` used the following setup.
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **14/14 tasks passed** in every run.
+- **46/46 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -26,6 +31,34 @@ same scenarios.
 | export | godot GLB + reimport | reimport matches dimensions |
 | anchors | cube top-center | position `[0,0,1]`, source |
 | constraints | desk ground + no-intersection | all constraints pass |
+| terrain | terrain + rock + scatter | 4×4 m, six instances |
+| vegetation | tree, bush, grass, flowers | non-empty meshes |
+| water | plane, river, pond | dimensions and faces |
+| materials/UV | procedural + unwrap | UV layer, nodes |
+| physics | rigid body + collision | ACTIVE, mass 2 |
+| lighting/render | light, camera, 64 px still | file exists |
+| architecture | room + door/window + table/chair | metric dimensions |
+| hardsurface | bevel + solidify + array | applied and dimensions |
+| environment | sky + ground + cliff + beach | dimensions |
+| character | humanoid + eyes + teeth + hair | blockout metrics |
+| PBR | metal, wood, glass, skin | nodes and assignment |
+| animation | path + turntable + camera rig | keyframes and camera |
+| pipeline | export + batch + LOD + manifest | files and LOD count |
+| render QA | turntable + validate | 64 px image |
+| rigging | IK + constraints + skin | bones and vertex groups |
+| textures | checker + material + save | nodes and file |
+| props | barrel/crate/chest/lantern/sword/shield | six meshes |
+| furniture | desk/wardrobe/dresser/bookshelf | metric dimensions |
+| vehicles | car/bicycle/boat/drone | blockout dimensions |
+| character detail | nose/ears/mouth/brows/nails | landmarks |
+| material bake | AO + normal + diffuse + UDIM | baked images |
+| nature biome | forest + grass + rocks + biome | components |
+| architecture set | bathroom + kitchen + fireplace + pool | dimensions |
+| advanced rigging | constraints + pose + mirror | bones and validation |
+| character rig | face rig + shape keys | 10 bones, 5 keys |
+| world assets | city/road/tunnel/skyscraper | dimensions |
+| material library | eight presets | node graphs |
+| animation FX | particles/explosion/fire | five effects |
 | materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
 | geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
 | repair | non-uniform scale | normalized scale |

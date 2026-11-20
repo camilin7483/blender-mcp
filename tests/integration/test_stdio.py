@@ -59,7 +59,7 @@ async def check_bridge():
                 initialized = await client.initialize()
                 assert initialized.capabilities.tools is not None
                 tools = (await client.list_tools()).tools
-                assert len(tools) == len({tool.name for tool in tools}) == 61
+                assert len(tools) == len({tool.name for tool in tools}) == 313
                 assert "name" in next(tool for tool in tools if tool.name == "get_object_info").inputSchema["required"]
 
                 info = await client.call_tool("get_scene_info", {})

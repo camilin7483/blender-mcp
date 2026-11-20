@@ -1,0 +1,36 @@
+{
+  "count": 1,
+  "object_count": 1,
+  "objects": [
+    {
+      "dimensions": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "lod_siblings": [
+        "BenchCube_LOD0",
+        "BenchCube_LOD1",
+        "BenchCube_LOD2"
+      ],
+      "materials": [],
+      "modifiers": [
+        {
+          "name": "Bevel",
+          "type": "BEVEL"
+        }
+      ],
+      "name": "BenchCube",
+      "polygon_count": 6,
+      "polygons": 6,
+      "type": "MESH",
+      "vertex_count": 8,
+      "vertices": 8
+    }
+  ]
+}

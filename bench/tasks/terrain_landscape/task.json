@@ -1,0 +1,5 @@
+{
+  "category": "terrain",
+  "runner": "terrain_landscape",
+  "description": "Generate terrain, rock, tree and scatter six instances over the terrain."
+}

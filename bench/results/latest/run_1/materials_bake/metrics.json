@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "materials",
+  "duration_ms": 264.608,
+  "error": null,
+  "expected": {
+    "ao": true,
+    "diffuse": true,
+    "normal": true,
+    "udim_tiles": 2
+  },
+  "failures": [],
+  "observed": {
+    "ao": true,
+    "diffuse": true,
+    "normal": true,
+    "udim_tiles": 2
+  },
+  "passed": true,
+  "run": 1,
+  "task": "materials_bake"
+}

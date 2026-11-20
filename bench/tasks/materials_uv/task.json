@@ -1,0 +1,5 @@
+{
+  "category": "materials",
+  "runner": "materials_uv",
+  "description": "Create a procedural material, assign it, unwrap and pack UVs."
+}

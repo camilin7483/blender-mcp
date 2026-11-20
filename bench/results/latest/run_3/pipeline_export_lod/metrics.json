@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "pipeline",
+  "duration_ms": 15.96,
+  "error": null,
+  "expected": {
+    "batch_count": 1,
+    "export_size": {
+      "min": 100
+    },
+    "exported": true,
+    "lod_count": 3,
+    "manifest": true
+  },
+  "failures": [],
+  "observed": {
+    "batch_count": 1,
+    "export_size": 1756,
+    "exported": true,
+    "lod_count": 3,
+    "manifest": true
+  },
+  "passed": true,
+  "run": 3,
+  "task": "pipeline_export_lod"
+}
