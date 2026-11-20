@@ -28,6 +28,7 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - [Migration v3 -> v4](docs/migration-v3-v4.md)
 - [Benchmark methodology and results](bench/README.md)
 - [Release checklist](docs/release-checklist.md)
+- [v4.9.0-alpha.1 release notes](docs/releases/v4.9.0-alpha.1.md)
 - [Changelog](CHANGELOG.md)
 
 ## Features

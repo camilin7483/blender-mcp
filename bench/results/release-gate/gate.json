@@ -1,7 +1,7 @@
 {
   "release": "4.9.0-alpha.1",
-  "commit": "a1e8bfa84c559da2265a78935c6f85cf6770cde0",
-  "generated_at": "2026-11-20T06:06:17.296581+00:00",
+  "commit": "5e76912cfe292ab5cfd7bfc3a0e2b1e5a365c775",
+  "generated_at": "2026-11-20T06:08:50.941854+00:00",
   "host_tests": "pass",
   "blender_4_5": "pass",
   "blender_5_2": "pass",
@@ -10,7 +10,7 @@
     "total_tasks": 46,
     "runs": 3
   },
-  "extension_sha256": "e0cfbf945f23416dda223b9388fcc2de7c58cbe7d77d20f9647659faf2f89cc9",
+  "extension_sha256": "3a9df86cd79ca1f644d97a63ff576161a06d8898197bad3b53d2934676557213",
   "external_blockers": [
     "GitHub Actions not executed: gh token invalid in this environment",
     "Windows/macOS Blender headless not validated on those OSes",

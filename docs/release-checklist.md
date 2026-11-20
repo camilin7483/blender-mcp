@@ -45,7 +45,10 @@ environment.
 
 `scripts/release_gate.sh` runs host tests, lint, Blender 4.5/5.2 headless+GUI,
 the 46-task benchmark (3 runs), extension build/validation and SBOM generation.
-Last local evidence:
+Last local evidence (2026-11-20, commit `5e76912`):
+
+- Extension SHA-256: `3a9df86cd79ca1f644d97a63ff576161a06d8898197bad3b53d2934676557213`
+- Release notes: `docs/releases/v4.9.0-alpha.1.md`
 
 - `bench/results/release-gate/gate.json`
 - `bench/results/release-gate/SHA256SUMS`
