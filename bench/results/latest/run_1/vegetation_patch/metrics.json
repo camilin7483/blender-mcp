@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "vegetation",
-  "duration_ms": 65.965,
+  "duration_ms": 61.12,
   "error": null,
   "expected": {
     "bush_polygons": {

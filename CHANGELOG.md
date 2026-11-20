@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.4.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.5.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -35,6 +35,14 @@ All notable changes to this repository are documented here.
   pose transforms and automatic skinning.
 - Texture utilities: generated images, checker textures, image material nodes,
   resize, colorspace, packing, saving and image-to-material.
+- Prop library: barrel, crate, chest, lantern, street lamp, sword, shield and
+  potion bottle.
+- Extra furniture: desk, wardrobe, dresser, nightstand, coffee table, bench,
+  bar stool and bookshelf.
+- Vehicle blockouts: wheel, car, bicycle, motorcycle, boat, aircraft, robot
+  and drone. Explicitly blockouts, not production vehicles.
+- Character detail: nose, ears, mouth, brows, eyelashes, hair strands,
+  fingernails and face proportions.
 - `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
@@ -60,7 +68,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 30 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 34 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

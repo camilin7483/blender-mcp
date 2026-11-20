@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "vehicles",
+  "duration_ms": 53.044,
+  "error": null,
+  "expected": {
+    "bicycle_height": {
+      "target": 0.97,
+      "tolerance": 0.1
+    },
+    "boat_width": {
+      "target": 1.8,
+      "tolerance": 0.1
+    },
+    "car_length": {
+      "target": 4.3,
+      "tolerance": 0.2
+    },
+    "drone_span": {
+      "target": 0.35,
+      "tolerance": 0.1
+    },
+    "polygons": {
+      "min": 100
+    }
+  },
+  "failures": [],
+  "observed": {
+    "bicycle_height": 0.9742000102996826,
+    "boat_width": 1.7999999523162842,
+    "car_length": 4.299999713897705,
+    "drone_span": 0.3482501208782196,
+    "polygons": 3160
+  },
+  "passed": true,
+  "run": 2,
+  "task": "vehicle_blockouts"
+}

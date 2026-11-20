@@ -1,6 +1,6 @@
 # Next action
 
-1. Prop/furniture/vehicle libraries with real geometry.
-2. Advanced character detail: face, hair, garments and rigging.
-3. Texture baking and UDIM.
+1. Baking/UDIM/advanced material pack.
+2. Nature and architecture extras.
+3. Character/rigging advanced tools.
 4. Continue toward 300 tools with tests and benchmarks.

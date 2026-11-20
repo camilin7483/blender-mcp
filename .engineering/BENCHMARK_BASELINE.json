@@ -2,8 +2,8 @@
   "benchmark": "BlenderMCP-Bench",
   "blender": "4.5.4 LTS",
   "runs": 3,
-  "passed_tasks": 30,
-  "total_tasks": 30,
+  "passed_tasks": 34,
+  "total_tasks": 34,
   "results": "bench/results/latest/summary.json",
   "external_comparison": false
 }

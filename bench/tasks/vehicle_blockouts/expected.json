@@ -1,0 +1,21 @@
+{
+  "car_length": {
+    "target": 4.3,
+    "tolerance": 0.2
+  },
+  "bicycle_height": {
+    "target": 0.97,
+    "tolerance": 0.1
+  },
+  "boat_width": {
+    "target": 1.8,
+    "tolerance": 0.1
+  },
+  "drone_span": {
+    "target": 0.35,
+    "tolerance": 0.1
+  },
+  "polygons": {
+    "min": 100
+  }
+}

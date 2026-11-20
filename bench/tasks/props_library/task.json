@@ -1,0 +1,5 @@
+{
+  "category": "props",
+  "runner": "props_library",
+  "description": "Create a barrel, crate, chest, lantern, sword and shield."
+}

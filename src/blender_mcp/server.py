@@ -1040,6 +1040,39 @@ TOOL_METADATA = {
     "pack_image": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
     "save_image": {"category": "textures", "safety": "write", "cost": "medium", "units": "pixels"},
     "image_to_material": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
+    "create_barrel": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_crate": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_chest": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_lantern": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_streetlamp": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_sword": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_shield": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_potion_bottle": {"category": "props", "safety": "write", "cost": "low", "units": "meters"},
+    "create_desk": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_wardrobe": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_dresser": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_nightstand": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_coffee_table": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bench": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bar_stool": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bookshelf": {"category": "furniture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_wheel": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_car_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bicycle_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_motorcycle_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_boat_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_aircraft_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_robot_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_drone_blockout": {"category": "vehicles", "safety": "write", "cost": "low", "units": "meters"},
+    "create_nose": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_ear_pair": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_mouth": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_brow_pair": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_eyelash_pair": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_hair_strands": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_fingernails": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_face_proportions": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "create_hair_strands": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
 }
 
 
@@ -1731,6 +1764,167 @@ def image_to_material(image_name: str, material_name: str, roughness: float = 0.
     return json.dumps(send_blender_command("image_to_material", {"image_name": image_name, "material_name": material_name, "roughness": roughness}), indent=2)
 
 
+@mcp.tool()
+def create_barrel(name: str = "Barrel", radius: float = 0.3, height: float = 0.8, segments: int = 16, seed: int = 0) -> str:
+    """Create a staved barrel with metal bands."""
+    return json.dumps(send_blender_command("create_barrel", {"name": name, "radius": radius, "height": height, "segments": segments, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_crate(name: str = "Crate", size: float = 0.6, plank_count: int = 4) -> str:
+    """Create a plank crate with corner battens."""
+    return json.dumps(send_blender_command("create_crate", {"name": name, "size": size, "plank_count": plank_count}), indent=2)
+
+@mcp.tool()
+def create_chest(name: str = "Chest", width: float = 0.8, depth: float = 0.5, height: float = 0.5) -> str:
+    """Create a chest with a lid, bands and latch."""
+    return json.dumps(send_blender_command("create_chest", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_lantern(name: str = "Lantern", height: float = 0.35, radius: float = 0.12) -> str:
+    """Create a lantern frame with glass panels and handle."""
+    return json.dumps(send_blender_command("create_lantern", {"name": name, "height": height, "radius": radius}), indent=2)
+
+@mcp.tool()
+def create_streetlamp(name: str = "StreetLamp", height: float = 3.0, arm_length: float = 0.8) -> str:
+    """Create a street lamp with base, pole, arm and head."""
+    return json.dumps(send_blender_command("create_streetlamp", {"name": name, "height": height, "arm_length": arm_length}), indent=2)
+
+@mcp.tool()
+def create_sword(name: str = "Sword", blade_length: float = 0.8, blade_width: float = 0.06, guard_width: float = 0.18) -> str:
+    """Create a sword with blade, guard, grip and pommel."""
+    return json.dumps(send_blender_command("create_sword", {"name": name, "blade_length": blade_length, "blade_width": blade_width, "guard_width": guard_width}), indent=2)
+
+@mcp.tool()
+def create_shield(name: str = "Shield", width: float = 0.6, height: float = 0.8, thickness: float = 0.04) -> str:
+    """Create a curved shield with rim and boss."""
+    return json.dumps(send_blender_command("create_shield", {"name": name, "width": width, "height": height, "thickness": thickness}), indent=2)
+
+@mcp.tool()
+def create_potion_bottle(name: str = "Potion", height: float = 0.2, radius: float = 0.05) -> str:
+    """Create a potion bottle with glass, liquid and cork."""
+    return json.dumps(send_blender_command("create_potion_bottle", {"name": name, "height": height, "radius": radius}), indent=2)
+
+@mcp.tool()
+def create_desk(name: str = "Desk", width: float = 1.6, depth: float = 0.8, height: float = 0.75, drawer_count: int = 3) -> str:
+    """Create a desk with top, legs and drawers."""
+    return json.dumps(send_blender_command("create_desk", {"name": name, "width": width, "depth": depth, "height": height, "drawer_count": drawer_count}), indent=2)
+
+@mcp.tool()
+def create_wardrobe(name: str = "Wardrobe", width: float = 1.2, depth: float = 0.6, height: float = 2.0, door_count: int = 2) -> str:
+    """Create a wardrobe with doors, handles and feet."""
+    return json.dumps(send_blender_command("create_wardrobe", {"name": name, "width": width, "depth": depth, "height": height, "door_count": door_count}), indent=2)
+
+@mcp.tool()
+def create_dresser(name: str = "Dresser", width: float = 1.0, depth: float = 0.5, height: float = 0.9, drawer_count: int = 4) -> str:
+    """Create a dresser with drawers and handles."""
+    return json.dumps(send_blender_command("create_dresser", {"name": name, "width": width, "depth": depth, "height": height, "drawer_count": drawer_count}), indent=2)
+
+@mcp.tool()
+def create_nightstand(name: str = "Nightstand", width: float = 0.5, depth: float = 0.4, height: float = 0.55) -> str:
+    """Create a nightstand with a drawer and legs."""
+    return json.dumps(send_blender_command("create_nightstand", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_coffee_table(name: str = "CoffeeTable", width: float = 1.2, depth: float = 0.6, height: float = 0.42) -> str:
+    """Create a coffee table with top, legs and lower shelf."""
+    return json.dumps(send_blender_command("create_coffee_table", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_bench(name: str = "Bench", width: float = 1.6, depth: float = 0.45, height: float = 0.45) -> str:
+    """Create a backless bench with seat and legs."""
+    return json.dumps(send_blender_command("create_bench", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_bar_stool(name: str = "BarStool", seat_radius: float = 0.18, height: float = 0.75) -> str:
+    """Create a bar stool with round seat, legs and footrest."""
+    return json.dumps(send_blender_command("create_bar_stool", {"name": name, "seat_radius": seat_radius, "height": height}), indent=2)
+
+@mcp.tool()
+def create_bookshelf(name: str = "Bookshelf", width: float = 1.0, height: float = 2.0, depth: float = 0.3, shelf_count: int = 5) -> str:
+    """Create a bookshelf with sides, shelves and back panel."""
+    return json.dumps(send_blender_command("create_bookshelf", {"name": name, "width": width, "height": height, "depth": depth, "shelf_count": shelf_count}), indent=2)
+
+@mcp.tool()
+def create_wheel(name: str = "Wheel", radius: float = 0.35, width: float = 0.22, segments: int = 24) -> str:
+    """Create a tire, rim and hub wheel."""
+    return json.dumps(send_blender_command("create_wheel", {"name": name, "radius": radius, "width": width, "segments": segments}), indent=2)
+
+@mcp.tool()
+def create_car_blockout(name: str = "Car", length: float = 4.2, width: float = 1.8, height: float = 1.4) -> str:
+    """Create a car blockout with body, cabin, wheels and lights."""
+    return json.dumps(send_blender_command("create_car_blockout", {"name": name, "length": length, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_bicycle_blockout(name: str = "Bicycle", length: float = 1.7, height: float = 1.0) -> str:
+    """Create a bicycle blockout with frame, wheels and handlebar."""
+    return json.dumps(send_blender_command("create_bicycle_blockout", {"name": name, "length": length, "height": height}), indent=2)
+
+@mcp.tool()
+def create_motorcycle_blockout(name: str = "Motorcycle", length: float = 2.1, height: float = 1.1) -> str:
+    """Create a motorcycle blockout with wheels, body and handlebar."""
+    return json.dumps(send_blender_command("create_motorcycle_blockout", {"name": name, "length": length, "height": height}), indent=2)
+
+@mcp.tool()
+def create_boat_blockout(name: str = "Boat", length: float = 5.0, width: float = 1.8, height: float = 1.0) -> str:
+    """Create a boat blockout with hull, deck and cabin."""
+    return json.dumps(send_blender_command("create_boat_blockout", {"name": name, "length": length, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_aircraft_blockout(name: str = "Aircraft", length: float = 8.0, wingspan: float = 10.0, height: float = 2.5) -> str:
+    """Create an aircraft blockout with fuselage, wings and tail."""
+    return json.dumps(send_blender_command("create_aircraft_blockout", {"name": name, "length": length, "wingspan": wingspan, "height": height}), indent=2)
+
+@mcp.tool()
+def create_robot_blockout(name: str = "Robot", height: float = 1.8, build: str = "humanoid") -> str:
+    """Create a robot or rover blockout."""
+    return json.dumps(send_blender_command("create_robot_blockout", {"name": name, "height": height, "build": build}), indent=2)
+
+@mcp.tool()
+def create_drone_blockout(name: str = "Drone", span: float = 0.5, height: float = 0.2) -> str:
+    """Create a drone blockout with body, arms and rotors."""
+    return json.dumps(send_blender_command("create_drone_blockout", {"name": name, "span": span, "height": height}), indent=2)
+
+@mcp.tool()
+def create_nose(name: str = "Nose", width: float = 0.035, height: float = 0.05, depth: float = 0.04) -> str:
+    """Create a nose detail blockout."""
+    return json.dumps(send_blender_command("create_nose", {"name": name, "width": width, "height": height, "depth": depth}), indent=2)
+
+@mcp.tool()
+def create_ear_pair(name: str = "Ears", width: float = 0.03, height: float = 0.06, spacing: float = 0.16) -> str:
+    """Create two ear detail meshes."""
+    return json.dumps(send_blender_command("create_ear_pair", {"name": name, "width": width, "height": height, "spacing": spacing}), indent=2)
+
+@mcp.tool()
+def create_mouth(name: str = "Mouth", width: float = 0.05, height: float = 0.018, depth: float = 0.02) -> str:
+    """Create a mouth and lip detail mesh."""
+    return json.dumps(send_blender_command("create_mouth", {"name": name, "width": width, "height": height, "depth": depth}), indent=2)
+
+@mcp.tool()
+def create_brow_pair(name: str = "Brows", width: float = 0.04, height: float = 0.01, spacing: float = 0.065) -> str:
+    """Create two curved eyebrow strips."""
+    return json.dumps(send_blender_command("create_brow_pair", {"name": name, "width": width, "height": height, "spacing": spacing}), indent=2)
+
+@mcp.tool()
+def create_eyelash_pair(name: str = "Eyelashes", radius: float = 0.014, strand_count: int = 24, seed: int = 0) -> str:
+    """Create two sets of deterministic eyelash strands."""
+    return json.dumps(send_blender_command("create_eyelash_pair", {"name": name, "radius": radius, "strand_count": strand_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_hair_strands(name: str = "HairStrands", radius: float = 0.1, strand_count: int = 200, length: float = 0.2, seed: int = 0) -> str:
+    """Create a dense deterministic hair strand mesh."""
+    return json.dumps(send_blender_command("create_hair_strands", {"name": name, "radius": radius, "strand_count": strand_count, "length": length, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_fingernails(name: str = "Nails", radius: float = 0.006, count: int = 10) -> str:
+    """Create ten fingernail plates arranged as two hands."""
+    return json.dumps(send_blender_command("create_fingernails", {"name": name, "radius": radius, "count": count}), indent=2)
+
+@mcp.tool()
+def create_face_proportions(head_object: str, height: float = 0.22) -> str:
+    """Create face landmark empties from a head AABB."""
+    return json.dumps(send_blender_command("create_face_proportions", {"head_object": head_object, "height": height}), indent=2)
+
+
 CORE_TOOLS = {
     "get_scene_info",
     "get_object_info",
@@ -1766,6 +1960,22 @@ PROFILE_EXTRAS = {
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
         "validate_constraints", "apply_constraints",
     },
+    "props": {
+        "create_barrel", "create_crate", "create_chest", "create_lantern",
+        "create_streetlamp", "create_sword", "create_shield",
+        "create_potion_bottle",
+    },
+    "furniture": {
+        "create_desk", "create_wardrobe", "create_dresser",
+        "create_nightstand", "create_coffee_table", "create_bench",
+        "create_bar_stool", "create_bookshelf",
+    },
+    "vehicles": {
+        "create_wheel", "create_car_blockout", "create_bicycle_blockout",
+        "create_motorcycle_blockout", "create_boat_blockout",
+        "create_aircraft_blockout", "create_robot_blockout",
+        "create_drone_blockout",
+    },
     "pipeline": {
         "import_model", "export_selected", "batch_export", "create_lod_chain",
         "validate_lod_chain", "pack_images", "save_images",
@@ -1789,7 +1999,10 @@ PROFILE_EXTRAS = {
     "character": {
         "create_humanoid_blockout", "create_eye_pair", "create_teeth_set",
         "create_hair_cap", "create_garment", "create_face_landmarks",
-        "create_hand_blockout", "create_foot_blockout",
+        "create_hand_blockout", "create_foot_blockout", "create_nose",
+        "create_ear_pair", "create_mouth", "create_brow_pair",
+        "create_eyelash_pair", "create_hair_strands", "create_fingernails",
+        "create_face_proportions",
     },
     "architecture": {
         "create_room_shell", "create_door", "create_window", "create_table",

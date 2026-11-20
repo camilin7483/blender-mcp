@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 4, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 5, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1254,6 +1254,53 @@ def main() -> None:
         finally:
             os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
             shutil.rmtree(v44_dir, ignore_errors=True)
+
+        # --- v4.5 props, furniture, vehicles and character detail ---
+        clear_scene()
+        for name, factory in (
+            ("V45Barrel", server.create_barrel),
+            ("V45Crate", server.create_crate),
+            ("V45Chest", server.create_chest),
+            ("V45Lantern", server.create_lantern),
+            ("V45Lamp", server.create_streetlamp),
+            ("V45Sword", server.create_sword),
+            ("V45Shield", server.create_shield),
+            ("V45Potion", server.create_potion_bottle),
+            ("V45Desk", server.create_desk),
+            ("V45Wardrobe", server.create_wardrobe),
+            ("V45Dresser", server.create_dresser),
+            ("V45Nightstand", server.create_nightstand),
+            ("V45Coffee", server.create_coffee_table),
+            ("V45Bench", server.create_bench),
+            ("V45Stool", server.create_bar_stool),
+            ("V45Bookshelf", server.create_bookshelf),
+            ("V45Wheel", server.create_wheel),
+            ("V45Car", server.create_car_blockout),
+            ("V45Bicycle", server.create_bicycle_blockout),
+            ("V45Motorcycle", server.create_motorcycle_blockout),
+            ("V45Boat", server.create_boat_blockout),
+            ("V45Aircraft", server.create_aircraft_blockout),
+            ("V45Robot", server.create_robot_blockout),
+            ("V45Drone", server.create_drone_blockout),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.objects.get(name), result
+            assert result["polygon_count"] > 0, result
+        for name, factory in (
+            ("V45Nose", server.create_nose),
+            ("V45Ears", server.create_ear_pair),
+            ("V45Mouth", server.create_mouth),
+            ("V45Brows", server.create_brow_pair),
+            ("V45Lashes", server.create_eyelash_pair),
+            ("V45Hair", server.create_hair_strands),
+            ("V45Nails", server.create_fingernails),
+        ):
+            kwargs = {"strand_count": 8} if name in {"V45Lashes", "V45Hair"} else {}
+            result = factory(name, **kwargs)
+            assert result["success"], result
+        server.create_humanoid_blockout("V45Char", height=1.75)
+        proportions = server.create_face_proportions("V45Char")
+        assert proportions["success"] and len(proportions["landmarks"]) == 8, proportions
 
         # --- animation and rigging primitives ---
         clear_scene()

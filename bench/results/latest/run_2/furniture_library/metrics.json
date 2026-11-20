@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "furniture",
+  "duration_ms": 8.571,
+  "error": null,
+  "expected": {
+    "bookshelf_height": {
+      "target": 2.0,
+      "tolerance": 0.02
+    },
+    "desk_dimensions": [
+      {
+        "target": 1.6,
+        "tolerance": 0.02
+      },
+      {
+        "target": 0.8,
+        "tolerance": 0.02
+      },
+      {
+        "target": 0.75,
+        "tolerance": 0.02
+      }
+    ],
+    "dresser_height": {
+      "target": 0.9,
+      "tolerance": 0.02
+    },
+    "polygons": {
+      "min": 100
+    },
+    "wardrobe_height": {
+      "target": 2.0,
+      "tolerance": 0.02
+    }
+  },
+  "failures": [],
+  "observed": {
+    "bookshelf_height": 2.0,
+    "desk_dimensions": [
+      1.600000023841858,
+      0.800000011920929,
+      0.75
+    ],
+    "dresser_height": 0.8999999761581421,
+    "polygons": 270,
+    "wardrobe_height": 2.0
+  },
+  "passed": true,
+  "run": 2,
+  "task": "furniture_library"
+}

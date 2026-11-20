@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **30/30 tasks passed** in every run.
+- **34/34 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -42,6 +42,10 @@ same scenarios.
 | render QA | turntable + validate | 64 px image |
 | rigging | IK + constraints + skin | bones and vertex groups |
 | textures | checker + material + save | nodes and file |
+| props | barrel/crate/chest/lantern/sword/shield | six meshes |
+| furniture | desk/wardrobe/dresser/bookshelf | metric dimensions |
+| vehicles | car/bicycle/boat/drone | blockout dimensions |
+| character detail | nose/ears/mouth/brows/nails | landmarks |
 | materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
 | geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
 | repair | non-uniform scale | normalized scale |

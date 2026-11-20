@@ -147,6 +147,18 @@
       "title": "Release v4.4.0-alpha.1",
       "status": "completed",
       "evidence": "tag and extension 4.4.0"
+    },
+    {
+      "id": "T18",
+      "title": "Props, furniture, vehicles and character detail",
+      "status": "completed",
+      "evidence": "32 tools, 34/34 bench, Blender 4.5/5.2"
+    },
+    {
+      "id": "T19",
+      "title": "Release v4.5.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag and extension 4.5.0"
     }
   ]
 }

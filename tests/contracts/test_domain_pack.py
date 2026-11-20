@@ -66,6 +66,27 @@ EXPECTED = {
         "resize_image", "set_image_colorspace", "pack_image", "save_image",
         "image_to_material",
     },
+    "props": {
+        "create_barrel", "create_crate", "create_chest", "create_lantern",
+        "create_streetlamp", "create_sword", "create_shield",
+        "create_potion_bottle",
+    },
+    "furniture_extra": {
+        "create_desk", "create_wardrobe", "create_dresser",
+        "create_nightstand", "create_coffee_table", "create_bench",
+        "create_bar_stool", "create_bookshelf",
+    },
+    "vehicles": {
+        "create_wheel", "create_car_blockout", "create_bicycle_blockout",
+        "create_motorcycle_blockout", "create_boat_blockout",
+        "create_aircraft_blockout", "create_robot_blockout",
+        "create_drone_blockout",
+    },
+    "character_detail": {
+        "create_nose", "create_ear_pair", "create_mouth", "create_brow_pair",
+        "create_eyelash_pair", "create_hair_strands", "create_fingernails",
+        "create_face_proportions",
+    },
 }
 
 

@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "constraints",
-  "duration_ms": 9.711,
+  "duration_ms": 10.665,
   "error": null,
   "expected": {
     "constraint_passed": true,

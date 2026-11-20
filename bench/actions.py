@@ -576,3 +576,69 @@ def textures_material(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "width": resized["width"],
         "file_exists": os.path.exists(saved["filepath"]),
     }
+
+
+def props_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    results = [
+        server.create_barrel("BenchBarrel"),
+        server.create_crate("BenchCrate"),
+        server.create_chest("BenchChest"),
+        server.create_lantern("BenchLantern"),
+        server.create_sword("BenchSword"),
+        server.create_shield("BenchShield"),
+    ]
+    return {
+        "count": len(results),
+        "all_success": all(item["success"] for item in results),
+        "polygons": sum(item["polygon_count"] for item in results),
+    }
+
+
+def furniture_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    desk = server.create_desk("BenchDesk")
+    wardrobe = server.create_wardrobe("BenchWardrobe")
+    dresser = server.create_dresser("BenchDresser")
+    bookshelf = server.create_bookshelf("BenchBookshelf")
+    return {
+        "desk_dimensions": desk["dimensions"],
+        "wardrobe_height": wardrobe["dimensions"][2],
+        "dresser_height": dresser["dimensions"][2],
+        "bookshelf_height": bookshelf["dimensions"][2],
+        "polygons": sum(
+            item["polygon_count"] for item in (desk, wardrobe, dresser, bookshelf)
+        ),
+    }
+
+
+def vehicle_blockouts(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    car = server.create_car_blockout("BenchCar")
+    bicycle = server.create_bicycle_blockout("BenchBicycle")
+    boat = server.create_boat_blockout("BenchBoat")
+    drone = server.create_drone_blockout("BenchDrone")
+    return {
+        "car_length": car["dimensions"][0],
+        "bicycle_height": bicycle["dimensions"][2],
+        "boat_width": boat["dimensions"][1],
+        "drone_span": drone["dimensions"][0],
+        "polygons": sum(
+            item["polygon_count"] for item in (car, bicycle, boat, drone)
+        ),
+    }
+
+
+def character_details(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_humanoid_blockout("BenchChar", height=1.75)
+    nose = server.create_nose("BenchNose")
+    ears = server.create_ear_pair("BenchEars")
+    mouth = server.create_mouth("BenchMouth")
+    brows = server.create_brow_pair("BenchBrows")
+    nails = server.create_fingernails("BenchNails")
+    proportions = server.create_face_proportions("BenchChar")
+    return {
+        "nose": nose["success"],
+        "ears": len(ears["ears"]),
+        "mouth": mouth["success"],
+        "brows": len(brows["brows"]),
+        "nails": nails["count"],
+        "landmarks": len(proportions["landmarks"]),
+    }

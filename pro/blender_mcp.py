@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 4, 0),
+    "version": (4, 5, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2310,6 +2310,38 @@ class BlenderMCPServer:
             "pack_image": lambda p: self.pack_image(**p),
             "save_image": lambda p: self.save_image(**p),
             "image_to_material": lambda p: self.image_to_material(**p),
+            "create_barrel": lambda p: self.create_barrel(**p),
+            "create_crate": lambda p: self.create_crate(**p),
+            "create_chest": lambda p: self.create_chest(**p),
+            "create_lantern": lambda p: self.create_lantern(**p),
+            "create_streetlamp": lambda p: self.create_streetlamp(**p),
+            "create_sword": lambda p: self.create_sword(**p),
+            "create_shield": lambda p: self.create_shield(**p),
+            "create_potion_bottle": lambda p: self.create_potion_bottle(**p),
+            "create_desk": lambda p: self.create_desk(**p),
+            "create_wardrobe": lambda p: self.create_wardrobe(**p),
+            "create_dresser": lambda p: self.create_dresser(**p),
+            "create_nightstand": lambda p: self.create_nightstand(**p),
+            "create_coffee_table": lambda p: self.create_coffee_table(**p),
+            "create_bench": lambda p: self.create_bench(**p),
+            "create_bar_stool": lambda p: self.create_bar_stool(**p),
+            "create_bookshelf": lambda p: self.create_bookshelf(**p),
+            "create_wheel": lambda p: self.create_wheel(**p),
+            "create_car_blockout": lambda p: self.create_car_blockout(**p),
+            "create_bicycle_blockout": lambda p: self.create_bicycle_blockout(**p),
+            "create_motorcycle_blockout": lambda p: self.create_motorcycle_blockout(**p),
+            "create_boat_blockout": lambda p: self.create_boat_blockout(**p),
+            "create_aircraft_blockout": lambda p: self.create_aircraft_blockout(**p),
+            "create_robot_blockout": lambda p: self.create_robot_blockout(**p),
+            "create_drone_blockout": lambda p: self.create_drone_blockout(**p),
+            "create_nose": lambda p: self.create_nose(**p),
+            "create_ear_pair": lambda p: self.create_ear_pair(**p),
+            "create_mouth": lambda p: self.create_mouth(**p),
+            "create_brow_pair": lambda p: self.create_brow_pair(**p),
+            "create_eyelash_pair": lambda p: self.create_eyelash_pair(**p),
+            "create_hair_strands": lambda p: self.create_hair_strands(**p),
+            "create_fingernails": lambda p: self.create_fingernails(**p),
+            "create_face_proportions": lambda p: self.create_face_proportions(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -2851,6 +2883,134 @@ class BlenderMCPServer:
     def image_to_material(self, image_name: str, material_name: str, roughness: float = 0.5) -> Dict[str, Any]:
         """Create a material driven by an image texture."""
         return self._domain_call("textures", "image_to_material", {k: v for k, v in locals().items() if k != "self"})
+    def create_barrel(self, name: str = "Barrel", radius: float = 0.3, height: float = 0.8, segments: int = 16, seed: int = 0) -> Dict[str, Any]:
+        """Create a staved barrel with metal bands."""
+        return self._domain_call("props", "create_barrel", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_crate(self, name: str = "Crate", size: float = 0.6, plank_count: int = 4) -> Dict[str, Any]:
+        """Create a plank crate with corner battens."""
+        return self._domain_call("props", "create_crate", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_chest(self, name: str = "Chest", width: float = 0.8, depth: float = 0.5, height: float = 0.5) -> Dict[str, Any]:
+        """Create a chest with a lid, bands and latch."""
+        return self._domain_call("props", "create_chest", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_lantern(self, name: str = "Lantern", height: float = 0.35, radius: float = 0.12) -> Dict[str, Any]:
+        """Create a lantern frame with glass panels and handle."""
+        return self._domain_call("props", "create_lantern", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_streetlamp(self, name: str = "StreetLamp", height: float = 3.0, arm_length: float = 0.8) -> Dict[str, Any]:
+        """Create a street lamp with base, pole, arm and head."""
+        return self._domain_call("props", "create_streetlamp", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_sword(self, name: str = "Sword", blade_length: float = 0.8, blade_width: float = 0.06, guard_width: float = 0.18) -> Dict[str, Any]:
+        """Create a sword with blade, guard, grip and pommel."""
+        return self._domain_call("props", "create_sword", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_shield(self, name: str = "Shield", width: float = 0.6, height: float = 0.8, thickness: float = 0.04) -> Dict[str, Any]:
+        """Create a curved shield with rim and boss."""
+        return self._domain_call("props", "create_shield", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_potion_bottle(self, name: str = "Potion", height: float = 0.2, radius: float = 0.05) -> Dict[str, Any]:
+        """Create a potion bottle with glass, liquid and cork."""
+        return self._domain_call("props", "create_potion_bottle", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_desk(self, name: str = "Desk", width: float = 1.6, depth: float = 0.8, height: float = 0.75, drawer_count: int = 3) -> Dict[str, Any]:
+        """Create a desk with top, legs and drawers."""
+        return self._domain_call("furniture_extra", "create_desk", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_wardrobe(self, name: str = "Wardrobe", width: float = 1.2, depth: float = 0.6, height: float = 2.0, door_count: int = 2) -> Dict[str, Any]:
+        """Create a wardrobe with doors, handles and feet."""
+        return self._domain_call("furniture_extra", "create_wardrobe", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_dresser(self, name: str = "Dresser", width: float = 1.0, depth: float = 0.5, height: float = 0.9, drawer_count: int = 4) -> Dict[str, Any]:
+        """Create a dresser with drawers and handles."""
+        return self._domain_call("furniture_extra", "create_dresser", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_nightstand(self, name: str = "Nightstand", width: float = 0.5, depth: float = 0.4, height: float = 0.55) -> Dict[str, Any]:
+        """Create a nightstand with a drawer and legs."""
+        return self._domain_call("furniture_extra", "create_nightstand", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_coffee_table(self, name: str = "CoffeeTable", width: float = 1.2, depth: float = 0.6, height: float = 0.42) -> Dict[str, Any]:
+        """Create a coffee table with top, legs and lower shelf."""
+        return self._domain_call("furniture_extra", "create_coffee_table", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bench(self, name: str = "Bench", width: float = 1.6, depth: float = 0.45, height: float = 0.45) -> Dict[str, Any]:
+        """Create a backless bench with seat and legs."""
+        return self._domain_call("furniture_extra", "create_bench", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bar_stool(self, name: str = "BarStool", seat_radius: float = 0.18, height: float = 0.75) -> Dict[str, Any]:
+        """Create a bar stool with round seat, legs and footrest."""
+        return self._domain_call("furniture_extra", "create_bar_stool", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bookshelf(self, name: str = "Bookshelf", width: float = 1.0, height: float = 2.0, depth: float = 0.3, shelf_count: int = 5) -> Dict[str, Any]:
+        """Create a bookshelf with sides, shelves and back panel."""
+        return self._domain_call("furniture_extra", "create_bookshelf", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_wheel(self, name: str = "Wheel", radius: float = 0.35, width: float = 0.22, segments: int = 24) -> Dict[str, Any]:
+        """Create a tire, rim and hub wheel."""
+        return self._domain_call("vehicles", "create_wheel", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_car_blockout(self, name: str = "Car", length: float = 4.2, width: float = 1.8, height: float = 1.4) -> Dict[str, Any]:
+        """Create a car blockout with body, cabin, wheels and lights."""
+        return self._domain_call("vehicles", "create_car_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bicycle_blockout(self, name: str = "Bicycle", length: float = 1.7, height: float = 1.0) -> Dict[str, Any]:
+        """Create a bicycle blockout with frame, wheels and handlebar."""
+        return self._domain_call("vehicles", "create_bicycle_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_motorcycle_blockout(self, name: str = "Motorcycle", length: float = 2.1, height: float = 1.1) -> Dict[str, Any]:
+        """Create a motorcycle blockout with wheels, body and handlebar."""
+        return self._domain_call("vehicles", "create_motorcycle_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_boat_blockout(self, name: str = "Boat", length: float = 5.0, width: float = 1.8, height: float = 1.0) -> Dict[str, Any]:
+        """Create a boat blockout with hull, deck and cabin."""
+        return self._domain_call("vehicles", "create_boat_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_aircraft_blockout(self, name: str = "Aircraft", length: float = 8.0, wingspan: float = 10.0, height: float = 2.5) -> Dict[str, Any]:
+        """Create an aircraft blockout with fuselage, wings and tail."""
+        return self._domain_call("vehicles", "create_aircraft_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_robot_blockout(self, name: str = "Robot", height: float = 1.8, build: str = "humanoid") -> Dict[str, Any]:
+        """Create a robot or rover blockout."""
+        return self._domain_call("vehicles", "create_robot_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_drone_blockout(self, name: str = "Drone", span: float = 0.5, height: float = 0.2) -> Dict[str, Any]:
+        """Create a drone blockout with body, arms and rotors."""
+        return self._domain_call("vehicles", "create_drone_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_nose(self, name: str = "Nose", width: float = 0.035, height: float = 0.05, depth: float = 0.04) -> Dict[str, Any]:
+        """Create a nose detail blockout."""
+        return self._domain_call("character_detail", "create_nose", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_ear_pair(self, name: str = "Ears", width: float = 0.03, height: float = 0.06, spacing: float = 0.16) -> Dict[str, Any]:
+        """Create two ear detail meshes."""
+        return self._domain_call("character_detail", "create_ear_pair", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_mouth(self, name: str = "Mouth", width: float = 0.05, height: float = 0.018, depth: float = 0.02) -> Dict[str, Any]:
+        """Create a mouth and lip detail mesh."""
+        return self._domain_call("character_detail", "create_mouth", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_brow_pair(self, name: str = "Brows", width: float = 0.04, height: float = 0.01, spacing: float = 0.065) -> Dict[str, Any]:
+        """Create two curved eyebrow strips."""
+        return self._domain_call("character_detail", "create_brow_pair", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eyelash_pair(self, name: str = "Eyelashes", radius: float = 0.014, strand_count: int = 24, seed: int = 0) -> Dict[str, Any]:
+        """Create two sets of deterministic eyelash strands."""
+        return self._domain_call("character_detail", "create_eyelash_pair", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_hair_strands(self, name: str = "HairStrands", radius: float = 0.1, strand_count: int = 200, length: float = 0.2, seed: int = 0) -> Dict[str, Any]:
+        """Create a dense deterministic hair strand mesh."""
+        return self._domain_call("character_detail", "create_hair_strands", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fingernails(self, name: str = "Nails", radius: float = 0.006, count: int = 10) -> Dict[str, Any]:
+        """Create ten fingernail plates arranged as two hands."""
+        return self._domain_call("character_detail", "create_fingernails", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_face_proportions(self, head_object: str, height: float = 0.22) -> Dict[str, Any]:
+        """Create face landmark empties from a head AABB."""
+        return self._domain_call("character_detail", "create_face_proportions", {k: v for k, v in locals().items() if k != "self"})
+
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION
     # ==========================================================================

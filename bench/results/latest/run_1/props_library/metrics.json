@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "props",
+  "duration_ms": 20.492,
+  "error": null,
+  "expected": {
+    "all_success": true,
+    "count": 6,
+    "polygons": {
+      "min": 100
+    }
+  },
+  "failures": [],
+  "observed": {
+    "all_success": true,
+    "count": 6,
+    "polygons": 1150
+  },
+  "passed": true,
+  "run": 1,
+  "task": "props_library"
+}
