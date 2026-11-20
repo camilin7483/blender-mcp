@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "materials",
+  "duration_ms": 2.649,
+  "error": null,
+  "expected": {
+    "assigned": {
+      "min": 1
+    },
+    "glass_nodes": {
+      "min": 2
+    },
+    "metal_nodes": {
+      "min": 2
+    },
+    "skin_nodes": {
+      "min": 2
+    },
+    "wood_nodes": {
+      "min": 3
+    }
+  },
+  "failures": [],
+  "observed": {
+    "assigned": 6,
+    "glass_nodes": 2,
+    "metal_nodes": 2,
+    "skin_nodes": 2,
+    "wood_nodes": 8
+  },
+  "passed": true,
+  "run": 2,
+  "task": "pbr_materials"
+}

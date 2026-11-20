@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.2.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.3.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -19,7 +19,15 @@ All notable changes to this repository are documented here.
   table, chair, shelf, bed, sofa and kitchen block.
 - Hard-surface pack: bevel, solidify, array and mirror modifiers, apply-all,
   text objects, bevelled curve tubes, metaballs and conversion to mesh.
-- `nano` (13 tools) and `guided` (26 tools) profiles for small models.
+- Environment pack: sky lighting, fog volume, clouds, ground, cliff, beach,
+  biome scatter and water shore.
+- Character blockout pack: humanoid, eyes, teeth, hair cap, garment, face
+  landmarks, hand and foot. Explicitly a blockout, not an AAA character.
+- PBR material pack: metal, wood, fabric, glass, skin, concrete, emission and
+  per-face material assignment.
+- Animation pack: frame range, path keyframes, turntable, camera rig,
+  follow-path constraint, interpolation, actions and animation clearing.
+- `nano` (13 tools) and `guided` (30 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
   relative tolerance model.
@@ -44,7 +52,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 22 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 26 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

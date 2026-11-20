@@ -26,6 +26,26 @@ EXPECTED = {
         "add_mirror_modifier", "apply_all_modifiers",
     },
     "hardsurface_primitives": {"create_text_object", "create_curve_tube", "create_metaball", "convert_to_mesh"},
+    "environment": {
+        "create_sky_lighting", "create_fog_volume", "create_cloud_layer",
+        "create_ground", "create_cliff", "create_beach",
+        "create_biome_scatter", "create_water_shore",
+    },
+    "character": {
+        "create_humanoid_blockout", "create_eye_pair", "create_teeth_set",
+        "create_hair_cap", "create_garment", "create_face_landmarks",
+        "create_hand_blockout", "create_foot_blockout",
+    },
+    "materials_pbr": {
+        "create_metal_material", "create_wood_material", "create_fabric_material",
+        "create_glass_material", "create_skin_material", "create_concrete_material",
+        "create_emission_material", "assign_material_to_faces",
+    },
+    "animation": {
+        "set_frame_range", "keyframe_path", "create_turntable_animation",
+        "create_camera_rig", "add_follow_path_constraint",
+        "set_keyframe_interpolation", "create_action", "clear_animation",
+    },
 }
 
 

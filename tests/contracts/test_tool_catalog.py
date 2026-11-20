@@ -18,7 +18,7 @@ def test_catalog_covers_every_active_tool() -> None:
 
     data = _catalog(include_schema=False)
     assert data["success"] is True
-    assert data["count"] == data["total_tools"] == 107
+    assert data["count"] == data["total_tools"] == 139
     assert {entry["name"] for entry in data["tools"]} == set(
         server.mcp._tool_manager._tools
     )

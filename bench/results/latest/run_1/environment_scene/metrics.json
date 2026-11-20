@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "environment",
+  "duration_ms": 25.323,
+  "error": null,
+  "expected": {
+    "beach_dimensions": [
+      5.0,
+      3.0
+    ],
+    "cliff_height": {
+      "target": 1.5,
+      "tolerance": 0.01
+    },
+    "ground_dimensions": [
+      6.0,
+      6.0
+    ],
+    "sky": true,
+    "sun": true
+  },
+  "failures": [],
+  "observed": {
+    "beach_dimensions": [
+      5.0,
+      3.0
+    ],
+    "cliff_height": 1.5,
+    "ground_dimensions": [
+      6.0,
+      6.0
+    ],
+    "sky": true,
+    "sun": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "environment_scene"
+}

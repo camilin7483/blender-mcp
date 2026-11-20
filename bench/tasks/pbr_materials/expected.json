@@ -1,0 +1,17 @@
+{
+  "metal_nodes": {
+    "min": 2
+  },
+  "wood_nodes": {
+    "min": 3
+  },
+  "glass_nodes": {
+    "min": 2
+  },
+  "skin_nodes": {
+    "min": 2
+  },
+  "assigned": {
+    "min": 1
+  }
+}

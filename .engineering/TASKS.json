@@ -123,6 +123,18 @@
       "title": "Release v4.2.0-alpha.1",
       "status": "completed",
       "evidence": "tag and extension 4.2.0"
+    },
+    {
+      "id": "T14",
+      "title": "Environment, character, PBR and animation packs",
+      "status": "completed",
+      "evidence": "32 tools, 26/26 bench, Blender 4.5/5.2"
+    },
+    {
+      "id": "T15",
+      "title": "Release v4.3.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag and extension 4.3.0"
     }
   ]
 }

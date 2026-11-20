@@ -1,0 +1,9 @@
+{
+  "frame_end": 60,
+  "keyframes": {
+    "min": 1
+  },
+  "turntable": true,
+  "camera": true,
+  "rig": true
+}

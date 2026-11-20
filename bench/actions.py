@@ -432,3 +432,71 @@ def hardsurface_modifiers(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "polygon_count": len(cube.data.polygons),
         "dimensions": [round(float(value), 4) for value in cube.dimensions],
     }
+
+
+def environment_scene(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    sky = server.create_sky_lighting("BenchSky", sun_elevation=30.0)
+    ground = server.create_ground("BenchGround", size=6.0, subdivisions=8)
+    cliff = server.create_cliff("BenchCliff", width=2.0, height=1.5)
+    beach = server.create_beach("BenchBeach", width=5.0, depth=3.0)
+    return {
+        "sky": sky["success"],
+        "sun": bpy.data.objects.get("BenchSky_Sun") is not None,
+        "ground_dimensions": ground["dimensions"][:2],
+        "cliff_height": cliff["dimensions"][2],
+        "beach_dimensions": beach["dimensions"][:2],
+    }
+
+
+def character_blockout(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    humanoid = server.create_humanoid_blockout("BenchHuman", height=1.75)
+    eyes = server.create_eye_pair("BenchEyes", height=1.62)
+    teeth = server.create_teeth_set("BenchTeeth")
+    hair = server.create_hair_cap(
+        "BenchHair", head_object="BenchHuman", radius=0.10,
+        strand_count=10, seed=3,
+    )
+    garment = server.create_garment("BenchShirt", garment_type="shirt")
+    return {
+        "height": humanoid["actual_height"],
+        "eye_count": len(eyes["eyes"]),
+        "tooth_count": teeth["tooth_count"],
+        "hair_dimensions": hair["dimensions"],
+        "garment": garment["success"],
+    }
+
+
+def pbr_materials(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    metal = server.create_metal_material("BenchMetal")
+    wood = server.create_wood_material("BenchWood")
+    glass = server.create_glass_material("BenchGlass")
+    skin = server.create_skin_material("BenchSkin")
+    assigned = server.assign_material_to_faces("BenchCube", "BenchMetal")
+    return {
+        "metal_nodes": len(metal["nodes"]),
+        "wood_nodes": len(wood["nodes"]),
+        "glass_nodes": len(glass["nodes"]),
+        "skin_nodes": len(skin["nodes"]),
+        "assigned": assigned["assigned_count"],
+    }
+
+
+def animation_path(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    frame = server.set_frame_range(1, 60, 24)
+    path = server.keyframe_path(
+        "BenchCube", points=[[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+        frame_start=1, frame_end=30,
+    )
+    turntable = server.create_turntable_animation("BenchCube", frames=60)
+    rig = server.create_camera_rig(
+        "BenchCamRig", target=[0.0, 0.0, 0.5], distance=4.0, height=2.0
+    )
+    return {
+        "frame_end": frame["frame_end"],
+        "keyframes": path["keyframes"],
+        "turntable": turntable["success"],
+        "camera": bpy.data.objects.get("BenchCamRig_Camera") is not None,
+        "rig": rig["success"],
+    }

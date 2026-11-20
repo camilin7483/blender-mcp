@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "terrain",
-  "duration_ms": 15.512,
+  "duration_ms": 17.521,
   "error": null,
   "expected": {
     "height": {

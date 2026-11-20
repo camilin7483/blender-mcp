@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 2, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 3, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1057,6 +1057,97 @@ def main() -> None:
         assert converted_tube["success"] and converted_tube["type"] == "MESH", converted_tube
         converted_meta = server.convert_to_mesh("V42Meta")
         assert converted_meta["success"] and converted_meta["type"] == "MESH", converted_meta
+
+        # --- v4.3 environment, character, PBR and animation packs ---
+        clear_scene()
+        sky = server.create_sky_lighting("V43Sky", sun_elevation=30.0)
+        assert sky["success"] and bpy.data.objects.get("V43Sky_Sun"), sky
+        fog = server.create_fog_volume("V43Fog", size=5.0, density=0.01)
+        assert fog["success"] and bpy.data.objects.get("V43Fog"), fog
+        clouds = server.create_cloud_layer("V43Clouds", size=5.0, altitude=3.0)
+        assert clouds["success"] and bpy.data.objects.get("V43Clouds"), clouds
+        ground = server.create_ground(
+            "V43Ground", size=6.0, subdivisions=8, style="grass"
+        )
+        assert ground["success"] and bpy.data.objects.get("V43Ground"), ground
+        cliff = server.create_cliff(
+            "V43Cliff", width=2.0, height=1.5, depth=1.0
+        )
+        assert cliff["success"] and bpy.data.objects.get("V43Cliff"), cliff
+        beach = server.create_beach("V43Beach", width=5.0, depth=3.0)
+        assert beach["success"] and bpy.data.objects.get("V43Beach"), beach
+        shore = server.create_water_shore("V43Shore", radius=2.0)
+        assert shore["success"] and bpy.data.objects.get("V43Shore"), shore
+        server.create_tree("V43Tree", height=2.0, crown_radius=0.5, seed=3)
+        server.create_bush("V43Bush", radius=0.3, height=0.3, seed=3)
+        biome = server.create_biome_scatter(
+            "V43Ground", "V43Tree", "V43Bush", count=4, seed=3
+        )
+        assert biome["success"] and biome["count"] == 4, biome
+
+        humanoid = server.create_humanoid_blockout(
+            "V43Human", height=1.75, build="average"
+        )
+        assert humanoid["success"] and humanoid["actual_height"] == 1.75, humanoid
+        eyes = server.create_eye_pair("V43Eyes", height=1.62)
+        assert eyes["success"] and len(eyes["eyes"]) == 2, eyes
+        teeth = server.create_teeth_set("V43Teeth")
+        assert teeth["success"] and teeth["tooth_count"] == 16, teeth
+        hair = server.create_hair_cap(
+            "V43Hair", head_object="V43Human", radius=0.10,
+            strand_count=10, seed=3,
+        )
+        assert hair["success"] and bpy.data.objects.get("V43Hair"), hair
+        garment = server.create_garment("V43Shirt", garment_type="shirt")
+        assert garment["success"] and bpy.data.objects.get("V43Shirt"), garment
+        landmarks = server.create_face_landmarks("V43Human")
+        assert landmarks["success"] and len(landmarks["landmarks"]) == 7, landmarks
+        hand = server.create_hand_blockout("V43Hand", side="L")
+        assert hand["success"] and bpy.data.objects.get("V43Hand_L"), hand
+        foot = server.create_foot_blockout("V43Foot", side="L")
+        assert foot["success"] and bpy.data.objects.get("V43Foot_L"), foot
+
+        for material_name, factory in (
+            ("V43Metal", server.create_metal_material),
+            ("V43Wood", server.create_wood_material),
+            ("V43Fabric", server.create_fabric_material),
+            ("V43Glass", server.create_glass_material),
+            ("V43Skin", server.create_skin_material),
+            ("V43Concrete", server.create_concrete_material),
+            ("V43Emission", server.create_emission_material),
+        ):
+            material = factory(material_name)
+            assert material["success"] and bpy.data.materials.get(material_name), material
+        assigned = server.assign_material_to_faces("V43Human", "V43Metal")
+        assert assigned["success"] and assigned["assigned_count"] > 0, assigned
+
+        frame = server.set_frame_range(1, 60, 24)
+        assert frame["success"] and frame["frame_end"] == 60, frame
+        path = server.keyframe_path(
+            "V43Human", points=[[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+            frame_start=1, frame_end=30,
+        )
+        assert path["success"] and path["keyframes"] > 0, path
+        turntable = server.create_turntable_animation("V43Human", frames=60)
+        assert turntable["success"], turntable
+        rig = server.create_camera_rig(
+            "V43CamRig", target=[0.0, 0.0, 1.0], distance=4.0, height=2.0
+        )
+        assert rig["success"] and bpy.data.objects.get("V43CamRig_Camera"), rig
+        server.create_curve_tube(
+            "V43AnimPath", points=[[0, 0, 0], [0, 2, 0], [0, 4, 0]],
+            radius=0.03,
+        )
+        follow = server.add_follow_path_constraint(
+            "V43Human", "V43AnimPath", offset=0.0
+        )
+        assert follow["success"], follow
+        interpolation = server.set_keyframe_interpolation("V43Human", "LINEAR")
+        assert interpolation["success"], interpolation
+        action = server.create_action("V43Human", "V43Action")
+        assert action["success"] and action["action"] == "V43Action", action
+        cleared = server.clear_animation("V43Human")
+        assert cleared["success"], cleared
 
         # --- animation and rigging primitives ---
         clear_scene()

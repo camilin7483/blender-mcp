@@ -1,0 +1,16 @@
+{
+  "sky": true,
+  "sun": true,
+  "ground_dimensions": [
+    6.0,
+    6.0
+  ],
+  "cliff_height": {
+    "target": 1.5,
+    "tolerance": 0.01
+  },
+  "beach_dimensions": [
+    5.0,
+    3.0
+  ]
+}

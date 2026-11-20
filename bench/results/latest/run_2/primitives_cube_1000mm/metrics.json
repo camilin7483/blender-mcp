@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "primitives",
-  "duration_ms": 2.929,
+  "duration_ms": 2.485,
   "error": null,
   "expected": {
     "dimensions_mm": {

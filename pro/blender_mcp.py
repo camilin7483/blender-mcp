@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 2, 0),
+    "version": (4, 3, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2238,6 +2238,38 @@ class BlenderMCPServer:
             "create_curve_tube": lambda p: self.create_curve_tube(**p),
             "create_metaball": lambda p: self.create_metaball(**p),
             "convert_to_mesh": lambda p: self.convert_to_mesh(**p),
+            "create_sky_lighting": lambda p: self.create_sky_lighting(**p),
+            "create_fog_volume": lambda p: self.create_fog_volume(**p),
+            "create_cloud_layer": lambda p: self.create_cloud_layer(**p),
+            "create_ground": lambda p: self.create_ground(**p),
+            "create_cliff": lambda p: self.create_cliff(**p),
+            "create_beach": lambda p: self.create_beach(**p),
+            "create_biome_scatter": lambda p: self.create_biome_scatter(**p),
+            "create_water_shore": lambda p: self.create_water_shore(**p),
+            "create_humanoid_blockout": lambda p: self.create_humanoid_blockout(**p),
+            "create_eye_pair": lambda p: self.create_eye_pair(**p),
+            "create_teeth_set": lambda p: self.create_teeth_set(**p),
+            "create_hair_cap": lambda p: self.create_hair_cap(**p),
+            "create_garment": lambda p: self.create_garment(**p),
+            "create_face_landmarks": lambda p: self.create_face_landmarks(**p),
+            "create_hand_blockout": lambda p: self.create_hand_blockout(**p),
+            "create_foot_blockout": lambda p: self.create_foot_blockout(**p),
+            "create_metal_material": lambda p: self.create_metal_material(**p),
+            "create_wood_material": lambda p: self.create_wood_material(**p),
+            "create_fabric_material": lambda p: self.create_fabric_material(**p),
+            "create_glass_material": lambda p: self.create_glass_material(**p),
+            "create_skin_material": lambda p: self.create_skin_material(**p),
+            "create_concrete_material": lambda p: self.create_concrete_material(**p),
+            "create_emission_material": lambda p: self.create_emission_material(**p),
+            "assign_material_to_faces": lambda p: self.assign_material_to_faces(**p),
+            "set_frame_range": lambda p: self.set_frame_range(**p),
+            "keyframe_path": lambda p: self.keyframe_path(**p),
+            "create_turntable_animation": lambda p: self.create_turntable_animation(**p),
+            "create_camera_rig": lambda p: self.create_camera_rig(**p),
+            "add_follow_path_constraint": lambda p: self.add_follow_path_constraint(**p),
+            "set_keyframe_interpolation": lambda p: self.set_keyframe_interpolation(**p),
+            "create_action": lambda p: self.create_action(**p),
+            "clear_animation": lambda p: self.clear_animation(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -2544,6 +2576,134 @@ class BlenderMCPServer:
     def convert_to_mesh(self, object_name: str) -> Dict[str, Any]:
         """Convert a curve, text, surface or metaball object to a mesh in place."""
         return self._domain_call("hardsurface_primitives", "convert_to_mesh", {k: v for k, v in locals().items() if k != "self"})
+    def create_sky_lighting(self, name: str = "Sky", sun_elevation: float = 45.0, sun_rotation: float = 135.0, sun_energy: float = 3.0, sky_strength: float = 1.0) -> Dict[str, Any]:
+        """Create a Nishita sky world and a sun light for environment lighting."""
+        return self._domain_call("environment", "create_sky_lighting", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fog_volume(self, name: str = "Fog", size: float = 20.0, density: float = 0.02, color: List[float] = [0.8, 0.85, 0.9], location: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a bounded volumetric fog cube with density and color."""
+        return self._domain_call("environment", "create_fog_volume", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_cloud_layer(self, name: str = "Clouds", size: float = 20.0, altitude: float = 10.0, density: float = 1.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a procedural cloud plane with seeded noise and density coverage."""
+        return self._domain_call("environment", "create_cloud_layer", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_ground(self, name: str = "Ground", size: float = 20.0, subdivisions: int = 16, style: str = "grass", seed: int = 0) -> Dict[str, Any]:
+        """Create a ground plane with grass, dirt or sand material and optional relief."""
+        return self._domain_call("environment", "create_ground", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_cliff(self, name: str = "Cliff", width: float = 5.0, height: float = 3.0, depth: float = 2.0, seed: int = 0, subdivisions: int = 24) -> Dict[str, Any]:
+        """Create a displaced closed cliff mesh with strata material."""
+        return self._domain_call("environment", "create_cliff", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_beach(self, name: str = "Beach", width: float = 20.0, depth: float = 10.0, slope: float = 0.08, seed: int = 0) -> Dict[str, Any]:
+        """Create a sloped sand beach with a shoreline vertex group."""
+        return self._domain_call("environment", "create_beach", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_biome_scatter(self, target_name: str, tree_name: str, bush_name: str, count: int = 20, seed: int = 0) -> Dict[str, Any]:
+        """Scatter trees and bushes over a terrain target using existing scatter support."""
+        return self._domain_call("environment", "create_biome_scatter", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_water_shore(self, name: str = "Shore", radius: float = 5.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a shore annulus and a water disc with sand/rock material."""
+        return self._domain_call("environment", "create_water_shore", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_humanoid_blockout(self, name: str = "Humanoid", height: float = 1.75, build: str = "average") -> Dict[str, Any]:
+        """Create a grounded humanoid blockout with head, torso, arms, legs, hands and feet."""
+        return self._domain_call("character", "create_humanoid_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eye_pair(self, name: str = "Eyes", radius: float = 0.012, spacing: float = 0.065, height: float = 1.62) -> Dict[str, Any]:
+        """Create two eyes with sclera, iris and pupil geometry."""
+        return self._domain_call("character", "create_eye_pair", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_teeth_set(self, name: str = "Teeth", width: float = 0.05, height: float = 0.02, depth: float = 0.04) -> Dict[str, Any]:
+        """Create segmented upper and lower teeth arches."""
+        return self._domain_call("character", "create_teeth_set", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_hair_cap(self, name: str = "Hair", head_object: Optional[str] = None, radius: float = 0.10, strand_count: int = 100, seed: int = 0) -> Dict[str, Any]:
+        """Create a hair cap and deterministic strands around a head or origin."""
+        return self._domain_call("character", "create_hair_cap", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_garment(self, name: str = "Shirt", body_width: float = 0.40, body_depth: float = 0.22, torso_height: float = 0.55, garment_type: str = "shirt") -> Dict[str, Any]:
+        """Create a simple shirt, jacket or robe shell with sleeves."""
+        return self._domain_call("character", "create_garment", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_face_landmarks(self, head_object: str, eye_spacing: float = 0.065, head_height: float = 0.22) -> Dict[str, Any]:
+        """Create empties at eyes, nose, mouth, ears and chin relative to a head."""
+        return self._domain_call("character", "create_face_landmarks", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_hand_blockout(self, name: str = "Hand", side: str = "L", scale: float = 1.0) -> Dict[str, Any]:
+        """Create a palm, four fingers and a thumb for the requested side."""
+        return self._domain_call("character", "create_hand_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_foot_blockout(self, name: str = "Foot", side: str = "L", length: float = 0.26) -> Dict[str, Any]:
+        """Create a heel, sole and five toes for the requested side."""
+        return self._domain_call("character", "create_foot_blockout", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_metal_material(self, name: str = "Metal", color: List[float] = [0.7, 0.7, 0.75, 1.0], roughness: float = 0.25) -> Dict[str, Any]:
+        """Create a metallic Principled material."""
+        return self._domain_call("materials_pbr", "create_metal_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_wood_material(self, name: str = "Wood", light_color: List[float] = [0.45, 0.28, 0.14, 1.0], dark_color: List[float] = [0.20, 0.10, 0.05, 1.0], scale: float = 4.0) -> Dict[str, Any]:
+        """Create a procedural wood material with light/dark grain and bump."""
+        return self._domain_call("materials_pbr", "create_wood_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fabric_material(self, name: str = "Fabric", color: List[float] = [0.2, 0.3, 0.5, 1.0], roughness: float = 0.8, sheen: float = 0.3) -> Dict[str, Any]:
+        """Create a fabric material with roughness, sheen and noise bump."""
+        return self._domain_call("materials_pbr", "create_fabric_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_glass_material(self, name: str = "Glass", color: List[float] = [0.8, 0.9, 1.0, 1.0], roughness: float = 0.05, ior: float = 1.45) -> Dict[str, Any]:
+        """Create a transmissive glass material with IOR and roughness."""
+        return self._domain_call("materials_pbr", "create_glass_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_skin_material(self, name: str = "Skin", color: List[float] = [0.65, 0.45, 0.35, 1.0], subsurface: float = 0.15, roughness: float = 0.45) -> Dict[str, Any]:
+        """Create a skin material with subsurface weight and roughness."""
+        return self._domain_call("materials_pbr", "create_skin_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_concrete_material(self, name: str = "Concrete", color: List[float] = [0.5, 0.5, 0.5, 1.0], roughness: float = 0.8, scale: float = 8.0) -> Dict[str, Any]:
+        """Create a concrete material with noise color variation and bump."""
+        return self._domain_call("materials_pbr", "create_concrete_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_emission_material(self, name: str = "Emission", color: List[float] = [1.0, 0.8, 0.4, 1.0], strength: float = 5.0) -> Dict[str, Any]:
+        """Create an emission material with color and strength."""
+        return self._domain_call("materials_pbr", "create_emission_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def assign_material_to_faces(self, object_name: str, material_name: str, face_indices: Optional[List[int]] = None) -> Dict[str, Any]:
+        """Assign a material slot to all or selected faces of a mesh object."""
+        return self._domain_call("materials_pbr", "assign_material_to_faces", {k: v for k, v in locals().items() if k != "self"})
+
+    def set_frame_range(self, start: int = 1, end: int = 250, fps: int = 24) -> Dict[str, Any]:
+        """Set scene frame start, end and FPS."""
+        return self._domain_call("animation", "set_frame_range", {k: v for k, v in locals().items() if k != "self"})
+
+    def keyframe_path(self, object_name: str, points: Optional[List[List[float]]] = None, frame_start: int = 1, frame_end: int = 100, interpolation: str = "BEZIER") -> Dict[str, Any]:
+        """Animate an object location along points across a frame range."""
+        return self._domain_call("animation", "keyframe_path", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_turntable_animation(self, object_name: str, frames: int = 120, axis: str = "Z") -> Dict[str, Any]:
+        """Animate a full 360 degree turntable rotation around an axis."""
+        return self._domain_call("animation", "create_turntable_animation", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_camera_rig(self, name: str = "CameraRig", target: List[float] = [0.0, 0.0, 1.0], distance: float = 6.0, height: float = 3.0) -> Dict[str, Any]:
+        """Create a camera aimed at a target via a Track To constraint."""
+        return self._domain_call("animation", "create_camera_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_follow_path_constraint(self, object_name: str, curve_name: str, offset: float = 0.0) -> Dict[str, Any]:
+        """Constrain an object to follow a curve path with an offset."""
+        return self._domain_call("animation", "add_follow_path_constraint", {k: v for k, v in locals().items() if k != "self"})
+
+    def set_keyframe_interpolation(self, object_name: str, interpolation: str = "LINEAR") -> Dict[str, Any]:
+        """Set interpolation for all keyframes on an object."""
+        return self._domain_call("animation", "set_keyframe_interpolation", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_action(self, object_name: str, name: str = "Action") -> Dict[str, Any]:
+        """Create and assign a new action to an object."""
+        return self._domain_call("animation", "create_action", {k: v for k, v in locals().items() if k != "self"})
+
+    def clear_animation(self, object_name: str) -> Dict[str, Any]:
+        """Remove animation data from an object while preserving constraints."""
+        return self._domain_call("animation", "clear_animation", {k: v for k, v in locals().items() if k != "self"})
+
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION
     # ==========================================================================

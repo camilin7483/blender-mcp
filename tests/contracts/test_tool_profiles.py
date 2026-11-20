@@ -42,7 +42,7 @@ def test_core_profile_is_smaller_and_includes_audit() -> None:
 
 
 def test_full_profile_has_every_tool() -> None:
-    assert len(_tools("full")) == 107
+    assert len(_tools("full")) == 139
 
 
 def test_unknown_profile_uses_core() -> None:
@@ -75,4 +75,4 @@ def test_nano_profile_stays_small() -> None:
 
 
 def test_guided_profile_is_bounded() -> None:
-    assert len(_tools("guided")) == 26
+    assert len(_tools("guided")) == 30
