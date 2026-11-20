@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 6, 0),
+    "version": (4, 8, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2374,6 +2374,72 @@ class BlenderMCPServer:
             "create_pose_library_action": lambda p: self.create_pose_library_action(**p),
             "mirror_pose": lambda p: self.mirror_pose(**p),
             "validate_rig": lambda p: self.validate_rig(**p),
+            "create_nla_track": lambda p: self.create_nla_track(**p),
+            "add_camera_shake": lambda p: self.add_camera_shake(**p),
+            "add_timeline_marker": lambda p: self.add_timeline_marker(**p),
+            "set_motion_paths": lambda p: self.set_motion_paths(**p),
+            "set_animation_curve_preset": lambda p: self.set_animation_curve_preset(**p),
+            "retime_action": lambda p: self.retime_action(**p),
+            "create_camera_cut": lambda p: self.create_camera_cut(**p),
+            "validate_animation": lambda p: self.validate_animation(**p),
+            "add_force_field": lambda p: self.add_force_field(**p),
+            "create_rigid_body_chain": lambda p: self.create_rigid_body_chain(**p),
+            "create_cloth_preset": lambda p: self.create_cloth_preset(**p),
+            "create_fluid_domain": lambda p: self.create_fluid_domain(**p),
+            "create_fluid_inflow": lambda p: self.create_fluid_inflow(**p),
+            "create_collision_object": lambda p: self.create_collision_object(**p),
+            "bake_physics": lambda p: self.bake_physics(**p),
+            "validate_physics": lambda p: self.validate_physics(**p),
+            "scene_audit": lambda p: self.scene_audit(**p),
+            "material_audit": lambda p: self.material_audit(**p),
+            "texture_audit": lambda p: self.texture_audit(**p),
+            "performance_budget": lambda p: self.performance_budget(**p),
+            "export_preflight": lambda p: self.export_preflight(**p),
+            "detect_floating_objects": lambda p: self.detect_floating_objects(**p),
+            "detect_duplicate_geometry": lambda p: self.detect_duplicate_geometry(**p),
+            "scene_repair_plan": lambda p: self.scene_repair_plan(**p),
+            "create_rain_system": lambda p: self.create_rain_system(**p),
+            "create_snow_system": lambda p: self.create_snow_system(**p),
+            "create_lightning_rig": lambda p: self.create_lightning_rig(**p),
+            "create_wind_field": lambda p: self.create_wind_field(**p),
+            "create_atmospheric_haze": lambda p: self.create_atmospheric_haze(**p),
+            "create_sunset_lighting": lambda p: self.create_sunset_lighting(**p),
+            "create_night_lighting": lambda p: self.create_night_lighting(**p),
+            "create_weather_scene": lambda p: self.create_weather_scene(**p),
+            "create_face_rig": lambda p: self.create_face_rig(**p),
+            "create_jaw_bone": lambda p: self.create_jaw_bone(**p),
+            "create_eyelid_bones": lambda p: self.create_eyelid_bones(**p),
+            "create_finger_rig": lambda p: self.create_finger_rig(**p),
+            "create_ik_leg_rig": lambda p: self.create_ik_leg_rig(**p),
+            "create_ik_arm_rig": lambda p: self.create_ik_arm_rig(**p),
+            "add_face_shape_keys": lambda p: self.add_face_shape_keys(**p),
+            "validate_character_rig": lambda p: self.validate_character_rig(**p),
+            "create_city_block": lambda p: self.create_city_block(**p),
+            "create_road": lambda p: self.create_road(**p),
+            "create_street": lambda p: self.create_street(**p),
+            "create_bridge": lambda p: self.create_bridge(**p),
+            "create_tunnel": lambda p: self.create_tunnel(**p),
+            "create_skyscraper": lambda p: self.create_skyscraper(**p),
+            "create_park": lambda p: self.create_park(**p),
+            "create_plaza": lambda p: self.create_plaza(**p),
+            "create_marble_material": lambda p: self.create_marble_material(**p),
+            "create_brick_material": lambda p: self.create_brick_material(**p),
+            "create_asphalt_material": lambda p: self.create_asphalt_material(**p),
+            "create_grass_material": lambda p: self.create_grass_material(**p),
+            "create_sand_material": lambda p: self.create_sand_material(**p),
+            "create_rust_material": lambda p: self.create_rust_material(**p),
+            "create_chrome_material": lambda p: self.create_chrome_material(**p),
+            "create_ceramic_material": lambda p: self.create_ceramic_material(**p),
+            "create_particle_system": lambda p: self.create_particle_system(**p),
+            "create_trail": lambda p: self.create_trail(**p),
+            "create_muzzle_flash": lambda p: self.create_muzzle_flash(**p),
+            "create_explosion": lambda p: self.create_explosion(**p),
+            "create_smoke_plume": lambda p: self.create_smoke_plume(**p),
+            "create_fire_effect": lambda p: self.create_fire_effect(**p),
+            "create_spark_burst": lambda p: self.create_spark_burst(**p),
+            "create_shockwave": lambda p: self.create_shockwave(**p),
+            "project_info": lambda p: self.project_info(**p),
+            "health_check": lambda p: self.health_check(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -3170,6 +3236,270 @@ class BlenderMCPServer:
     def validate_rig(self, armature_name: str, mesh_name: Optional[str] = None) -> Dict[str, Any]:
         """Validate bones, armature modifier, vertex groups and weights."""
         return self._domain_call("rigging_advanced", "validate_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_nla_track(self, object_name: str, action_name: str, start_frame: int = 1) -> Dict[str, Any]:
+        """Create an NLA track and strip from an existing action."""
+        return self._domain_call("animation_advanced", "create_nla_track", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_camera_shake(self, camera_name: str, strength: float = 0.05, frame_start: int = 1, frame_end: int = 60, seed: int = 0) -> Dict[str, Any]:
+        """Add deterministic camera shake keyframes over a frame range."""
+        return self._domain_call("animation_advanced", "add_camera_shake", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_timeline_marker(self, name: str, frame: int = 1) -> Dict[str, Any]:
+        """Add a named timeline marker at a frame."""
+        return self._domain_call("animation_advanced", "add_timeline_marker", {k: v for k, v in locals().items() if k != "self"})
+
+    def set_motion_paths(self, object_name: str, enabled: bool = True) -> Dict[str, Any]:
+        """Calculate or clear motion paths for an object or armature."""
+        return self._domain_call("animation_advanced", "set_motion_paths", {k: v for k, v in locals().items() if k != "self"})
+
+    def set_animation_curve_preset(self, object_name: str, preset: str = "ease_in_out") -> Dict[str, Any]:
+        """Apply a named interpolation/easing preset to an object action."""
+        return self._domain_call("animation_advanced", "set_animation_curve_preset", {k: v for k, v in locals().items() if k != "self"})
+
+    def retime_action(self, object_name: str, factor: float = 1.0) -> Dict[str, Any]:
+        """Scale animation keyframe times by a factor."""
+        return self._domain_call("animation_advanced", "retime_action", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_camera_cut(self, camera_names: List[str], frame_ranges: List[List[int]]) -> Dict[str, Any]:
+        """Create timeline markers bound to cameras for a camera cut."""
+        return self._domain_call("animation_advanced", "create_camera_cut", {k: v for k, v in locals().items() if k != "self"})
+
+    def validate_animation(self, object_name: str) -> Dict[str, Any]:
+        """Validate action, frame range, fcurves and camera markers."""
+        return self._domain_call("animation_advanced", "validate_animation", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_force_field(self, name: str = "Wind", field_type: str = "WIND", strength: float = 1.0, location: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Add a force field empty with strength and location."""
+        return self._domain_call("physics_extra", "add_force_field", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_rigid_body_chain(self, object_names: List[str], mass: float = 1.0) -> Dict[str, Any]:
+        """Add active rigid bodies with mass to mesh objects."""
+        return self._domain_call("physics_extra", "create_rigid_body_chain", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_cloth_preset(self, object_name: str, preset: str = "silk") -> Dict[str, Any]:
+        """Add a cloth modifier with a silk, cotton, leather or wool preset."""
+        return self._domain_call("physics_extra", "create_cloth_preset", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fluid_domain(self, domain_name: str, size: List[float] = [2.0, 2.0, 2.0], resolution: int = 32) -> Dict[str, Any]:
+        """Create and configure a fluid domain cube."""
+        return self._domain_call("physics_extra", "create_fluid_domain", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fluid_inflow(self, object_name: str, domain_name: str, velocity: List[float] = [0.0, 0.0, -1.0]) -> Dict[str, Any]:
+        """Add a fluid inflow object linked to a domain."""
+        return self._domain_call("physics_extra", "create_fluid_inflow", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_collision_object(self, object_name: str, thickness: float = 0.02) -> Dict[str, Any]:
+        """Add a collision modifier to an object."""
+        return self._domain_call("physics_extra", "create_collision_object", {k: v for k, v in locals().items() if k != "self"})
+
+    def bake_physics(self, frame_end: int = 60) -> Dict[str, Any]:
+        """Bake all physics caches up to a bounded frame."""
+        return self._domain_call("physics_extra", "bake_physics", {k: v for k, v in locals().items() if k != "self"})
+
+    def validate_physics(self, object_name: Optional[str] = None) -> Dict[str, Any]:
+        """Report rigid bodies, cloth, fluid, collision modifiers and caches."""
+        return self._domain_call("physics_extra", "validate_physics", {k: v for k, v in locals().items() if k != "self"})
+
+    def scene_audit(self, include_hidden: bool = False) -> Dict[str, Any]:
+        """Audit object counts, hidden objects, orphan data, non-manifold meshes and empty materials."""
+        return self._domain_call("qa_extra", "scene_audit", {k: v for k, v in locals().items() if k != "self"})
+
+    def material_audit(self, ) -> Dict[str, Any]:
+        """Audit node-less, unused, missing-image and non-Principled materials."""
+        return self._domain_call("qa_extra", "material_audit", {k: v for k, v in locals().items() if k != "self"})
+
+    def texture_audit(self, ) -> Dict[str, Any]:
+        """Audit image paths, sizes, packing and colorspaces."""
+        return self._domain_call("qa_extra", "texture_audit", {k: v for k, v in locals().items() if k != "self"})
+
+    def performance_budget(self, max_triangles: int = 100000, max_texture_mb: float = 256.0) -> Dict[str, Any]:
+        """Check triangles, texture memory and object count against budgets."""
+        return self._domain_call("qa_extra", "performance_budget", {k: v for k, v in locals().items() if k != "self"})
+
+    def export_preflight(self, profile: str = "generic-gltf") -> Dict[str, Any]:
+        """Run profile-aware mesh, UV, material, rig and action checks."""
+        return self._domain_call("qa_extra", "export_preflight", {k: v for k, v in locals().items() if k != "self"})
+
+    def detect_floating_objects(self, tolerance: float = 0.001) -> Dict[str, Any]:
+        """Find objects whose world AABB bottom is above tolerance."""
+        return self._domain_call("qa_extra", "detect_floating_objects", {k: v for k, v in locals().items() if k != "self"})
+
+    def detect_duplicate_geometry(self, tolerance: float = 0.0001) -> Dict[str, Any]:
+        """Find shared geometry and equal dimensions within tolerance."""
+        return self._domain_call("qa_extra", "detect_duplicate_geometry", {k: v for k, v in locals().items() if k != "self"})
+
+    def scene_repair_plan(self, ) -> Dict[str, Any]:
+        """Aggregate scene, material, texture and performance findings into a repair plan."""
+        return self._domain_call("qa_extra", "scene_repair_plan", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_rain_system(self, name: str = "Rain", count: int = 500, area: float = 10.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic rain streak mesh over an area."""
+        return self._domain_call("environment_extra", "create_rain_system", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_snow_system(self, name: str = "Snow", count: int = 500, area: float = 10.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic snow flake mesh over an area."""
+        return self._domain_call("environment_extra", "create_snow_system", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_lightning_rig(self, name: str = "Lightning", location: List[float] = [0.0, 0.0, 5.0], energy: float = 1000.0) -> Dict[str, Any]:
+        """Create a point flash and emissive lightning bolt."""
+        return self._domain_call("environment_extra", "create_lightning_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_wind_field(self, name: str = "Wind", strength: float = 1.0, direction: List[float] = [1.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a wind force field with a direction."""
+        return self._domain_call("environment_extra", "create_wind_field", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_atmospheric_haze(self, density: float = 0.01, color: List[float] = [0.8, 0.85, 0.9]) -> Dict[str, Any]:
+        """Create a volumetric haze cube with density and color."""
+        return self._domain_call("environment_extra", "create_atmospheric_haze", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_sunset_lighting(self, ) -> Dict[str, Any]:
+        """Create a warm sunset world and low sun."""
+        return self._domain_call("environment_extra", "create_sunset_lighting", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_night_lighting(self, moon_energy: float = 0.5) -> Dict[str, Any]:
+        """Create a dark night world and moon light."""
+        return self._domain_call("environment_extra", "create_night_lighting", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_weather_scene(self, weather: str = "rain", size: float = 10.0, seed: int = 0) -> Dict[str, Any]:
+        """Compose ground, sky and rain, snow or clear weather."""
+        return self._domain_call("environment_extra", "create_weather_scene", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_face_rig(self, mesh_name: str, armature_name: str = "FaceRig") -> Dict[str, Any]:
+        """Create a compact face rig fitted to a head mesh."""
+        return self._domain_call("character_rig", "create_face_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_jaw_bone(self, armature_name: str, head: List[float], tail: List[float]) -> Dict[str, Any]:
+        """Add a jaw bone to an existing armature."""
+        return self._domain_call("character_rig", "create_jaw_bone", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eyelid_bones(self, armature_name: str, eye_spacing: float = 0.065, head_height: float = 0.22) -> Dict[str, Any]:
+        """Add upper and lower eyelid bones for both eyes."""
+        return self._domain_call("character_rig", "create_eyelid_bones", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_finger_rig(self, armature_name: str, side: str = "L", scale: float = 1.0) -> Dict[str, Any]:
+        """Create a thumb and four finger bone chains for one hand."""
+        return self._domain_call("character_rig", "create_finger_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_ik_leg_rig(self, armature_name: str, hip: List[float], knee: List[float], ankle: List[float], target_name: str) -> Dict[str, Any]:
+        """Create a two-bone leg chain with an IK target."""
+        return self._domain_call("character_rig", "create_ik_leg_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_ik_arm_rig(self, armature_name: str, shoulder: List[float], elbow: List[float], wrist: List[float], target_name: str) -> Dict[str, Any]:
+        """Create a two-bone arm chain with an IK target."""
+        return self._domain_call("character_rig", "create_ik_arm_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_face_shape_keys(self, mesh_name: str, names: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Create face shape keys such as brow, blink, jaw and smile."""
+        return self._domain_call("character_rig", "add_face_shape_keys", {k: v for k, v in locals().items() if k != "self"})
+
+    def validate_character_rig(self, armature_name: str, mesh_name: Optional[str] = None) -> Dict[str, Any]:
+        """Validate face/finger/IK bones, symmetry, constraints and shape keys."""
+        return self._domain_call("character_rig", "validate_character_rig", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_city_block(self, name: str = "CityBlock", width: float = 40.0, depth: float = 40.0, building_count: int = 6, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic city block with roads and buildings."""
+        return self._domain_call("world_building", "create_city_block", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_road(self, name: str = "Road", length: float = 40.0, width: float = 7.0, lane_count: int = 2) -> Dict[str, Any]:
+        """Create an asphalt road with lane markings and sidewalks."""
+        return self._domain_call("world_building", "create_road", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_street(self, name: str = "Street", length: float = 40.0, width: float = 8.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a street with sidewalks, lamps and props."""
+        return self._domain_call("world_building", "create_street", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bridge(self, name: str = "Bridge", length: float = 20.0, width: float = 8.0, height: float = 4.0) -> Dict[str, Any]:
+        """Create a bridge with deck, railings and piers."""
+        return self._domain_call("world_building", "create_bridge", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_tunnel(self, name: str = "Tunnel", length: float = 20.0, width: float = 8.0, height: float = 4.0) -> Dict[str, Any]:
+        """Create an arched tunnel with interior walls."""
+        return self._domain_call("world_building", "create_tunnel", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_skyscraper(self, name: str = "Skyscraper", width: float = 12.0, depth: float = 12.0, height: float = 60.0, floors: int = 20) -> Dict[str, Any]:
+        """Create a skyscraper with floor bands and roof details."""
+        return self._domain_call("world_building", "create_skyscraper", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_park(self, name: str = "Park", width: float = 20.0, depth: float = 20.0, tree_count: int = 8, seed: int = 0) -> Dict[str, Any]:
+        """Create a park with paths, trees and benches."""
+        return self._domain_call("world_building", "create_park", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_plaza(self, name: str = "Plaza", width: float = 20.0, depth: float = 20.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a paved plaza with planters, benches and a fountain."""
+        return self._domain_call("world_building", "create_plaza", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_marble_material(self, name: str = "Marble", color: List[float] = [0.85, 0.85, 0.82, 1.0], vein_color: List[float] = [0.25, 0.25, 0.28, 1.0], scale: float = 3.0) -> Dict[str, Any]:
+        """Create a procedural marble material with veins."""
+        return self._domain_call("material_library", "create_marble_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_brick_material(self, name: str = "Brick", color: List[float] = [0.45, 0.16, 0.10, 1.0], mortar_color: List[float] = [0.75, 0.75, 0.72, 1.0], scale: float = 8.0) -> Dict[str, Any]:
+        """Create a procedural brick material with mortar."""
+        return self._domain_call("material_library", "create_brick_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_asphalt_material(self, name: str = "Asphalt", color: List[float] = [0.08, 0.08, 0.09, 1.0], roughness: float = 0.9) -> Dict[str, Any]:
+        """Create a dark asphalt material."""
+        return self._domain_call("material_library", "create_asphalt_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_grass_material(self, name: str = "Grass", color: List[float] = [0.12, 0.35, 0.08, 1.0], scale: float = 12.0) -> Dict[str, Any]:
+        """Create a green grass material with noise variation."""
+        return self._domain_call("material_library", "create_grass_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_sand_material(self, name: str = "Sand", color: List[float] = [0.76, 0.65, 0.45, 1.0], scale: float = 10.0) -> Dict[str, Any]:
+        """Create a sand material with fine variation."""
+        return self._domain_call("material_library", "create_sand_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_rust_material(self, name: str = "Rust", color: List[float] = [0.35, 0.12, 0.05, 1.0], scale: float = 6.0) -> Dict[str, Any]:
+        """Create a rusted metal material."""
+        return self._domain_call("material_library", "create_rust_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_chrome_material(self, name: str = "Chrome", roughness: float = 0.05) -> Dict[str, Any]:
+        """Create a polished chrome material."""
+        return self._domain_call("material_library", "create_chrome_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_ceramic_material(self, name: str = "Ceramic", color: List[float] = [0.9, 0.9, 0.88, 1.0], roughness: float = 0.15) -> Dict[str, Any]:
+        """Create a glossy ceramic material."""
+        return self._domain_call("material_library", "create_ceramic_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_particle_system(self, object_name: str, name: str = "Particles", count: int = 500, lifetime: int = 60) -> Dict[str, Any]:
+        """Add a particle system to an emitter object."""
+        return self._domain_call("animation_fx", "create_particle_system", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_trail(self, object_name: str, name: str = "Trail", length: int = 20) -> Dict[str, Any]:
+        """Create a curve trail following an object animation."""
+        return self._domain_call("animation_fx", "create_trail", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_muzzle_flash(self, name: str = "MuzzleFlash", location: List[float] = [0.0, 0.0, 1.0], energy: float = 200.0) -> Dict[str, Any]:
+        """Create a light and emissive muzzle flash."""
+        return self._domain_call("animation_fx", "create_muzzle_flash", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_explosion(self, name: str = "Explosion", location: List[float] = [0.0, 0.0, 1.0], radius: float = 2.0) -> Dict[str, Any]:
+        """Create an explosion with fireball and shock ring."""
+        return self._domain_call("animation_fx", "create_explosion", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_smoke_plume(self, name: str = "Smoke", location: List[float] = [0.0, 0.0, 0.0], height: float = 4.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a volumetric smoke plume."""
+        return self._domain_call("animation_fx", "create_smoke_plume", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fire_effect(self, name: str = "Fire", radius: float = 0.5, height: float = 1.5) -> Dict[str, Any]:
+        """Create a displaced emissive flame mesh."""
+        return self._domain_call("animation_fx", "create_fire_effect", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_spark_burst(self, name: str = "Sparks", location: List[float] = [0.0, 0.0, 1.0], count: int = 100, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic burst of spark streaks."""
+        return self._domain_call("animation_fx", "create_spark_burst", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_shockwave(self, name: str = "Shockwave", location: List[float] = [0.0, 0.0, 1.0], radius: float = 3.0) -> Dict[str, Any]:
+        """Create an emissive transparent shockwave ring."""
+        return self._domain_call("animation_fx", "create_shockwave", {k: v for k, v in locals().items() if k != "self"})
+
+    def project_info(self, ) -> Dict[str, Any]:
+        """Report Blender, add-on, scene, data counts, units and render engine."""
+        return self._domain_call("utility", "project_info", {k: v for k, v in locals().items() if k != "self"})
+
+    def health_check(self, ) -> Dict[str, Any]:
+        """Run read-only context, scene, main-thread, add-on and memory checks."""
+        return self._domain_call("utility", "health_check", {k: v for k, v in locals().items() if k != "self"})
 
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION

@@ -108,6 +108,48 @@ EXPECTED = {
         "set_bone_custom_shape", "create_pose_library_action", "mirror_pose",
         "validate_rig",
     },
+    "animation_advanced": {
+        "create_nla_track", "add_camera_shake", "add_timeline_marker",
+        "set_motion_paths", "set_animation_curve_preset", "retime_action",
+        "create_camera_cut", "validate_animation",
+    },
+    "physics_extra": {
+        "add_force_field", "create_rigid_body_chain", "create_cloth_preset",
+        "create_fluid_domain", "create_fluid_inflow", "create_collision_object",
+        "bake_physics", "validate_physics",
+    },
+    "qa_extra": {
+        "scene_audit", "material_audit", "texture_audit", "performance_budget",
+        "export_preflight", "detect_floating_objects",
+        "detect_duplicate_geometry", "scene_repair_plan",
+    },
+    "environment_extra": {
+        "create_rain_system", "create_snow_system", "create_lightning_rig",
+        "create_wind_field", "create_atmospheric_haze",
+        "create_sunset_lighting", "create_night_lighting",
+        "create_weather_scene",
+    },
+    "character_rig": {
+        "create_face_rig", "create_jaw_bone", "create_eyelid_bones",
+        "create_finger_rig", "create_ik_leg_rig", "create_ik_arm_rig",
+        "add_face_shape_keys", "validate_character_rig",
+    },
+    "world_building": {
+        "create_city_block", "create_road", "create_street", "create_bridge",
+        "create_tunnel", "create_skyscraper", "create_park", "create_plaza",
+    },
+    "material_library": {
+        "create_marble_material", "create_brick_material",
+        "create_asphalt_material", "create_grass_material",
+        "create_sand_material", "create_rust_material",
+        "create_chrome_material", "create_ceramic_material",
+    },
+    "animation_fx": {
+        "create_particle_system", "create_trail", "create_muzzle_flash",
+        "create_explosion", "create_smoke_plume", "create_fire_effect",
+        "create_spark_burst", "create_shockwave",
+    },
+    "utility": {"project_info", "health_check"},
 }
 
 

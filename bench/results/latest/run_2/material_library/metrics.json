@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "materials",
+  "duration_ms": 5.585,
+  "error": null,
+  "expected": {
+    "all_success": true,
+    "count": 8,
+    "min_nodes": {
+      "min": 2
+    }
+  },
+  "failures": [],
+  "observed": {
+    "all_success": true,
+    "count": 8,
+    "min_nodes": 2
+  },
+  "passed": true,
+  "run": 2,
+  "task": "material_library"
+}

@@ -171,6 +171,18 @@
       "title": "Release v4.6.0-alpha.1",
       "status": "completed",
       "evidence": "tag and extension 4.6.0"
+    },
+    {
+      "id": "T22",
+      "title": "Animation/physics/QA/weather and final 301-tool packs",
+      "status": "completed",
+      "evidence": "34 tools, 42/42 bench, Blender 4.5/5.2"
+    },
+    {
+      "id": "T23",
+      "title": "Release v4.8.0-alpha.1 (301 tools)",
+      "status": "completed",
+      "evidence": "tag and extension 4.8.0"
     }
   ]
 }

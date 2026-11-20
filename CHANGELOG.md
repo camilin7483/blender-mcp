@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.6.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.8.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -51,6 +51,22 @@ All notable changes to this repository are documented here.
   fence, gate, garage and pool.
 - Advanced rigging: Child Of, Copy Location, Damped Track, Stretch To,
   custom shapes, pose actions, pose mirroring and rig validation.
+- Advanced animation: NLA strips, camera shake, markers, motion path previews,
+  curve presets, retiming and camera cuts.
+- Physics extras: force fields, rigid chains, cloth presets, fluid domain and
+  inflow, collision and physics validation.
+- QA extras: scene/material/texture audits, budgets, export preflight,
+  floating/duplicate detection and repair plans.
+- Weather: rain, snow, lightning, wind, haze, sunset and night lighting.
+- Character rigging: face rig, jaw/eyelid/finger bones, IK leg/arm chains,
+  face shape keys and rig validation.
+- World building: city block, road, street, bridge, tunnel, skyscraper, park
+  and plaza.
+- Material library: marble, brick, asphalt, grass, sand, rust, chrome and
+  ceramic.
+- Animation FX: particle systems, trails, muzzle flashes, explosions, smoke,
+  fire, sparks and shockwaves.
+- Utility tools: project_info and health_check. Total: 301 tools.
 - `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
@@ -76,7 +92,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 38 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 42 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

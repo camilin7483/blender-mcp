@@ -1,0 +1,9 @@
+{
+  "bones": {
+    "min": 10
+  },
+  "shape_keys": {
+    "min": 4
+  },
+  "passed": true
+}

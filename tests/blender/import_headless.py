@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 6, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 8, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1398,6 +1398,183 @@ def main() -> None:
         assert mirrored["success"], mirrored
         rig_check = server.validate_rig("V46Rig")
         assert rig_check["success"], rig_check
+
+        # --- v4.7 advanced animation, physics, QA and weather ---
+        clear_scene()
+        server.create_parametric_part(
+            "V47Cube", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.create_action("V47Cube", "V47Action")
+        server.keyframe_object("V47Cube", "location", 1, [0.0, 0.0, 0.5])
+        server.keyframe_object("V47Cube", "location", 10, [1.0, 0.0, 0.5])
+        server.create_camera("V47Cam1", location=[4.0, -4.0, 3.0], look_at=[0.0, 0.0, 0.5])
+        server.create_camera("V47Cam2", location=[-4.0, -4.0, 3.0], look_at=[0.0, 0.0, 0.5])
+        nla = server.create_nla_track("V47Cube", "V47Action", 1)
+        assert nla["success"], nla
+        shake = server.add_camera_shake("V47Cam1", 0.03, 1, 5, 2)
+        assert shake["success"], shake
+        marker = server.add_timeline_marker("V47Start", 1)
+        assert marker["success"], marker
+        motion = server.set_motion_paths("V47Cube", True)
+        assert motion["success"] and motion["curve"], motion
+        preset = server.set_animation_curve_preset("V47Cube", "ease_in_out")
+        assert preset["success"], preset
+        retime = server.retime_action("V47Cube", 1.2)
+        assert retime["success"], retime
+        cut = server.create_camera_cut(
+            ["V47Cam1", "V47Cam2"], [[1, 5], [6, 10]]
+        )
+        assert cut["success"] and cut["cut_count"] == 2, cut
+        animation_check = server.validate_animation("V47Cube")
+        assert animation_check["success"], animation_check
+
+        force = server.add_force_field("V47Wind", "WIND", 2.0, [0.0, 0.0, 0.0])
+        assert force["success"], force
+        rigid = server.create_rigid_body_chain(["V47Cube"], 1.0)
+        assert rigid["success"] and rigid["count"] == 1, rigid
+        server.create_parametric_part(
+            "V47Cloth", shape="BOX", dimensions=[1.0, 1.0, 0.01],
+            location=[0.0, 0.0, 1.0],
+        )
+        cloth = server.create_cloth_preset("V47Cloth", "silk")
+        assert cloth["success"], cloth
+        domain = server.create_fluid_domain("V47Fluid", [2.0, 2.0, 2.0], 16)
+        assert domain["success"], domain
+        inflow = server.create_fluid_inflow(
+            "V47Cube", "V47Fluid", [0.0, 0.0, -1.0]
+        )
+        assert inflow["success"], inflow
+        collision = server.create_collision_object("V47Cloth", 0.02)
+        assert collision["success"], collision
+        baked = server.bake_physics(2)
+        assert baked["success"], baked
+        physics_check = server.validate_physics("V47Cube")
+        assert physics_check["success"], physics_check
+
+        scene_audit = server.scene_audit(False)
+        assert scene_audit["success"], scene_audit
+        material_audit = server.material_audit()
+        assert material_audit["success"], material_audit
+        texture_audit = server.texture_audit()
+        assert texture_audit["success"], texture_audit
+        budget = server.performance_budget(100000, 256.0)
+        assert budget["success"], budget
+        preflight = server.export_preflight("generic-gltf")
+        assert preflight["success"], preflight
+        floating = server.detect_floating_objects(0.001)
+        assert floating["success"], floating
+        duplicates = server.detect_duplicate_geometry(0.0001)
+        assert duplicates["success"], duplicates
+        repair = server.scene_repair_plan()
+        assert repair["success"], repair
+
+        rain = server.create_rain_system("V47Rain", 50, 5.0, 1)
+        assert rain["success"], rain
+        snow = server.create_snow_system("V47Snow", 50, 5.0, 1)
+        assert snow["success"], snow
+        lightning = server.create_lightning_rig("V47Lightning", [0.0, 0.0, 4.0], 500.0)
+        assert lightning["success"], lightning
+        wind = server.create_wind_field("V47WindField", 2.0, [1.0, 0.0, 0.0])
+        assert wind["success"], wind
+        haze = server.create_atmospheric_haze(0.01, [0.8, 0.85, 0.9])
+        assert haze["success"], haze
+        sunset = server.create_sunset_lighting()
+        assert sunset["success"], sunset
+        night = server.create_night_lighting(0.5)
+        assert night["success"], night
+        weather = server.create_weather_scene("rain", 6.0, 1)
+        assert weather["success"], weather
+
+        # --- v4.8 character rig, world, material library and FX ---
+        clear_scene()
+        server.create_humanoid_blockout("V48Char", height=1.75)
+        face_rig = server.create_face_rig("V48Char", "V48FaceRig")
+        assert face_rig["success"] and face_rig["bone_count"] >= 10, face_rig
+        server.create_armature("V48JawRig", [
+            {"name": "Root", "head": [0.0, 0.0, 0.0], "tail": [0.0, 0.0, 0.5]}
+        ])
+        jaw = server.create_jaw_bone(
+            "V48JawRig", [0.0, -0.05, 1.6], [0.0, -0.05, 1.5]
+        )
+        assert jaw["success"], jaw
+        eyelids = server.create_eyelid_bones("V48JawRig", 0.065, 0.22)
+        assert eyelids["success"], eyelids
+        fingers = server.create_finger_rig("V48JawRig", "L", 1.0)
+        assert fingers["success"] and fingers["bone_count"] == 15, fingers
+        server.create_parametric_part(
+            "V48Target", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 1.0],
+        )
+        leg_ik = server.create_ik_leg_rig(
+            "V48JawRig", [0.1, 0.0, 0.9], [0.1, 0.1, 0.5],
+            [0.1, 0.2, 0.1], "V48Target",
+        )
+        assert leg_ik["success"], leg_ik
+        arm_ik = server.create_ik_arm_rig(
+            "V48JawRig", [0.2, 0.0, 1.4], [0.4, 0.0, 1.1],
+            [0.6, 0.0, 0.8], "V48Target",
+        )
+        assert arm_ik["success"], arm_ik
+        shape_keys = server.add_face_shape_keys("V48Char")
+        assert shape_keys["success"] and len(shape_keys["created"]) >= 4, shape_keys
+        character_check = server.validate_character_rig("V48FaceRig", "V48Char")
+        assert character_check["success"], character_check
+
+        for name, factory, args in (
+            ("V48City", server.create_city_block, (20.0, 20.0, 4, 1)),
+            ("V48Road", server.create_road, (20.0, 7.0, 2)),
+            ("V48Street", server.create_street, (20.0, 8.0, 1)),
+            ("V48Bridge", server.create_bridge, (10.0, 6.0, 3.0)),
+            ("V48Tunnel", server.create_tunnel, (10.0, 4.0, 3.0)),
+            ("V48Tower", server.create_skyscraper, (8.0, 8.0, 30.0, 10)),
+            ("V48Park", server.create_park, (15.0, 15.0, 4, 1)),
+            ("V48Plaza", server.create_plaza, (15.0, 15.0, 1)),
+        ):
+            result = factory(name, *args)
+            assert result["success"] and bpy.data.objects.get(name), result
+
+        for name, factory in (
+            ("V48Marble", server.create_marble_material),
+            ("V48Brick", server.create_brick_material),
+            ("V48Asphalt", server.create_asphalt_material),
+            ("V48GrassMat", server.create_grass_material),
+            ("V48SandMat", server.create_sand_material),
+            ("V48Rust", server.create_rust_material),
+            ("V48Chrome", server.create_chrome_material),
+            ("V48Ceramic", server.create_ceramic_material),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.materials.get(name), result
+
+        server.create_parametric_part(
+            "V48Emitter", shape="BOX", dimensions=[0.2, 0.2, 0.2],
+            location=[0.0, 0.0, 0.1],
+        )
+        particles = server.create_particle_system("V48Emitter", "V48Particles", 50, 20)
+        assert particles["success"], particles
+        server.create_parametric_part(
+            "V48TrailObj", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.keyframe_object("V48TrailObj", "location", 1, [0.0, 0.0, 0.5])
+        server.keyframe_object("V48TrailObj", "location", 10, [1.0, 0.0, 0.5])
+        trail = server.create_trail("V48TrailObj", "V48Trail", 10)
+        assert trail["success"], trail
+        for name, factory, args in (
+            ("V48Muzzle", server.create_muzzle_flash, ([0.0, 0.0, 1.0], 200.0)),
+            ("V48Explosion", server.create_explosion, ([0.0, 0.0, 1.0], 2.0)),
+            ("V48Smoke", server.create_smoke_plume, ([0.0, 0.0, 0.0], 3.0, 1)),
+            ("V48Fire", server.create_fire_effect, (0.5, 1.5)),
+            ("V48Sparks", server.create_spark_burst, ([0.0, 0.0, 1.0], 50, 1)),
+            ("V48Shockwave", server.create_shockwave, ([0.0, 0.0, 1.0], 3.0)),
+        ):
+            result = factory(name, *args)
+            assert result["success"], result
+        project = server.project_info()
+        assert project["success"] and project["object_count"] > 0, project
+        health = server.health_check()
+        assert health["success"] and health["passed"], health
 
         # --- animation and rigging primitives ---
         clear_scene()

@@ -42,7 +42,7 @@ def test_core_profile_is_smaller_and_includes_audit() -> None:
 
 
 def test_full_profile_has_every_tool() -> None:
-    assert len(_tools("full")) == 235
+    assert len(_tools("full")) == 301
 
 
 def test_unknown_profile_uses_core() -> None:

@@ -1104,6 +1104,72 @@ TOOL_METADATA = {
     "create_pose_library_action": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
     "mirror_pose": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
     "validate_rig": {"category": "rigging", "safety": "read", "cost": "low", "units": ""},
+    "create_nla_track": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "add_camera_shake": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "add_timeline_marker": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "set_motion_paths": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "set_animation_curve_preset": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "retime_action": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "create_camera_cut": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "validate_animation": {"category": "animation", "safety": "read", "cost": "low", "units": ""},
+    "add_force_field": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "create_rigid_body_chain": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "create_cloth_preset": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "create_fluid_domain": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "create_fluid_inflow": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "create_collision_object": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "bake_physics": {"category": "physics", "safety": "write", "cost": "high", "units": ""},
+    "validate_physics": {"category": "physics", "safety": "read", "cost": "low", "units": ""},
+    "scene_audit": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "material_audit": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "texture_audit": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "performance_budget": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "export_preflight": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "detect_floating_objects": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "detect_duplicate_geometry": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "scene_repair_plan": {"category": "qa", "safety": "read", "cost": "low", "units": ""},
+    "create_rain_system": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_snow_system": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_lightning_rig": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_wind_field": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_atmospheric_haze": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_sunset_lighting": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_night_lighting": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_weather_scene": {"category": "environment", "safety": "write", "cost": "medium", "units": ""},
+    "create_face_rig": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "create_jaw_bone": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "create_eyelid_bones": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "create_finger_rig": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "create_ik_leg_rig": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "create_ik_arm_rig": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "add_face_shape_keys": {"category": "character", "safety": "write", "cost": "low", "units": ""},
+    "validate_character_rig": {"category": "character", "safety": "read", "cost": "low", "units": ""},
+    "create_city_block": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_road": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_street": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_bridge": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_tunnel": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_skyscraper": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_park": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_plaza": {"category": "architecture", "safety": "write", "cost": "medium", "units": ""},
+    "create_marble_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_brick_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_asphalt_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_grass_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_sand_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_rust_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_chrome_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_ceramic_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_particle_system": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_trail": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_muzzle_flash": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_explosion": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_smoke_plume": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_fire_effect": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_spark_burst": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "create_shockwave": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
+    "project_info": {"category": "core", "safety": "read", "cost": "low", "units": ""},
+    "health_check": {"category": "core", "safety": "read", "cost": "low", "units": ""},
     "create_hair_strands": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
 }
 
@@ -2118,8 +2184,340 @@ def validate_rig(armature_name: str, mesh_name: Optional[str] = None) -> str:
     return json.dumps(send_blender_command("validate_rig", {"armature_name": armature_name, "mesh_name": mesh_name}), indent=2)
 
 
+@mcp.tool()
+def create_nla_track(object_name: str, action_name: str, start_frame: int = 1) -> str:
+    """Create an NLA track and strip from an existing action."""
+    return json.dumps(send_blender_command("create_nla_track", {"object_name": object_name, "action_name": action_name, "start_frame": start_frame}), indent=2)
+
+@mcp.tool()
+def add_camera_shake(camera_name: str, strength: float = 0.05, frame_start: int = 1, frame_end: int = 60, seed: int = 0) -> str:
+    """Add deterministic camera shake keyframes over a frame range."""
+    return json.dumps(send_blender_command("add_camera_shake", {"camera_name": camera_name, "strength": strength, "frame_start": frame_start, "frame_end": frame_end, "seed": seed}), indent=2)
+
+@mcp.tool()
+def add_timeline_marker(name: str, frame: int = 1) -> str:
+    """Add a named timeline marker at a frame."""
+    return json.dumps(send_blender_command("add_timeline_marker", {"name": name, "frame": frame}), indent=2)
+
+@mcp.tool()
+def set_motion_paths(object_name: str, enabled: bool = True) -> str:
+    """Calculate or clear motion paths for an object or armature."""
+    return json.dumps(send_blender_command("set_motion_paths", {"object_name": object_name, "enabled": enabled}), indent=2)
+
+@mcp.tool()
+def set_animation_curve_preset(object_name: str, preset: str = "ease_in_out") -> str:
+    """Apply a named interpolation/easing preset to an object action."""
+    return json.dumps(send_blender_command("set_animation_curve_preset", {"object_name": object_name, "preset": preset}), indent=2)
+
+@mcp.tool()
+def retime_action(object_name: str, factor: float = 1.0) -> str:
+    """Scale animation keyframe times by a factor."""
+    return json.dumps(send_blender_command("retime_action", {"object_name": object_name, "factor": factor}), indent=2)
+
+@mcp.tool()
+def create_camera_cut(camera_names: List[str], frame_ranges: List[List[int]]) -> str:
+    """Create timeline markers bound to cameras for a camera cut."""
+    return json.dumps(send_blender_command("create_camera_cut", {"camera_names": camera_names, "frame_ranges": frame_ranges}), indent=2)
+
+@mcp.tool()
+def validate_animation(object_name: str) -> str:
+    """Validate action, frame range, fcurves and camera markers."""
+    return json.dumps(send_blender_command("validate_animation", {"object_name": object_name}), indent=2)
+
+@mcp.tool()
+def add_force_field(name: str = "Wind", field_type: str = "WIND", strength: float = 1.0, location: List[float] = [0.0, 0.0, 0.0]) -> str:
+    """Add a force field empty with strength and location."""
+    return json.dumps(send_blender_command("add_force_field", {"name": name, "field_type": field_type, "strength": strength, "location": location}), indent=2)
+
+@mcp.tool()
+def create_rigid_body_chain(object_names: List[str], mass: float = 1.0) -> str:
+    """Add active rigid bodies with mass to mesh objects."""
+    return json.dumps(send_blender_command("create_rigid_body_chain", {"object_names": object_names, "mass": mass}), indent=2)
+
+@mcp.tool()
+def create_cloth_preset(object_name: str, preset: str = "silk") -> str:
+    """Add a cloth modifier with a silk, cotton, leather or wool preset."""
+    return json.dumps(send_blender_command("create_cloth_preset", {"object_name": object_name, "preset": preset}), indent=2)
+
+@mcp.tool()
+def create_fluid_domain(domain_name: str, size: List[float] = [2.0, 2.0, 2.0], resolution: int = 32) -> str:
+    """Create and configure a fluid domain cube."""
+    return json.dumps(send_blender_command("create_fluid_domain", {"domain_name": domain_name, "size": size, "resolution": resolution}), indent=2)
+
+@mcp.tool()
+def create_fluid_inflow(object_name: str, domain_name: str, velocity: List[float] = [0.0, 0.0, -1.0]) -> str:
+    """Add a fluid inflow object linked to a domain."""
+    return json.dumps(send_blender_command("create_fluid_inflow", {"object_name": object_name, "domain_name": domain_name, "velocity": velocity}), indent=2)
+
+@mcp.tool()
+def create_collision_object(object_name: str, thickness: float = 0.02) -> str:
+    """Add a collision modifier to an object."""
+    return json.dumps(send_blender_command("create_collision_object", {"object_name": object_name, "thickness": thickness}), indent=2)
+
+@mcp.tool()
+def bake_physics(frame_end: int = 60) -> str:
+    """Bake all physics caches up to a bounded frame."""
+    return json.dumps(send_blender_command("bake_physics", {"frame_end": frame_end}), indent=2)
+
+@mcp.tool()
+def validate_physics(object_name: Optional[str] = None) -> str:
+    """Report rigid bodies, cloth, fluid, collision modifiers and caches."""
+    return json.dumps(send_blender_command("validate_physics", {"object_name": object_name}), indent=2)
+
+@mcp.tool()
+def scene_audit(include_hidden: bool = False) -> str:
+    """Audit object counts, hidden objects, orphan data, non-manifold meshes and empty materials."""
+    return json.dumps(send_blender_command("scene_audit", {"include_hidden": include_hidden}), indent=2)
+
+@mcp.tool()
+def material_audit() -> str:
+    """Audit node-less, unused, missing-image and non-Principled materials."""
+    return json.dumps(send_blender_command("material_audit", {}), indent=2)
+
+@mcp.tool()
+def texture_audit() -> str:
+    """Audit image paths, sizes, packing and colorspaces."""
+    return json.dumps(send_blender_command("texture_audit", {}), indent=2)
+
+@mcp.tool()
+def performance_budget(max_triangles: int = 100000, max_texture_mb: float = 256.0) -> str:
+    """Check triangles, texture memory and object count against budgets."""
+    return json.dumps(send_blender_command("performance_budget", {"max_triangles": max_triangles, "max_texture_mb": max_texture_mb}), indent=2)
+
+@mcp.tool()
+def export_preflight(profile: str = "generic-gltf") -> str:
+    """Run profile-aware mesh, UV, material, rig and action checks."""
+    return json.dumps(send_blender_command("export_preflight", {"profile": profile}), indent=2)
+
+@mcp.tool()
+def detect_floating_objects(tolerance: float = 0.001) -> str:
+    """Find objects whose world AABB bottom is above tolerance."""
+    return json.dumps(send_blender_command("detect_floating_objects", {"tolerance": tolerance}), indent=2)
+
+@mcp.tool()
+def detect_duplicate_geometry(tolerance: float = 0.0001) -> str:
+    """Find shared geometry and equal dimensions within tolerance."""
+    return json.dumps(send_blender_command("detect_duplicate_geometry", {"tolerance": tolerance}), indent=2)
+
+@mcp.tool()
+def scene_repair_plan() -> str:
+    """Aggregate scene, material, texture and performance findings into a repair plan."""
+    return json.dumps(send_blender_command("scene_repair_plan", {}), indent=2)
+
+@mcp.tool()
+def create_rain_system(name: str = "Rain", count: int = 500, area: float = 10.0, seed: int = 0) -> str:
+    """Create a deterministic rain streak mesh over an area."""
+    return json.dumps(send_blender_command("create_rain_system", {"name": name, "count": count, "area": area, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_snow_system(name: str = "Snow", count: int = 500, area: float = 10.0, seed: int = 0) -> str:
+    """Create a deterministic snow flake mesh over an area."""
+    return json.dumps(send_blender_command("create_snow_system", {"name": name, "count": count, "area": area, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_lightning_rig(name: str = "Lightning", location: List[float] = [0.0, 0.0, 5.0], energy: float = 1000.0) -> str:
+    """Create a point flash and emissive lightning bolt."""
+    return json.dumps(send_blender_command("create_lightning_rig", {"name": name, "location": location, "energy": energy}), indent=2)
+
+@mcp.tool()
+def create_wind_field(name: str = "Wind", strength: float = 1.0, direction: List[float] = [1.0, 0.0, 0.0]) -> str:
+    """Create a wind force field with a direction."""
+    return json.dumps(send_blender_command("create_wind_field", {"name": name, "strength": strength, "direction": direction}), indent=2)
+
+@mcp.tool()
+def create_atmospheric_haze(density: float = 0.01, color: List[float] = [0.8, 0.85, 0.9]) -> str:
+    """Create a volumetric haze cube with density and color."""
+    return json.dumps(send_blender_command("create_atmospheric_haze", {"density": density, "color": color}), indent=2)
+
+@mcp.tool()
+def create_sunset_lighting() -> str:
+    """Create a warm sunset world and low sun."""
+    return json.dumps(send_blender_command("create_sunset_lighting", {}), indent=2)
+
+@mcp.tool()
+def create_night_lighting(moon_energy: float = 0.5) -> str:
+    """Create a dark night world and moon light."""
+    return json.dumps(send_blender_command("create_night_lighting", {"moon_energy": moon_energy}), indent=2)
+
+@mcp.tool()
+def create_weather_scene(weather: str = "rain", size: float = 10.0, seed: int = 0) -> str:
+    """Compose ground, sky and rain, snow or clear weather."""
+    return json.dumps(send_blender_command("create_weather_scene", {"weather": weather, "size": size, "seed": seed}), indent=2)
+
+
+@mcp.tool()
+def create_face_rig(mesh_name: str, armature_name: str = "FaceRig") -> str:
+    """Create a compact face rig fitted to a head mesh."""
+    return json.dumps(send_blender_command("create_face_rig", {"mesh_name": mesh_name, "armature_name": armature_name}), indent=2)
+
+@mcp.tool()
+def create_jaw_bone(armature_name: str, head: List[float], tail: List[float]) -> str:
+    """Add a jaw bone to an existing armature."""
+    return json.dumps(send_blender_command("create_jaw_bone", {"armature_name": armature_name, "head": head, "tail": tail}), indent=2)
+
+@mcp.tool()
+def create_eyelid_bones(armature_name: str, eye_spacing: float = 0.065, head_height: float = 0.22) -> str:
+    """Add upper and lower eyelid bones for both eyes."""
+    return json.dumps(send_blender_command("create_eyelid_bones", {"armature_name": armature_name, "eye_spacing": eye_spacing, "head_height": head_height}), indent=2)
+
+@mcp.tool()
+def create_finger_rig(armature_name: str, side: str = "L", scale: float = 1.0) -> str:
+    """Create a thumb and four finger bone chains for one hand."""
+    return json.dumps(send_blender_command("create_finger_rig", {"armature_name": armature_name, "side": side, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_ik_leg_rig(armature_name: str, hip: List[float], knee: List[float], ankle: List[float], target_name: str) -> str:
+    """Create a two-bone leg chain with an IK target."""
+    return json.dumps(send_blender_command("create_ik_leg_rig", {"armature_name": armature_name, "hip": hip, "knee": knee, "ankle": ankle, "target_name": target_name}), indent=2)
+
+@mcp.tool()
+def create_ik_arm_rig(armature_name: str, shoulder: List[float], elbow: List[float], wrist: List[float], target_name: str) -> str:
+    """Create a two-bone arm chain with an IK target."""
+    return json.dumps(send_blender_command("create_ik_arm_rig", {"armature_name": armature_name, "shoulder": shoulder, "elbow": elbow, "wrist": wrist, "target_name": target_name}), indent=2)
+
+@mcp.tool()
+def add_face_shape_keys(mesh_name: str, names: Optional[List[str]] = None) -> str:
+    """Create face shape keys such as brow, blink, jaw and smile."""
+    return json.dumps(send_blender_command("add_face_shape_keys", {"mesh_name": mesh_name, "names": names}), indent=2)
+
+@mcp.tool()
+def validate_character_rig(armature_name: str, mesh_name: Optional[str] = None) -> str:
+    """Validate face/finger/IK bones, symmetry, constraints and shape keys."""
+    return json.dumps(send_blender_command("validate_character_rig", {"armature_name": armature_name, "mesh_name": mesh_name}), indent=2)
+
+@mcp.tool()
+def create_city_block(name: str = "CityBlock", width: float = 40.0, depth: float = 40.0, building_count: int = 6, seed: int = 0) -> str:
+    """Create a deterministic city block with roads and buildings."""
+    return json.dumps(send_blender_command("create_city_block", {"name": name, "width": width, "depth": depth, "building_count": building_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_road(name: str = "Road", length: float = 40.0, width: float = 7.0, lane_count: int = 2) -> str:
+    """Create an asphalt road with lane markings and sidewalks."""
+    return json.dumps(send_blender_command("create_road", {"name": name, "length": length, "width": width, "lane_count": lane_count}), indent=2)
+
+@mcp.tool()
+def create_street(name: str = "Street", length: float = 40.0, width: float = 8.0, seed: int = 0) -> str:
+    """Create a street with sidewalks, lamps and props."""
+    return json.dumps(send_blender_command("create_street", {"name": name, "length": length, "width": width, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_bridge(name: str = "Bridge", length: float = 20.0, width: float = 8.0, height: float = 4.0) -> str:
+    """Create a bridge with deck, railings and piers."""
+    return json.dumps(send_blender_command("create_bridge", {"name": name, "length": length, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_tunnel(name: str = "Tunnel", length: float = 20.0, width: float = 8.0, height: float = 4.0) -> str:
+    """Create an arched tunnel with interior walls."""
+    return json.dumps(send_blender_command("create_tunnel", {"name": name, "length": length, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_skyscraper(name: str = "Skyscraper", width: float = 12.0, depth: float = 12.0, height: float = 60.0, floors: int = 20) -> str:
+    """Create a skyscraper with floor bands and roof details."""
+    return json.dumps(send_blender_command("create_skyscraper", {"name": name, "width": width, "depth": depth, "height": height, "floors": floors}), indent=2)
+
+@mcp.tool()
+def create_park(name: str = "Park", width: float = 20.0, depth: float = 20.0, tree_count: int = 8, seed: int = 0) -> str:
+    """Create a park with paths, trees and benches."""
+    return json.dumps(send_blender_command("create_park", {"name": name, "width": width, "depth": depth, "tree_count": tree_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_plaza(name: str = "Plaza", width: float = 20.0, depth: float = 20.0, seed: int = 0) -> str:
+    """Create a paved plaza with planters, benches and a fountain."""
+    return json.dumps(send_blender_command("create_plaza", {"name": name, "width": width, "depth": depth, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_marble_material(name: str = "Marble", color: List[float] = [0.85, 0.85, 0.82, 1.0], vein_color: List[float] = [0.25, 0.25, 0.28, 1.0], scale: float = 3.0) -> str:
+    """Create a procedural marble material with veins."""
+    return json.dumps(send_blender_command("create_marble_material", {"name": name, "color": color, "vein_color": vein_color, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_brick_material(name: str = "Brick", color: List[float] = [0.45, 0.16, 0.10, 1.0], mortar_color: List[float] = [0.75, 0.75, 0.72, 1.0], scale: float = 8.0) -> str:
+    """Create a procedural brick material with mortar."""
+    return json.dumps(send_blender_command("create_brick_material", {"name": name, "color": color, "mortar_color": mortar_color, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_asphalt_material(name: str = "Asphalt", color: List[float] = [0.08, 0.08, 0.09, 1.0], roughness: float = 0.9) -> str:
+    """Create a dark asphalt material."""
+    return json.dumps(send_blender_command("create_asphalt_material", {"name": name, "color": color, "roughness": roughness}), indent=2)
+
+@mcp.tool()
+def create_grass_material(name: str = "Grass", color: List[float] = [0.12, 0.35, 0.08, 1.0], scale: float = 12.0) -> str:
+    """Create a green grass material with noise variation."""
+    return json.dumps(send_blender_command("create_grass_material", {"name": name, "color": color, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_sand_material(name: str = "Sand", color: List[float] = [0.76, 0.65, 0.45, 1.0], scale: float = 10.0) -> str:
+    """Create a sand material with fine variation."""
+    return json.dumps(send_blender_command("create_sand_material", {"name": name, "color": color, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_rust_material(name: str = "Rust", color: List[float] = [0.35, 0.12, 0.05, 1.0], scale: float = 6.0) -> str:
+    """Create a rusted metal material."""
+    return json.dumps(send_blender_command("create_rust_material", {"name": name, "color": color, "scale": scale}), indent=2)
+
+@mcp.tool()
+def create_chrome_material(name: str = "Chrome", roughness: float = 0.05) -> str:
+    """Create a polished chrome material."""
+    return json.dumps(send_blender_command("create_chrome_material", {"name": name, "roughness": roughness}), indent=2)
+
+@mcp.tool()
+def create_ceramic_material(name: str = "Ceramic", color: List[float] = [0.9, 0.9, 0.88, 1.0], roughness: float = 0.15) -> str:
+    """Create a glossy ceramic material."""
+    return json.dumps(send_blender_command("create_ceramic_material", {"name": name, "color": color, "roughness": roughness}), indent=2)
+
+@mcp.tool()
+def create_particle_system(object_name: str, name: str = "Particles", count: int = 500, lifetime: int = 60) -> str:
+    """Add a particle system to an emitter object."""
+    return json.dumps(send_blender_command("create_particle_system", {"object_name": object_name, "name": name, "count": count, "lifetime": lifetime}), indent=2)
+
+@mcp.tool()
+def create_trail(object_name: str, name: str = "Trail", length: int = 20) -> str:
+    """Create a curve trail following an object animation."""
+    return json.dumps(send_blender_command("create_trail", {"object_name": object_name, "name": name, "length": length}), indent=2)
+
+@mcp.tool()
+def create_muzzle_flash(name: str = "MuzzleFlash", location: List[float] = [0.0, 0.0, 1.0], energy: float = 200.0) -> str:
+    """Create a light and emissive muzzle flash."""
+    return json.dumps(send_blender_command("create_muzzle_flash", {"name": name, "location": location, "energy": energy}), indent=2)
+
+@mcp.tool()
+def create_explosion(name: str = "Explosion", location: List[float] = [0.0, 0.0, 1.0], radius: float = 2.0) -> str:
+    """Create an explosion with fireball and shock ring."""
+    return json.dumps(send_blender_command("create_explosion", {"name": name, "location": location, "radius": radius}), indent=2)
+
+@mcp.tool()
+def create_smoke_plume(name: str = "Smoke", location: List[float] = [0.0, 0.0, 0.0], height: float = 4.0, seed: int = 0) -> str:
+    """Create a volumetric smoke plume."""
+    return json.dumps(send_blender_command("create_smoke_plume", {"name": name, "location": location, "height": height, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_fire_effect(name: str = "Fire", radius: float = 0.5, height: float = 1.5) -> str:
+    """Create a displaced emissive flame mesh."""
+    return json.dumps(send_blender_command("create_fire_effect", {"name": name, "radius": radius, "height": height}), indent=2)
+
+@mcp.tool()
+def create_spark_burst(name: str = "Sparks", location: List[float] = [0.0, 0.0, 1.0], count: int = 100, seed: int = 0) -> str:
+    """Create a deterministic burst of spark streaks."""
+    return json.dumps(send_blender_command("create_spark_burst", {"name": name, "location": location, "count": count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_shockwave(name: str = "Shockwave", location: List[float] = [0.0, 0.0, 1.0], radius: float = 3.0) -> str:
+    """Create an emissive transparent shockwave ring."""
+    return json.dumps(send_blender_command("create_shockwave", {"name": name, "location": location, "radius": radius}), indent=2)
+
+@mcp.tool()
+def project_info() -> str:
+    """Report Blender, add-on, scene, data counts, units and render engine."""
+    return json.dumps(send_blender_command("project_info", {}), indent=2)
+
+@mcp.tool()
+def health_check() -> str:
+    """Run read-only context, scene, main-thread, add-on and memory checks."""
+    return json.dumps(send_blender_command("health_check", {}), indent=2)
+
+
 CORE_TOOLS = {
-    "get_scene_info",
+    "get_scene_info", "project_info", "health_check",
     "get_object_info",
     "list_objects",
     "transform_object",
@@ -2192,7 +2590,10 @@ PROFILE_EXTRAS = {
     "environment": {
         "create_sky_lighting", "create_fog_volume", "create_cloud_layer",
         "create_ground", "create_cliff", "create_beach",
-        "create_biome_scatter", "create_water_shore",
+        "create_biome_scatter", "create_water_shore", "create_rain_system",
+        "create_snow_system", "create_lightning_rig", "create_wind_field",
+        "create_atmospheric_haze", "create_sunset_lighting",
+        "create_night_lighting", "create_weather_scene",
     },
     "character": {
         "create_humanoid_blockout", "create_eye_pair", "create_teeth_set",
@@ -2200,7 +2601,9 @@ PROFILE_EXTRAS = {
         "create_hand_blockout", "create_foot_blockout", "create_nose",
         "create_ear_pair", "create_mouth", "create_brow_pair",
         "create_eyelash_pair", "create_hair_strands", "create_fingernails",
-        "create_face_proportions",
+        "create_face_proportions", "create_face_rig", "create_jaw_bone",
+        "create_eyelid_bones", "create_finger_rig", "create_ik_leg_rig",
+        "create_ik_arm_rig", "add_face_shape_keys", "validate_character_rig",
     },
     "architecture": {
         "create_room_shell", "create_door", "create_window", "create_table",
@@ -2209,7 +2612,9 @@ PROFILE_EXTRAS = {
         "create_parametric_roof", "create_staircase", "create_building_shell",
         "create_bathroom_set", "create_kitchen_island", "create_fireplace",
         "create_balcony", "create_fence", "create_gate", "create_garage",
-        "create_pool",
+        "create_pool", "create_city_block", "create_road", "create_street",
+        "create_bridge", "create_tunnel", "create_skyscraper", "create_park",
+        "create_plaza",
     },
     "hardsurface": {
         "add_bevel_modifier", "add_solidify_modifier", "add_array_modifier",
@@ -2228,6 +2633,10 @@ PROFILE_EXTRAS = {
         "bake_ambient_occlusion", "bake_normal_map", "bake_diffuse",
         "create_udim_tiles", "add_displacement", "create_layer_weight_mix",
         "create_parallax_bump", "optimize_material",
+        "create_marble_material", "create_brick_material",
+        "create_asphalt_material", "create_grass_material",
+        "create_sand_material", "create_rust_material",
+        "create_chrome_material", "create_ceramic_material",
     },
     "terrain": {
         "create_terrain", "sculpt_terrain_region", "scatter_objects",
@@ -2247,13 +2656,21 @@ PROFILE_EXTRAS = {
     },
     "physics": {
         "add_rigid_body", "add_collision", "add_cloth", "bake_simulation",
+        "add_force_field", "create_rigid_body_chain", "create_cloth_preset",
+        "create_fluid_domain", "create_fluid_inflow", "create_collision_object",
+        "bake_physics", "validate_physics",
     },
     "animation": {
         "create_articulation_joint", "auto_rig_humanoid",
         "orient_and_face_towards", "keyframe_object", "set_frame_range",
         "keyframe_path", "create_turntable_animation", "create_camera_rig",
         "add_follow_path_constraint", "set_keyframe_interpolation",
-        "create_action", "clear_animation",
+        "create_action", "clear_animation", "create_nla_track",
+        "add_camera_shake", "add_timeline_marker", "set_motion_paths",
+        "set_animation_curve_preset", "retime_action", "create_camera_cut",
+        "validate_animation", "create_particle_system", "create_trail",
+        "create_muzzle_flash", "create_explosion", "create_smoke_plume",
+        "create_fire_effect", "create_spark_burst", "create_shockwave",
     },
     "rigging": {
         "fuse_organic_parts", "create_skeleton_skin_mesh",
@@ -2265,6 +2682,11 @@ PROFILE_EXTRAS = {
         "add_damped_track_constraint", "add_stretch_to_constraint",
         "set_bone_custom_shape", "create_pose_library_action", "mirror_pose",
         "validate_rig",
+    },
+    "qa": {
+        "scene_audit", "material_audit", "texture_audit", "performance_budget",
+        "export_preflight", "detect_floating_objects",
+        "detect_duplicate_geometry", "scene_repair_plan",
     },
     "geometry_nodes": {
         "deform_object", "create_loft_surface", "array_grid_on_surface",

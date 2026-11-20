@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "rigging",
-  "duration_ms": 0.469,
+  "duration_ms": 0.496,
   "error": null,
   "expected": {
     "bone_count": 2,

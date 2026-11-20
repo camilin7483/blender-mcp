@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **38/38 tasks passed** in every run.
+- **42/42 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -50,6 +50,10 @@ same scenarios.
 | nature biome | forest + grass + rocks + biome | components |
 | architecture set | bathroom + kitchen + fireplace + pool | dimensions |
 | advanced rigging | constraints + pose + mirror | bones and validation |
+| character rig | face rig + shape keys | 10 bones, 5 keys |
+| world assets | city/road/tunnel/skyscraper | dimensions |
+| material library | eight presets | node graphs |
+| animation FX | particles/explosion/fire | five effects |
 | materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
 | geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
 | repair | non-uniform scale | normalized scale |

@@ -5,28 +5,53 @@
     "performed": false,
     "reason": "Requires a second server with the same LLM, prompt, budget and machine."
   },
-  "passed_tasks": 38,
+  "passed_tasks": 42,
   "runs": 3,
   "tasks": {
     "anchors_cube_top": {
       "category": "anchors",
-      "median_ms": 2.053,
+      "median_ms": 2.397,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 3.779,
+          "duration_ms": 2.397,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 1.942,
+          "duration_ms": 2.384,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 2.053,
+          "duration_ms": 3.871,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "animation_fx": {
+      "category": "animation",
+      "median_ms": 13.965,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 17.494,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 12.233,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 13.965,
           "failures": [],
           "passed": true,
           "run": 3
@@ -35,23 +60,23 @@
     },
     "animation_keyframes": {
       "category": "animation",
-      "median_ms": 1.758,
+      "median_ms": 1.451,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 1.805,
+          "duration_ms": 2.152,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 1.758,
+          "duration_ms": 1.451,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 1.433,
+          "duration_ms": 1.448,
           "failures": [],
           "passed": true,
           "run": 3
@@ -60,23 +85,23 @@
     },
     "animation_path": {
       "category": "animation",
-      "median_ms": 4.364,
+      "median_ms": 3.156,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 2.924,
+          "duration_ms": 3.308,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 4.364,
+          "duration_ms": 3.156,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 4.639,
+          "duration_ms": 2.425,
           "failures": [],
           "passed": true,
           "run": 3
@@ -85,23 +110,23 @@
     },
     "architecture_interior": {
       "category": "architecture",
-      "median_ms": 8.459,
+      "median_ms": 9.215,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 9.567,
+          "duration_ms": 11.577,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 7.117,
+          "duration_ms": 9.215,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 8.459,
+          "duration_ms": 9.005,
           "failures": [],
           "passed": true,
           "run": 3
@@ -110,23 +135,23 @@
     },
     "architecture_set": {
       "category": "architecture",
-      "median_ms": 11.58,
+      "median_ms": 13.493,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 9.573,
+          "duration_ms": 16.961,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 11.58,
+          "duration_ms": 13.493,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 12.129,
+          "duration_ms": 12.55,
           "failures": [],
           "passed": true,
           "run": 3
@@ -135,23 +160,23 @@
     },
     "assemblies_desk_update": {
       "category": "assemblies",
-      "median_ms": 23.853,
+      "median_ms": 27.868,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 23.853,
+          "duration_ms": 27.924,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 28.041,
+          "duration_ms": 25.622,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 23.068,
+          "duration_ms": 27.868,
           "failures": [],
           "passed": true,
           "run": 3
@@ -160,23 +185,23 @@
     },
     "character_blockout": {
       "category": "character",
-      "median_ms": 28.729,
+      "median_ms": 33.403,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 28.98,
+          "duration_ms": 33.403,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 27.105,
+          "duration_ms": 30.633,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 28.729,
+          "duration_ms": 33.418,
           "failures": [],
           "passed": true,
           "run": 3
@@ -185,23 +210,48 @@
     },
     "character_details": {
       "category": "character",
-      "median_ms": 50.477,
+      "median_ms": 58.609,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 53.537,
+          "duration_ms": 58.609,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 50.477,
+          "duration_ms": 49.924,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 49.762,
+          "duration_ms": 60.991,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "character_rigging": {
+      "category": "character",
+      "median_ms": 9.241,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 9.216,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 9.869,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 9.241,
           "failures": [],
           "passed": true,
           "run": 3
@@ -210,23 +260,23 @@
     },
     "constraints_desk_ground": {
       "category": "constraints",
-      "median_ms": 11.298,
+      "median_ms": 11.521,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 11.943,
+          "duration_ms": 13.567,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 11.298,
+          "duration_ms": 11.521,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 8.697,
+          "duration_ms": 10.951,
           "failures": [],
           "passed": true,
           "run": 3
@@ -235,23 +285,23 @@
     },
     "dimensions_desk_1600": {
       "category": "dimensions",
-      "median_ms": 11.599,
+      "median_ms": 10.178,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 9.968,
+          "duration_ms": 23.412,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 12.285,
+          "duration_ms": 10.178,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 11.599,
+          "duration_ms": 9.204,
           "failures": [],
           "passed": true,
           "run": 3
@@ -260,23 +310,23 @@
     },
     "environment_scene": {
       "category": "environment",
-      "median_ms": 26.262,
+      "median_ms": 24.913,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 36.788,
+          "duration_ms": 25.304,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 24.116,
+          "duration_ms": 24.371,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 26.262,
+          "duration_ms": 24.913,
           "failures": [],
           "passed": true,
           "run": 3
@@ -285,23 +335,23 @@
     },
     "export_godot_glb": {
       "category": "export",
-      "median_ms": 41.106,
+      "median_ms": 44.587,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 84.079,
+          "duration_ms": 86.028,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 31.753,
+          "duration_ms": 44.587,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 41.106,
+          "duration_ms": 44.325,
           "failures": [],
           "passed": true,
           "run": 3
@@ -310,23 +360,23 @@
     },
     "furniture_library": {
       "category": "furniture",
-      "median_ms": 7.038,
+      "median_ms": 9.404,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 10.012,
+          "duration_ms": 11.223,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 6.59,
+          "duration_ms": 9.108,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 7.038,
+          "duration_ms": 9.404,
           "failures": [],
           "passed": true,
           "run": 3
@@ -335,23 +385,23 @@
     },
     "geometry_nodes_cube": {
       "category": "geometry_nodes",
-      "median_ms": 1.049,
+      "median_ms": 0.885,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 1.259,
+          "duration_ms": 1.269,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 0.855,
+          "duration_ms": 0.885,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 1.049,
+          "duration_ms": 0.878,
           "failures": [],
           "passed": true,
           "run": 3
@@ -360,23 +410,23 @@
     },
     "hardsurface_modifiers": {
       "category": "hardsurface",
-      "median_ms": 4.239,
+      "median_ms": 3.065,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 3.07,
+          "duration_ms": 5.521,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 4.239,
+          "duration_ms": 3.065,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 5.349,
+          "duration_ms": 2.577,
           "failures": [],
           "passed": true,
           "run": 3
@@ -385,23 +435,23 @@
     },
     "inspection_front_ortho": {
       "category": "inspection",
-      "median_ms": 1387.641,
+      "median_ms": 1445.434,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 1681.201,
+          "duration_ms": 1838.763,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 1344.006,
+          "duration_ms": 1425.611,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 1387.641,
+          "duration_ms": 1445.434,
           "failures": [],
           "passed": true,
           "run": 3
@@ -410,23 +460,48 @@
     },
     "lighting_render": {
       "category": "lighting",
-      "median_ms": 650.516,
+      "median_ms": 648.465,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 658.583,
+          "duration_ms": 697.043,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 605.247,
+          "duration_ms": 604.985,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 650.516,
+          "duration_ms": 648.465,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "material_library": {
+      "category": "materials",
+      "median_ms": 5.758,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 5.758,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 5.585,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 7.405,
           "failures": [],
           "passed": true,
           "run": 3
@@ -435,23 +510,23 @@
     },
     "materials_bake": {
       "category": "materials",
-      "median_ms": 261.576,
+      "median_ms": 269.815,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 258.179,
+          "duration_ms": 269.815,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 261.576,
+          "duration_ms": 267.001,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 262.3,
+          "duration_ms": 270.878,
           "failures": [],
           "passed": true,
           "run": 3
@@ -460,23 +535,23 @@
     },
     "materials_pbr_cube": {
       "category": "materials",
-      "median_ms": 2.091,
+      "median_ms": 1.367,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 3.112,
+          "duration_ms": 1.316,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 1.373,
+          "duration_ms": 1.367,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 2.091,
+          "duration_ms": 1.99,
           "failures": [],
           "passed": true,
           "run": 3
@@ -485,23 +560,23 @@
     },
     "materials_uv": {
       "category": "materials",
-      "median_ms": 6.298,
+      "median_ms": 7.123,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 6.298,
+          "duration_ms": 7.123,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 5.409,
+          "duration_ms": 8.348,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 6.301,
+          "duration_ms": 6.249,
           "failures": [],
           "passed": true,
           "run": 3
@@ -510,23 +585,23 @@
     },
     "nature_biome": {
       "category": "environment",
-      "median_ms": 71.301,
+      "median_ms": 71.382,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 73.986,
+          "duration_ms": 74.719,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 71.301,
+          "duration_ms": 71.382,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 70.511,
+          "duration_ms": 70.073,
           "failures": [],
           "passed": true,
           "run": 3
@@ -535,23 +610,23 @@
     },
     "pbr_materials": {
       "category": "materials",
-      "median_ms": 3.073,
+      "median_ms": 5.1,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 3.073,
+          "duration_ms": 5.81,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 2.9,
+          "duration_ms": 3.252,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 4.683,
+          "duration_ms": 5.1,
           "failures": [],
           "passed": true,
           "run": 3
@@ -560,23 +635,23 @@
     },
     "physics_rigid": {
       "category": "physics",
-      "median_ms": 2.152,
+      "median_ms": 2.416,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 2.541,
+          "duration_ms": 2.416,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 2.076,
+          "duration_ms": 3.165,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 2.152,
+          "duration_ms": 2.316,
           "failures": [],
           "passed": true,
           "run": 3
@@ -585,23 +660,23 @@
     },
     "pipeline_export_lod": {
       "category": "pipeline",
-      "median_ms": 13.983,
+      "median_ms": 15.981,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 14.005,
+          "duration_ms": 17.411,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 13.983,
+          "duration_ms": 15.981,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 13.418,
+          "duration_ms": 14.554,
           "failures": [],
           "passed": true,
           "run": 3
@@ -610,23 +685,23 @@
     },
     "primitives_cube_1000mm": {
       "category": "primitives",
-      "median_ms": 1.979,
+      "median_ms": 2.096,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 1.937,
+          "duration_ms": 2.001,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 2.182,
+          "duration_ms": 2.16,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 1.979,
+          "duration_ms": 2.096,
           "failures": [],
           "passed": true,
           "run": 3
@@ -635,23 +710,23 @@
     },
     "props_library": {
       "category": "props",
-      "median_ms": 21.003,
+      "median_ms": 22.636,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 22.118,
+          "duration_ms": 24.102,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 21.003,
+          "duration_ms": 22.636,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 19.808,
+          "duration_ms": 22.619,
           "failures": [],
           "passed": true,
           "run": 3
@@ -660,23 +735,23 @@
     },
     "render_turntable": {
       "category": "render",
-      "median_ms": 440.47,
+      "median_ms": 476.207,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 453.195,
+          "duration_ms": 465.813,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 440.47,
+          "duration_ms": 476.207,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 427.245,
+          "duration_ms": 487.013,
           "failures": [],
           "passed": true,
           "run": 3
@@ -685,23 +760,23 @@
     },
     "repair_nonuniform_scale": {
       "category": "repair",
-      "median_ms": 5.397,
+      "median_ms": 3.18,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 5.092,
+          "duration_ms": 3.18,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 5.397,
+          "duration_ms": 4.283,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 5.469,
+          "duration_ms": 2.978,
           "failures": [],
           "passed": true,
           "run": 3
@@ -710,23 +785,23 @@
     },
     "rigging_advanced": {
       "category": "rigging",
-      "median_ms": 3.878,
+      "median_ms": 5.641,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 3.789,
+          "duration_ms": 6.833,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 3.878,
+          "duration_ms": 3.377,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 4.352,
+          "duration_ms": 5.641,
           "failures": [],
           "passed": true,
           "run": 3
@@ -735,23 +810,23 @@
     },
     "rigging_armature": {
       "category": "rigging",
-      "median_ms": 0.567,
+      "median_ms": 0.496,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 0.567,
+          "duration_ms": 0.483,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 0.922,
+          "duration_ms": 1.021,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 0.469,
+          "duration_ms": 0.496,
           "failures": [],
           "passed": true,
           "run": 3
@@ -760,23 +835,23 @@
     },
     "rigging_ik": {
       "category": "rigging",
-      "median_ms": 5.458,
+      "median_ms": 4.954,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 4.02,
+          "duration_ms": 4.954,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 5.458,
+          "duration_ms": 6.379,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 6.552,
+          "duration_ms": 4.035,
           "failures": [],
           "passed": true,
           "run": 3
@@ -785,23 +860,23 @@
     },
     "terrain_landscape": {
       "category": "terrain",
-      "median_ms": 15.959,
+      "median_ms": 18.955,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 13.049,
+          "duration_ms": 21.258,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 16.176,
+          "duration_ms": 15.675,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 15.959,
+          "duration_ms": 18.955,
           "failures": [],
           "passed": true,
           "run": 3
@@ -810,23 +885,23 @@
     },
     "textures_material": {
       "category": "textures",
-      "median_ms": 3.507,
+      "median_ms": 3.481,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 4.56,
+          "duration_ms": 3.481,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 3.5,
+          "duration_ms": 3.244,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 3.507,
+          "duration_ms": 3.576,
           "failures": [],
           "passed": true,
           "run": 3
@@ -835,23 +910,23 @@
     },
     "topology_clean_cube": {
       "category": "topology",
-      "median_ms": 2.576,
+      "median_ms": 3.56,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 2.576,
+          "duration_ms": 4.081,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 2.7,
+          "duration_ms": 3.56,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 2.144,
+          "duration_ms": 1.864,
           "failures": [],
           "passed": true,
           "run": 3
@@ -860,23 +935,23 @@
     },
     "vegetation_patch": {
       "category": "vegetation",
-      "median_ms": 65.044,
+      "median_ms": 66.582,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 65.044,
+          "duration_ms": 66.582,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 67.949,
+          "duration_ms": 63.482,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 64.147,
+          "duration_ms": 70.626,
           "failures": [],
           "passed": true,
           "run": 3
@@ -885,23 +960,23 @@
     },
     "vehicle_blockouts": {
       "category": "vehicles",
-      "median_ms": 55.881,
+      "median_ms": 54.312,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 64.149,
+          "duration_ms": 54.312,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 50.949,
+          "duration_ms": 59.795,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 55.881,
+          "duration_ms": 54.243,
           "failures": [],
           "passed": true,
           "run": 3
@@ -910,23 +985,23 @@
     },
     "visual_scene_desk": {
       "category": "visual_scenes",
-      "median_ms": 16.375,
+      "median_ms": 16.267,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 16.375,
+          "duration_ms": 17.849,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 15.692,
+          "duration_ms": 15.258,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 19.69,
+          "duration_ms": 16.267,
           "failures": [],
           "passed": true,
           "run": 3
@@ -935,23 +1010,48 @@
     },
     "water_surface": {
       "category": "water",
-      "median_ms": 5.498,
+      "median_ms": 3.516,
       "pass_rate": 1.0,
       "runs": [
         {
-          "duration_ms": 5.599,
+          "duration_ms": 3.506,
           "failures": [],
           "passed": true,
           "run": 1
         },
         {
-          "duration_ms": 5.388,
+          "duration_ms": 3.516,
           "failures": [],
           "passed": true,
           "run": 2
         },
         {
-          "duration_ms": 5.498,
+          "duration_ms": 6.753,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "world_assets": {
+      "category": "world",
+      "median_ms": 17.696,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 17.604,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 17.696,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 18.865,
           "failures": [],
           "passed": true,
           "run": 3
@@ -959,5 +1059,5 @@
       ]
     }
   },
-  "total_tasks": 38
+  "total_tasks": 42
 }

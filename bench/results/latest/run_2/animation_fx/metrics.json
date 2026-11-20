@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "animation",
+  "duration_ms": 12.233,
+  "error": null,
+  "expected": {
+    "explosion": true,
+    "fire": true,
+    "particles": true,
+    "shockwave": true,
+    "sparks": true
+  },
+  "failures": [],
+  "observed": {
+    "explosion": true,
+    "fire": true,
+    "particles": true,
+    "shockwave": true,
+    "sparks": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "animation_fx"
+}

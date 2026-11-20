@@ -713,3 +713,65 @@ def rigging_advanced(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "mirrored": mirrored["mirrored_count"],
         "validate": validation["success"],
     }
+
+
+def character_rigging(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_humanoid_blockout("BenchChar", height=1.75)
+    face = server.create_face_rig("BenchChar", "BenchFaceRig")
+    shapes = server.add_face_shape_keys("BenchChar")
+    validation = server.validate_character_rig("BenchFaceRig", "BenchChar")
+    return {
+        "bones": face["bone_count"],
+        "shape_keys": len(shapes["created"]),
+        "passed": validation["passed"],
+    }
+
+
+def world_assets(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    city = server.create_city_block("BenchCity", 20.0, 20.0, 4, 1)
+    road = server.create_road("BenchRoad", 20.0, 7.0, 2)
+    tunnel = server.create_tunnel("BenchTunnel", 10.0, 4.0, 3.0)
+    tower = server.create_skyscraper("BenchTower", 8.0, 8.0, 30.0, 10)
+    return {
+        "city_buildings": city["building_count"],
+        "road_length": road["length"],
+        "tunnel_width": tunnel["width"],
+        "tower_height": tower["dimensions"][2],
+        "polygons": sum(
+            item["polygon_count"] for item in (city, road, tunnel, tower)
+        ),
+    }
+
+
+def material_library(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    results = [
+        server.create_marble_material("BenchMarble"),
+        server.create_brick_material("BenchBrick"),
+        server.create_asphalt_material("BenchAsphalt"),
+        server.create_grass_material("BenchGrassMat"),
+        server.create_sand_material("BenchSandMat"),
+        server.create_rust_material("BenchRust"),
+        server.create_chrome_material("BenchChrome"),
+        server.create_ceramic_material("BenchCeramic"),
+    ]
+    return {
+        "count": len(results),
+        "all_success": all(item["success"] for item in results),
+        "min_nodes": min(len(item["nodes"]) for item in results),
+    }
+
+
+def animation_fx(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    particles = server.create_particle_system("BenchCube", "BenchParticles", 50, 20)
+    explosion = server.create_explosion("BenchExplosion", [0.0, 0.0, 1.0], 2.0)
+    fire = server.create_fire_effect("BenchFire", 0.5, 1.5)
+    sparks = server.create_spark_burst("BenchSparks", [0.0, 0.0, 1.0], 50, 1)
+    shockwave = server.create_shockwave("BenchShockwave", [0.0, 0.0, 1.0], 3.0)
+    return {
+        "particles": particles["success"],
+        "explosion": explosion["success"],
+        "fire": fire["success"],
+        "sparks": sparks["success"],
+        "shockwave": shockwave["success"],
+    }

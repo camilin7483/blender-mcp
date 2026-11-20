@@ -1,0 +1,5 @@
+{
+  "category": "character",
+  "runner": "character_rigging",
+  "description": "Create a face rig, shape keys and validate the character rig."
+}

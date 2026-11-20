@@ -1,0 +1,37 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "world",
+  "duration_ms": 17.696,
+  "error": null,
+  "expected": {
+    "city_buildings": 4,
+    "polygons": {
+      "min": 100
+    },
+    "road_length": {
+      "target": 20.0,
+      "tolerance": 0.1
+    },
+    "tower_height": {
+      "target": 30.0,
+      "tolerance": 0.2
+    },
+    "tunnel_width": {
+      "target": 4.0,
+      "tolerance": 0.1
+    }
+  },
+  "failures": [],
+  "observed": {
+    "city_buildings": 4,
+    "polygons": 538,
+    "road_length": 20.0,
+    "tower_height": 30.0,
+    "tunnel_width": 4.0
+  },
+  "passed": true,
+  "run": 2,
+  "task": "world_assets"
+}
