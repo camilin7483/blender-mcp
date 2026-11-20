@@ -1,0 +1,31 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "architecture",
+  "duration_ms": 11.58,
+  "error": null,
+  "expected": {
+    "bathroom": true,
+    "fireplace": true,
+    "kitchen_height": {
+      "target": 0.9,
+      "tolerance": 0.05
+    },
+    "polygons": {
+      "min": 100
+    },
+    "pool": true
+  },
+  "failures": [],
+  "observed": {
+    "bathroom": true,
+    "fireplace": true,
+    "kitchen_height": 0.8999999761581421,
+    "polygons": 404,
+    "pool": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "architecture_set"
+}

@@ -1072,6 +1072,38 @@ TOOL_METADATA = {
     "create_hair_strands": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
     "create_fingernails": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
     "create_face_proportions": {"category": "character", "safety": "write", "cost": "low", "units": "meters"},
+    "bake_ambient_occlusion": {"category": "materials", "safety": "write", "cost": "high", "units": "pixels"},
+    "bake_normal_map": {"category": "materials", "safety": "write", "cost": "high", "units": "pixels"},
+    "bake_diffuse": {"category": "materials", "safety": "write", "cost": "high", "units": "pixels"},
+    "create_udim_tiles": {"category": "materials", "safety": "write", "cost": "low", "units": "pixels"},
+    "add_displacement": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_layer_weight_mix": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_parallax_bump": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "optimize_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "create_forest": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_grass_field": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_rock_cluster": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_mountain_range": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_cave": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_island": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_waterfall": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_biome": {"category": "environment", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_bathroom_set": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_kitchen_island": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_fireplace": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_balcony": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_fence": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_gate": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_garage": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_pool": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "add_child_of_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "add_copy_location_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "add_damped_track_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "add_stretch_to_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "set_bone_custom_shape": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "create_pose_library_action": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "mirror_pose": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "validate_rig": {"category": "rigging", "safety": "read", "cost": "low", "units": ""},
     "create_hair_strands": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
 }
 
@@ -1925,6 +1957,167 @@ def create_face_proportions(head_object: str, height: float = 0.22) -> str:
     return json.dumps(send_blender_command("create_face_proportions", {"head_object": head_object, "height": height}), indent=2)
 
 
+@mcp.tool()
+def bake_ambient_occlusion(object_name: str, image_size: int = 512, samples: int = 16) -> str:
+    """Bake ambient occlusion for a UV-mapped mesh into an image."""
+    return json.dumps(send_blender_command("bake_ambient_occlusion", {"object_name": object_name, "image_size": image_size, "samples": samples}), indent=2)
+
+@mcp.tool()
+def bake_normal_map(object_name: str, image_size: int = 512) -> str:
+    """Bake a tangent normal map for a UV-mapped mesh into an image."""
+    return json.dumps(send_blender_command("bake_normal_map", {"object_name": object_name, "image_size": image_size}), indent=2)
+
+@mcp.tool()
+def bake_diffuse(object_name: str, image_size: int = 512) -> str:
+    """Bake diffuse color for a UV-mapped mesh into an image."""
+    return json.dumps(send_blender_command("bake_diffuse", {"object_name": object_name, "image_size": image_size}), indent=2)
+
+@mcp.tool()
+def create_udim_tiles(name: str = "UDIM", tiles: List[int] = [1001, 1002], size: int = 1024) -> str:
+    """Create a tiled UDIM image with the requested tile numbers."""
+    return json.dumps(send_blender_command("create_udim_tiles", {"name": name, "tiles": tiles, "size": size}), indent=2)
+
+@mcp.tool()
+def add_displacement(material_name: str, scale: float = 0.1, midlevel: float = 0.5) -> str:
+    """Add and link a noise displacement node to a material."""
+    return json.dumps(send_blender_command("add_displacement", {"material_name": material_name, "scale": scale, "midlevel": midlevel}), indent=2)
+
+@mcp.tool()
+def create_layer_weight_mix(name: str = "LayerMix", color_a: List[float] = [0.1, 0.2, 0.4, 1.0], color_b: List[float] = [0.8, 0.6, 0.3, 1.0]) -> str:
+    """Create a material blending two colors by layer weight facing."""
+    return json.dumps(send_blender_command("create_layer_weight_mix", {"name": name, "color_a": color_a, "color_b": color_b}), indent=2)
+
+@mcp.tool()
+def create_parallax_bump(material_name: str, scale: float = 0.05) -> str:
+    """Add a noise-driven bump node to a material."""
+    return json.dumps(send_blender_command("create_parallax_bump", {"material_name": material_name, "scale": scale}), indent=2)
+
+@mcp.tool()
+def optimize_material(material_name: str) -> str:
+    """Remove unused nodes and duplicate image texture nodes from a material."""
+    return json.dumps(send_blender_command("optimize_material", {"material_name": material_name}), indent=2)
+
+@mcp.tool()
+def create_forest(name: str = "Forest", radius: float = 10.0, tree_count: int = 12, seed: int = 0) -> str:
+    """Create a deterministic forest of trees in a disc."""
+    return json.dumps(send_blender_command("create_forest", {"name": name, "radius": radius, "tree_count": tree_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_grass_field(name: str = "GrassField", size: float = 10.0, blade_count: int = 100, seed: int = 0) -> str:
+    """Create a deterministic field of tapered grass blades."""
+    return json.dumps(send_blender_command("create_grass_field", {"name": name, "size": size, "blade_count": blade_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_rock_cluster(name: str = "Rocks", radius: float = 3.0, count: int = 8, seed: int = 0) -> str:
+    """Create a deterministic cluster of displaced rocks."""
+    return json.dumps(send_blender_command("create_rock_cluster", {"name": name, "radius": radius, "count": count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_mountain_range(name: str = "Mountains", width: float = 40.0, depth: float = 20.0, peak_height: float = 8.0, seed: int = 0) -> str:
+    """Create a displaced mountain range with snow and rock materials."""
+    return json.dumps(send_blender_command("create_mountain_range", {"name": name, "width": width, "depth": depth, "peak_height": peak_height, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_cave(name: str = "Cave", width: float = 6.0, depth: float = 4.0, height: float = 3.0, seed: int = 0) -> str:
+    """Create a hollow cave shell with an opening."""
+    return json.dumps(send_blender_command("create_cave", {"name": name, "width": width, "depth": depth, "height": height, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_island(name: str = "Island", radius: float = 8.0, seed: int = 0) -> str:
+    """Create a terrain island with a beach ring and water."""
+    return json.dumps(send_blender_command("create_island", {"name": name, "radius": radius, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_waterfall(name: str = "Waterfall", width: float = 2.0, height: float = 4.0) -> str:
+    """Create a curved waterfall sheet and foam pool."""
+    return json.dumps(send_blender_command("create_waterfall", {"name": name, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_biome(name: str = "Biome", size: float = 20.0, seed: int = 0) -> str:
+    """Compose terrain, water and forest into a biome scene."""
+    return json.dumps(send_blender_command("create_biome", {"name": name, "size": size, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_bathroom_set(name: str = "Bathroom", width: float = 2.4, depth: float = 2.0) -> str:
+    """Create a bathtub, toilet and sink set."""
+    return json.dumps(send_blender_command("create_bathroom_set", {"name": name, "width": width, "depth": depth}), indent=2)
+
+@mcp.tool()
+def create_kitchen_island(name: str = "KitchenIsland", width: float = 2.0, depth: float = 1.0, height: float = 0.9) -> str:
+    """Create a kitchen island with countertop and drawers."""
+    return json.dumps(send_blender_command("create_kitchen_island", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_fireplace(name: str = "Fireplace", width: float = 1.6, height: float = 1.2, depth: float = 0.4) -> str:
+    """Create a fireplace with surround, hearth and logs."""
+    return json.dumps(send_blender_command("create_fireplace", {"name": name, "width": width, "height": height, "depth": depth}), indent=2)
+
+@mcp.tool()
+def create_balcony(name: str = "Balcony", width: float = 3.0, depth: float = 1.2, height: float = 1.0) -> str:
+    """Create a balcony slab with railings."""
+    return json.dumps(send_blender_command("create_balcony", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_fence(name: str = "Fence", length: float = 6.0, height: float = 1.2, post_count: int = 8) -> str:
+    """Create a post and rail fence."""
+    return json.dumps(send_blender_command("create_fence", {"name": name, "length": length, "height": height, "post_count": post_count}), indent=2)
+
+@mcp.tool()
+def create_gate(name: str = "Gate", width: float = 3.0, height: float = 2.0) -> str:
+    """Create a two-leaf gate with posts and bars."""
+    return json.dumps(send_blender_command("create_gate", {"name": name, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def create_garage(name: str = "Garage", width: float = 6.0, depth: float = 6.0, height: float = 2.8) -> str:
+    """Create a garage shell with a door opening and flat roof."""
+    return json.dumps(send_blender_command("create_garage", {"name": name, "width": width, "depth": depth, "height": height}), indent=2)
+
+@mcp.tool()
+def create_pool(name: str = "Pool", width: float = 6.0, depth: float = 3.0, water_depth: float = 1.2) -> str:
+    """Create a pool basin with water at the requested depth."""
+    return json.dumps(send_blender_command("create_pool", {"name": name, "width": width, "depth": depth, "water_depth": water_depth}), indent=2)
+
+@mcp.tool()
+def add_child_of_constraint(armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> str:
+    """Add a Child Of pose constraint to a bone."""
+    return json.dumps(send_blender_command("add_child_of_constraint", {"armature_name": armature_name, "bone_name": bone_name, "target_name": target_name, "influence": influence}), indent=2)
+
+@mcp.tool()
+def add_copy_location_constraint(armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> str:
+    """Add a Copy Location pose constraint to a bone."""
+    return json.dumps(send_blender_command("add_copy_location_constraint", {"armature_name": armature_name, "bone_name": bone_name, "target_name": target_name, "influence": influence}), indent=2)
+
+@mcp.tool()
+def add_damped_track_constraint(armature_name: str, bone_name: str, target_name: str, track_axis: str = "TRACK_Y", influence: float = 1.0) -> str:
+    """Add a Damped Track pose constraint to a bone."""
+    return json.dumps(send_blender_command("add_damped_track_constraint", {"armature_name": armature_name, "bone_name": bone_name, "target_name": target_name, "track_axis": track_axis, "influence": influence}), indent=2)
+
+@mcp.tool()
+def add_stretch_to_constraint(armature_name: str, bone_name: str, target_name: str, rest_length: float = 0.0, influence: float = 1.0) -> str:
+    """Add a Stretch To pose constraint to a bone."""
+    return json.dumps(send_blender_command("add_stretch_to_constraint", {"armature_name": armature_name, "bone_name": bone_name, "target_name": target_name, "rest_length": rest_length, "influence": influence}), indent=2)
+
+@mcp.tool()
+def set_bone_custom_shape(armature_name: str, bone_name: str, object_name: str) -> str:
+    """Assign a custom display object to a pose bone."""
+    return json.dumps(send_blender_command("set_bone_custom_shape", {"armature_name": armature_name, "bone_name": bone_name, "object_name": object_name}), indent=2)
+
+@mcp.tool()
+def create_pose_library_action(armature_name: str, action_name: str = "Pose") -> str:
+    """Keyframe all pose bones into a new action."""
+    return json.dumps(send_blender_command("create_pose_library_action", {"armature_name": armature_name, "action_name": action_name}), indent=2)
+
+@mcp.tool()
+def mirror_pose(armature_name: str, axis: str = "X") -> str:
+    """Mirror pose bone transforms across an axis."""
+    return json.dumps(send_blender_command("mirror_pose", {"armature_name": armature_name, "axis": axis}), indent=2)
+
+@mcp.tool()
+def validate_rig(armature_name: str, mesh_name: Optional[str] = None) -> str:
+    """Validate bones, armature modifier, vertex groups and weights."""
+    return json.dumps(send_blender_command("validate_rig", {"armature_name": armature_name, "mesh_name": mesh_name}), indent=2)
+
+
 CORE_TOOLS = {
     "get_scene_info",
     "get_object_info",
@@ -1959,6 +2152,11 @@ PROFILE_EXTRAS = {
         "create_staircase", "create_building_shell", "array_grid_on_surface",
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
         "validate_constraints", "apply_constraints",
+    },
+    "nature": {
+        "create_forest", "create_grass_field", "create_rock_cluster",
+        "create_mountain_range", "create_cave", "create_island",
+        "create_waterfall", "create_biome",
     },
     "props": {
         "create_barrel", "create_crate", "create_chest", "create_lantern",
@@ -2009,6 +2207,9 @@ PROFILE_EXTRAS = {
         "create_chair", "create_shelf", "create_bed", "create_sofa",
         "create_kitchen_block", "create_floorplan_walls", "cut_wall_opening",
         "create_parametric_roof", "create_staircase", "create_building_shell",
+        "create_bathroom_set", "create_kitchen_island", "create_fireplace",
+        "create_balcony", "create_fence", "create_gate", "create_garage",
+        "create_pool",
     },
     "hardsurface": {
         "add_bevel_modifier", "add_solidify_modifier", "add_array_modifier",
@@ -2024,6 +2225,9 @@ PROFILE_EXTRAS = {
         "create_metal_material", "create_wood_material", "create_fabric_material",
         "create_glass_material", "create_skin_material", "create_concrete_material",
         "create_emission_material", "assign_material_to_faces",
+        "bake_ambient_occlusion", "bake_normal_map", "bake_diffuse",
+        "create_udim_tiles", "add_displacement", "create_layer_weight_mix",
+        "create_parallax_bump", "optimize_material",
     },
     "terrain": {
         "create_terrain", "sculpt_terrain_region", "scatter_objects",
@@ -2057,6 +2261,10 @@ PROFILE_EXTRAS = {
         "create_armature", "list_bones", "create_bone", "create_ik_chain",
         "add_copy_rotation_constraint", "add_limit_rotation_constraint",
         "set_bone_rotation", "set_bone_location", "skin_mesh_to_armature",
+        "add_child_of_constraint", "add_copy_location_constraint",
+        "add_damped_track_constraint", "add_stretch_to_constraint",
+        "set_bone_custom_shape", "create_pose_library_action", "mirror_pose",
+        "validate_rig",
     },
     "geometry_nodes": {
         "deform_object", "create_loft_surface", "array_grid_on_surface",

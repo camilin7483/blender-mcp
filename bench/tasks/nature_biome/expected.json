@@ -1,0 +1,8 @@
+{
+  "trees": 3,
+  "grass": true,
+  "rocks": true,
+  "components": {
+    "min": 2
+  }
+}

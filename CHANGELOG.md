@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.5.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.6.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -43,6 +43,14 @@ All notable changes to this repository are documented here.
   and drone. Explicitly blockouts, not production vehicles.
 - Character detail: nose, ears, mouth, brows, eyelashes, hair strands,
   fingernails and face proportions.
+- Advanced materials: AO/normal/diffuse baking, UDIM tiles, displacement,
+  layer-weight mixes, parallax bump and material cleanup.
+- Nature extras: forest, grass field, rock cluster, mountain range, cave,
+  island, waterfall and composed biome.
+- Architecture extras: bathroom set, kitchen island, fireplace, balcony,
+  fence, gate, garage and pool.
+- Advanced rigging: Child Of, Copy Location, Damped Track, Stretch To,
+  custom shapes, pose actions, pose mirroring and rig validation.
 - `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
@@ -68,7 +76,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 34 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 38 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

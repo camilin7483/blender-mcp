@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 5, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 6, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1301,6 +1301,103 @@ def main() -> None:
         server.create_humanoid_blockout("V45Char", height=1.75)
         proportions = server.create_face_proportions("V45Char")
         assert proportions["success"] and len(proportions["landmarks"]) == 8, proportions
+
+        # --- v4.6 advanced materials, nature, architecture and rigging ---
+        clear_scene()
+        server.create_parametric_part(
+            "V46Bake", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+            location=[0.0, 0.0, 0.5],
+        )
+        server.create_material("V46BakeMat", [0.8, 0.3, 0.2, 1.0], 0.0, 0.5)
+        server.assign_material("V46Bake", "V46BakeMat")
+        for _bake_name, bake_call in (
+            ("V46AO", lambda: server.bake_ambient_occlusion("V46Bake", 32, 1)),
+            ("V46Normal", lambda: server.bake_normal_map("V46Bake", 32)),
+            ("V46Diffuse", lambda: server.bake_diffuse("V46Bake", 32)),
+        ):
+            baked = bake_call()
+            assert baked["success"] and baked["baked"], baked
+        udim = server.create_udim_tiles("V46UDIM", [1001, 1002], 32)
+        assert udim["success"] and udim["tile_count"] == 2, udim
+        displacement = server.add_displacement("V46BakeMat", 0.1, 0.5)
+        assert displacement["success"], displacement
+        layer_mix = server.create_layer_weight_mix("V46LayerMix")
+        assert layer_mix["success"], layer_mix
+        parallax = server.create_parallax_bump("V46LayerMix", 0.05)
+        assert parallax["success"], parallax
+        optimized = server.optimize_material("V46LayerMix")
+        assert optimized["success"], optimized
+
+        forest = server.create_forest("V46Forest", radius=3.0, tree_count=3)
+        assert forest["success"] and forest["count"] == 3, forest
+        grass = server.create_grass_field("V46Grass", size=3.0, blade_count=10)
+        assert grass["success"], grass
+        rocks = server.create_rock_cluster("V46Rocks", radius=2.0, count=3)
+        assert rocks["success"], rocks
+        mountain = server.create_mountain_range(
+            "V46Mountains", width=6.0, depth=3.0, peak_height=1.5
+        )
+        assert mountain["success"], mountain
+        cave = server.create_cave("V46Cave", width=3.0, depth=2.0, height=2.0)
+        assert cave["success"], cave
+        island = server.create_island("V46Island", radius=3.0)
+        assert island["success"], island
+        waterfall = server.create_waterfall("V46Waterfall", width=1.0, height=2.0)
+        assert waterfall["success"], waterfall
+        biome = server.create_biome("V46Biome", size=4.0)
+        assert biome["success"], biome
+
+        bathroom = server.create_bathroom_set("V46Bathroom", 2.0, 2.0)
+        assert bathroom["success"], bathroom
+        kitchen = server.create_kitchen_island("V46Kitchen", 1.5, 0.8, 0.9)
+        assert kitchen["success"], kitchen
+        fireplace = server.create_fireplace("V46Fireplace", 1.2, 1.0, 0.3)
+        assert fireplace["success"], fireplace
+        balcony = server.create_balcony("V46Balcony", 2.5, 1.0, 1.0)
+        assert balcony["success"], balcony
+        fence = server.create_fence("V46Fence", 4.0, 1.0, 5)
+        assert fence["success"], fence
+        gate = server.create_gate("V46Gate", 2.5, 1.8)
+        assert gate["success"], gate
+        garage = server.create_garage("V46Garage", 4.0, 4.0, 2.5)
+        assert garage["success"], garage
+        pool = server.create_pool("V46Pool", 4.0, 2.0, 1.0)
+        assert pool["success"], pool
+
+        server.create_armature("V46Rig", [
+            {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+        ])
+        server.create_bone(
+            "V46Rig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+        )
+        server.create_parametric_part(
+            "V46Target", shape="BOX", dimensions=[0.1, 0.1, 0.1],
+            location=[0.0, 0.0, 1.0],
+        )
+        for _constraint_name, constraint_call in (
+            ("V46ChildOf", lambda: server.add_child_of_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+            ("V46CopyLoc", lambda: server.add_copy_location_constraint(
+                "V46Rig", "Tip", "V46Target", 0.5
+            )),
+            ("V46Damped", lambda: server.add_damped_track_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+            ("V46Stretch", lambda: server.add_stretch_to_constraint(
+                "V46Rig", "Tip", "V46Target"
+            )),
+        ):
+            constraint = constraint_call()
+            assert constraint["success"], constraint
+        shape = server.set_bone_custom_shape("V46Rig", "Tip", "V46Target")
+        assert shape["success"], shape
+        pose = server.create_pose_library_action("V46Rig", "V46Pose")
+        assert pose["success"] and pose["keyframed_bones"] == 2, pose
+        mirrored = server.mirror_pose("V46Rig", "X")
+        assert mirrored["success"], mirrored
+        rig_check = server.validate_rig("V46Rig")
+        assert rig_check["success"], rig_check
 
         # --- animation and rigging primitives ---
         clear_scene()

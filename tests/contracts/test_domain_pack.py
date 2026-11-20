@@ -87,6 +87,27 @@ EXPECTED = {
         "create_eyelash_pair", "create_hair_strands", "create_fingernails",
         "create_face_proportions",
     },
+    "materials_advanced": {
+        "bake_ambient_occlusion", "bake_normal_map", "bake_diffuse",
+        "create_udim_tiles", "add_displacement", "create_layer_weight_mix",
+        "create_parallax_bump", "optimize_material",
+    },
+    "nature_extra": {
+        "create_forest", "create_grass_field", "create_rock_cluster",
+        "create_mountain_range", "create_cave", "create_island",
+        "create_waterfall", "create_biome",
+    },
+    "architecture_extra": {
+        "create_bathroom_set", "create_kitchen_island", "create_fireplace",
+        "create_balcony", "create_fence", "create_gate", "create_garage",
+        "create_pool",
+    },
+    "rigging_advanced": {
+        "add_child_of_constraint", "add_copy_location_constraint",
+        "add_damped_track_constraint", "add_stretch_to_constraint",
+        "set_bone_custom_shape", "create_pose_library_action", "mirror_pose",
+        "validate_rig",
+    },
 }
 
 

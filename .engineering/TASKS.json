@@ -159,6 +159,18 @@
       "title": "Release v4.5.0-alpha.1",
       "status": "completed",
       "evidence": "tag and extension 4.5.0"
+    },
+    {
+      "id": "T20",
+      "title": "Advanced materials, nature, architecture and rigging",
+      "status": "completed",
+      "evidence": "32 tools, 38/38 bench, Blender 4.5/5.2"
+    },
+    {
+      "id": "T21",
+      "title": "Release v4.6.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag and extension 4.6.0"
     }
   ]
 }

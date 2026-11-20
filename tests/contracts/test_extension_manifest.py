@@ -20,7 +20,7 @@ def test_manifest_is_valid_toml() -> None:
     data = tomllib.loads(MANIFEST.read_text(encoding="utf-8"))
     assert data["schema_version"] == "1.0.0"
     assert data["id"] == "blender_mcp_pro"
-    assert data["version"] == "4.5.0"
+    assert data["version"] == "4.6.0"
     assert data["type"] == "add-on"
     assert data["blender_version_min"] == "4.5.0"
     assert data["license"] == ["SPDX:MIT"]
@@ -39,7 +39,7 @@ def test_addon_version_matches_manifest() -> None:
         ):
             continue
         value = ast.literal_eval(node.value)
-        assert value["version"] == (4, 5, 0)
+        assert value["version"] == (4, 6, 0)
         assert value["blender"] == (4, 5, 0)
         return
     raise AssertionError("bl_info not found")

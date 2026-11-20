@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "topology",
-  "duration_ms": 2.367,
+  "duration_ms": 2.7,
   "error": null,
   "expected": {
     "passed": true,

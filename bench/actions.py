@@ -642,3 +642,74 @@ def character_details(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "nails": nails["count"],
         "landmarks": len(proportions["landmarks"]),
     }
+
+
+def materials_bake(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_material("BenchBakeMat", [0.8, 0.3, 0.2, 1.0], 0.0, 0.5)
+    server.assign_material("BenchCube", "BenchBakeMat")
+    ao = server.bake_ambient_occlusion("BenchCube", 32, 1)
+    normal = server.bake_normal_map("BenchCube", 32)
+    diffuse = server.bake_diffuse("BenchCube", 32)
+    udim = server.create_udim_tiles("BenchUDIM", [1001, 1002], 32)
+    return {
+        "ao": ao["baked"],
+        "normal": normal["baked"],
+        "diffuse": diffuse["baked"],
+        "udim_tiles": udim["tile_count"],
+    }
+
+
+def nature_biome(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    forest = server.create_forest("BenchForest", radius=3.0, tree_count=3)
+    grass = server.create_grass_field("BenchGrass", size=3.0, blade_count=10)
+    rocks = server.create_rock_cluster("BenchRocks", radius=2.0, count=3)
+    biome = server.create_biome("BenchBiome", size=4.0)
+    return {
+        "trees": forest["count"],
+        "grass": grass["success"],
+        "rocks": rocks["success"],
+        "components": len(biome["components"]),
+    }
+
+
+def architecture_set(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    bathroom = server.create_bathroom_set("BenchBathroom", 2.0, 2.0)
+    kitchen = server.create_kitchen_island("BenchKitchen", 1.5, 0.8, 0.9)
+    fireplace = server.create_fireplace("BenchFireplace", 1.2, 1.0, 0.3)
+    pool = server.create_pool("BenchPool", 4.0, 2.0, 1.0)
+    return {
+        "bathroom": bathroom["success"],
+        "kitchen_height": kitchen["dimensions"][2],
+        "fireplace": fireplace["success"],
+        "pool": pool["success"],
+        "polygons": sum(
+            item["polygon_count"]
+            for item in (bathroom, kitchen, fireplace, pool)
+        ),
+    }
+
+
+def rigging_advanced(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_armature("BenchRig", [
+        {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+    ])
+    server.create_bone(
+        "BenchRig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+    )
+    server.add_child_of_constraint("BenchRig", "Tip", "BenchCube")
+    server.add_copy_location_constraint("BenchRig", "Tip", "BenchCube", 0.5)
+    server.add_damped_track_constraint("BenchRig", "Tip", "BenchCube")
+    server.add_stretch_to_constraint("BenchRig", "Tip", "BenchCube")
+    pose = server.create_pose_library_action("BenchRig", "BenchPose")
+    mirrored = server.mirror_pose("BenchRig", "X")
+    validation = server.validate_rig("BenchRig")
+    return {
+        "constraints": len(
+            server.list_bones("BenchRig")["bones"]
+        ),
+        "pose_bones": pose["keyframed_bones"],
+        "mirrored": mirrored["mirrored_count"],
+        "validate": validation["success"],
+    }

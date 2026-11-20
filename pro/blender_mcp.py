@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 5, 0),
+    "version": (4, 6, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2342,6 +2342,38 @@ class BlenderMCPServer:
             "create_hair_strands": lambda p: self.create_hair_strands(**p),
             "create_fingernails": lambda p: self.create_fingernails(**p),
             "create_face_proportions": lambda p: self.create_face_proportions(**p),
+            "bake_ambient_occlusion": lambda p: self.bake_ambient_occlusion(**p),
+            "bake_normal_map": lambda p: self.bake_normal_map(**p),
+            "bake_diffuse": lambda p: self.bake_diffuse(**p),
+            "create_udim_tiles": lambda p: self.create_udim_tiles(**p),
+            "add_displacement": lambda p: self.add_displacement(**p),
+            "create_layer_weight_mix": lambda p: self.create_layer_weight_mix(**p),
+            "create_parallax_bump": lambda p: self.create_parallax_bump(**p),
+            "optimize_material": lambda p: self.optimize_material(**p),
+            "create_forest": lambda p: self.create_forest(**p),
+            "create_grass_field": lambda p: self.create_grass_field(**p),
+            "create_rock_cluster": lambda p: self.create_rock_cluster(**p),
+            "create_mountain_range": lambda p: self.create_mountain_range(**p),
+            "create_cave": lambda p: self.create_cave(**p),
+            "create_island": lambda p: self.create_island(**p),
+            "create_waterfall": lambda p: self.create_waterfall(**p),
+            "create_biome": lambda p: self.create_biome(**p),
+            "create_bathroom_set": lambda p: self.create_bathroom_set(**p),
+            "create_kitchen_island": lambda p: self.create_kitchen_island(**p),
+            "create_fireplace": lambda p: self.create_fireplace(**p),
+            "create_balcony": lambda p: self.create_balcony(**p),
+            "create_fence": lambda p: self.create_fence(**p),
+            "create_gate": lambda p: self.create_gate(**p),
+            "create_garage": lambda p: self.create_garage(**p),
+            "create_pool": lambda p: self.create_pool(**p),
+            "add_child_of_constraint": lambda p: self.add_child_of_constraint(**p),
+            "add_copy_location_constraint": lambda p: self.add_copy_location_constraint(**p),
+            "add_damped_track_constraint": lambda p: self.add_damped_track_constraint(**p),
+            "add_stretch_to_constraint": lambda p: self.add_stretch_to_constraint(**p),
+            "set_bone_custom_shape": lambda p: self.set_bone_custom_shape(**p),
+            "create_pose_library_action": lambda p: self.create_pose_library_action(**p),
+            "mirror_pose": lambda p: self.mirror_pose(**p),
+            "validate_rig": lambda p: self.validate_rig(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -3010,6 +3042,134 @@ class BlenderMCPServer:
     def create_face_proportions(self, head_object: str, height: float = 0.22) -> Dict[str, Any]:
         """Create face landmark empties from a head AABB."""
         return self._domain_call("character_detail", "create_face_proportions", {k: v for k, v in locals().items() if k != "self"})
+
+    def bake_ambient_occlusion(self, object_name: str, image_size: int = 512, samples: int = 16) -> Dict[str, Any]:
+        """Bake ambient occlusion for a UV-mapped mesh into an image."""
+        return self._domain_call("materials_advanced", "bake_ambient_occlusion", {k: v for k, v in locals().items() if k != "self"})
+
+    def bake_normal_map(self, object_name: str, image_size: int = 512) -> Dict[str, Any]:
+        """Bake a tangent normal map for a UV-mapped mesh into an image."""
+        return self._domain_call("materials_advanced", "bake_normal_map", {k: v for k, v in locals().items() if k != "self"})
+
+    def bake_diffuse(self, object_name: str, image_size: int = 512) -> Dict[str, Any]:
+        """Bake diffuse color for a UV-mapped mesh into an image."""
+        return self._domain_call("materials_advanced", "bake_diffuse", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_udim_tiles(self, name: str = "UDIM", tiles: List[int] = [1001, 1002], size: int = 1024) -> Dict[str, Any]:
+        """Create a tiled UDIM image with the requested tile numbers."""
+        return self._domain_call("materials_advanced", "create_udim_tiles", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_displacement(self, material_name: str, scale: float = 0.1, midlevel: float = 0.5) -> Dict[str, Any]:
+        """Add and link a noise displacement node to a material."""
+        return self._domain_call("materials_advanced", "add_displacement", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_layer_weight_mix(self, name: str = "LayerMix", color_a: List[float] = [0.1, 0.2, 0.4, 1.0], color_b: List[float] = [0.8, 0.6, 0.3, 1.0]) -> Dict[str, Any]:
+        """Create a material blending two colors by layer weight facing."""
+        return self._domain_call("materials_advanced", "create_layer_weight_mix", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_parallax_bump(self, material_name: str, scale: float = 0.05) -> Dict[str, Any]:
+        """Add a noise-driven bump node to a material."""
+        return self._domain_call("materials_advanced", "create_parallax_bump", {k: v for k, v in locals().items() if k != "self"})
+
+    def optimize_material(self, material_name: str) -> Dict[str, Any]:
+        """Remove unused nodes and duplicate image texture nodes from a material."""
+        return self._domain_call("materials_advanced", "optimize_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_forest(self, name: str = "Forest", radius: float = 10.0, tree_count: int = 12, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic forest of trees in a disc."""
+        return self._domain_call("nature_extra", "create_forest", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_grass_field(self, name: str = "GrassField", size: float = 10.0, blade_count: int = 100, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic field of tapered grass blades."""
+        return self._domain_call("nature_extra", "create_grass_field", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_rock_cluster(self, name: str = "Rocks", radius: float = 3.0, count: int = 8, seed: int = 0) -> Dict[str, Any]:
+        """Create a deterministic cluster of displaced rocks."""
+        return self._domain_call("nature_extra", "create_rock_cluster", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_mountain_range(self, name: str = "Mountains", width: float = 40.0, depth: float = 20.0, peak_height: float = 8.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a displaced mountain range with snow and rock materials."""
+        return self._domain_call("nature_extra", "create_mountain_range", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_cave(self, name: str = "Cave", width: float = 6.0, depth: float = 4.0, height: float = 3.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a hollow cave shell with an opening."""
+        return self._domain_call("nature_extra", "create_cave", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_island(self, name: str = "Island", radius: float = 8.0, seed: int = 0) -> Dict[str, Any]:
+        """Create a terrain island with a beach ring and water."""
+        return self._domain_call("nature_extra", "create_island", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_waterfall(self, name: str = "Waterfall", width: float = 2.0, height: float = 4.0) -> Dict[str, Any]:
+        """Create a curved waterfall sheet and foam pool."""
+        return self._domain_call("nature_extra", "create_waterfall", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_biome(self, name: str = "Biome", size: float = 20.0, seed: int = 0) -> Dict[str, Any]:
+        """Compose terrain, water and forest into a biome scene."""
+        return self._domain_call("nature_extra", "create_biome", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bathroom_set(self, name: str = "Bathroom", width: float = 2.4, depth: float = 2.0) -> Dict[str, Any]:
+        """Create a bathtub, toilet and sink set."""
+        return self._domain_call("architecture_extra", "create_bathroom_set", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_kitchen_island(self, name: str = "KitchenIsland", width: float = 2.0, depth: float = 1.0, height: float = 0.9) -> Dict[str, Any]:
+        """Create a kitchen island with countertop and drawers."""
+        return self._domain_call("architecture_extra", "create_kitchen_island", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fireplace(self, name: str = "Fireplace", width: float = 1.6, height: float = 1.2, depth: float = 0.4) -> Dict[str, Any]:
+        """Create a fireplace with surround, hearth and logs."""
+        return self._domain_call("architecture_extra", "create_fireplace", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_balcony(self, name: str = "Balcony", width: float = 3.0, depth: float = 1.2, height: float = 1.0) -> Dict[str, Any]:
+        """Create a balcony slab with railings."""
+        return self._domain_call("architecture_extra", "create_balcony", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_fence(self, name: str = "Fence", length: float = 6.0, height: float = 1.2, post_count: int = 8) -> Dict[str, Any]:
+        """Create a post and rail fence."""
+        return self._domain_call("architecture_extra", "create_fence", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_gate(self, name: str = "Gate", width: float = 3.0, height: float = 2.0) -> Dict[str, Any]:
+        """Create a two-leaf gate with posts and bars."""
+        return self._domain_call("architecture_extra", "create_gate", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_garage(self, name: str = "Garage", width: float = 6.0, depth: float = 6.0, height: float = 2.8) -> Dict[str, Any]:
+        """Create a garage shell with a door opening and flat roof."""
+        return self._domain_call("architecture_extra", "create_garage", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_pool(self, name: str = "Pool", width: float = 6.0, depth: float = 3.0, water_depth: float = 1.2) -> Dict[str, Any]:
+        """Create a pool basin with water at the requested depth."""
+        return self._domain_call("architecture_extra", "create_pool", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_child_of_constraint(self, armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> Dict[str, Any]:
+        """Add a Child Of pose constraint to a bone."""
+        return self._domain_call("rigging_advanced", "add_child_of_constraint", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_copy_location_constraint(self, armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> Dict[str, Any]:
+        """Add a Copy Location pose constraint to a bone."""
+        return self._domain_call("rigging_advanced", "add_copy_location_constraint", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_damped_track_constraint(self, armature_name: str, bone_name: str, target_name: str, track_axis: str = "TRACK_Y", influence: float = 1.0) -> Dict[str, Any]:
+        """Add a Damped Track pose constraint to a bone."""
+        return self._domain_call("rigging_advanced", "add_damped_track_constraint", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_stretch_to_constraint(self, armature_name: str, bone_name: str, target_name: str, rest_length: float = 0.0, influence: float = 1.0) -> Dict[str, Any]:
+        """Add a Stretch To pose constraint to a bone."""
+        return self._domain_call("rigging_advanced", "add_stretch_to_constraint", {k: v for k, v in locals().items() if k != "self"})
+
+    def set_bone_custom_shape(self, armature_name: str, bone_name: str, object_name: str) -> Dict[str, Any]:
+        """Assign a custom display object to a pose bone."""
+        return self._domain_call("rigging_advanced", "set_bone_custom_shape", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_pose_library_action(self, armature_name: str, action_name: str = "Pose") -> Dict[str, Any]:
+        """Keyframe all pose bones into a new action."""
+        return self._domain_call("rigging_advanced", "create_pose_library_action", {k: v for k, v in locals().items() if k != "self"})
+
+    def mirror_pose(self, armature_name: str, axis: str = "X") -> Dict[str, Any]:
+        """Mirror pose bone transforms across an axis."""
+        return self._domain_call("rigging_advanced", "mirror_pose", {k: v for k, v in locals().items() if k != "self"})
+
+    def validate_rig(self, armature_name: str, mesh_name: Optional[str] = None) -> Dict[str, Any]:
+        """Validate bones, armature modifier, vertex groups and weights."""
+        return self._domain_call("rigging_advanced", "validate_rig", {k: v for k, v in locals().items() if k != "self"})
 
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION

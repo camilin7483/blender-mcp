@@ -7,13 +7,12 @@
 - v4.3 environment/character/PBR/animation: 139 tools.
 - v4.4 pipeline/render QA/rigging/textures: 171 tools.
 - v4.5 props/furniture/vehicles/character detail: 203 tools.
+- v4.6 advanced materials/nature/architecture/rigging: 235 tools.
 - Host tests: 29 passed.
-- Blender 4.5.4 and 5.2.4 headless + GUI: passed.
-- Benchmark: 34/34 tasks, 3 runs.
-- Extension 4.5.0 built and validated.
-- Tags through v4.5.0-alpha.1.
+- Benchmark: 38/38 tasks, 3 runs.
+- Extension 4.6.0 built and validated.
+- Tags through v4.6.0-alpha.1.
 
 ## Gap to 300
 
-97 tools remain. Next: materials baking/UDIM, nature extras, architecture
-extras and advanced character/rigging.
+65 tools remain. Next: animation/physics/QA and final generalist packs.

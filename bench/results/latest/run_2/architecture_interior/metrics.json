@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "architecture",
-  "duration_ms": 9.05,
+  "duration_ms": 7.117,
   "error": null,
   "expected": {
     "chair_height": {
