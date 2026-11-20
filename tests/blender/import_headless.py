@@ -136,6 +136,15 @@ def main() -> None:
                 assert bm._connect_public_download(("api.polyhaven.com", 443), 5.0) is connection
             resolve.assert_called_once_with("api.polyhaven.com", 443, type=bm.socket.SOCK_STREAM)
             connection.connect.assert_called_once_with(("8.8.8.8", 443))
+        fallback_address = (bm.socket.AF_INET, bm.socket.SOCK_STREAM, 6, "", ("1.1.1.1", 443))
+        stalled_connection = Mock()
+        stalled_connection.connect.side_effect = TimeoutError
+        fallback_connection = Mock()
+        with patch.object(bm.socket, "getaddrinfo", return_value=[public_address, fallback_address]):
+            with patch.object(bm.socket, "socket", side_effect=[stalled_connection, fallback_connection]):
+                assert bm._connect_public_download(("api.polyhaven.com", 443), 5.0) is fallback_connection
+        stalled_connection.close.assert_called_once_with()
+        fallback_connection.connect.assert_called_once_with(("1.1.1.1", 443))
         with patch.object(bm.socket, "getaddrinfo", return_value=[public_address, private_address]):
             with patch.object(bm.socket, "socket") as connect:
                 try:

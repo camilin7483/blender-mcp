@@ -248,19 +248,23 @@ def _public_download_addresses(host, port):
 
 def _connect_public_download(address, timeout, source_address=None):
     host, port = address
-    addresses = _public_download_addresses(host, port)
     deadline = time.monotonic() + timeout
+    addresses = _public_download_addresses(host, port)
     last_error = None
-    for family, socktype, protocol, _, sockaddr in addresses:
+    for index, (family, socktype, protocol, _, sockaddr) in enumerate(addresses):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError(f"Timed out connecting to download host '{host}'")
         sock = socket.socket(family, socktype, protocol)
         try:
-            sock.settimeout(remaining)
+            sock.settimeout(remaining / (len(addresses) - index))
             if source_address is not None:
                 sock.bind(source_address)
             sock.connect(sockaddr)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timed out connecting to download host '{host}'")
+            sock.settimeout(remaining)
             return sock
         except OSError as exc:
             sock.close()
