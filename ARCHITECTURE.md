@@ -1,13 +1,13 @@
 # Architecture
 
-## Current baseline (v4.0.0-alpha.3)
+## Current implementation
 
 ```
 MCP client (Claude/OpenCode/Cursor)
     |  stdio, FastMCP tools
     v
 src/blender_mcp/server.py    host Python, one socket per command
-    |  JSON {"type","params","auth_token"} + "\n"
+    |  newline-delimited JSON with auth, request ID and queue timeout
     v  localhost:9876
 pro/blender_mcp.py           Blender add-on, socket thread
     |  bpy.app.timers.register(...)
@@ -24,7 +24,7 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `src/blender_mcp/server.py` | Registers 313 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| MCP bridge | `src/blender_mcp/server.py` | Registers up to 313 FastMCP tools. Handles discovery locally and forwards Blender commands. Responses can include JSON text and an inspection image. |
 | Socket transport | `src/blender_mcp/transport.py` | Auth token loading, one connection per command, framing, request IDs and response limits. |
 | Bridge config | `src/blender_mcp/config.py` | Host, port, token paths, response limits and heavy-command timeouts. |
 | Legacy entry point | `pro/mcp_server.py` | Thin wrapper that imports the package and keeps old MCP configurations working. |
@@ -35,11 +35,14 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 | Geometry service | `pro/blender_mcp.py` | Evaluated snapshots, world BVH, contact graph, topology, symmetry, tolerances. |
 | Anchors | `pro/blender_mcp.py` | Center/face/surface/edge/corner/socket/bone/custom anchors and operations. |
 | Audit | `pro/blender_mcp.py` | Collects metrics, evaluates requirements, computes the score, sets `passed` last. |
-| Domain packs | `pro/domain/` | Terrain, vegetation, water, materials/UV, lighting and physics modules loaded dynamically by the add-on. |
+| Domain packs | `pro/domain/` | Implements scene builders, character anatomy and grooming, materials/UV, animation, rigging, physics, render QA and asset pipeline tools. |
 | Rendering | `pro/blender_mcp.py` | Deterministic inspection cameras, modes, metadata and optional AABB overlay. |
 | Export | `pro/blender_mcp.py` | Game profiles, scene validation, file write and reimport dimension check. |
 | Asset downloads | `pro/blender_mcp.py` | Poly Haven and Sketchfab search/download/import. |
 | Add-on UI | `pro/blender_mcp.py` | Start/stop operators and sidebar panel. |
+
+The [tool reference](docs/tools.md) and [JSON catalog](docs/tool-schemas.json)
+are generated from the bridge registry.
 
 ### Threading rules
 
@@ -111,16 +114,16 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 
 ### Known architectural debt
 
-- Two unversioned sources of truth before the `v3.0.0-baseline` tag.
-- One 3.3k-line add-on file and one 0.8k-line bridge file.
-- No protocol version negotiation beyond the optional `request_id`.
+- The main add-on module still owns geometry, dispatch, export and UI.
+- The bridge sends protocol v4 fields. The add-on accepts compatible legacy
+  messages without version negotiation.
 - Profiles filter FastMCP registration at bridge import; the add-on keeps
   every handler. `execute_code` is full-only.
 - Destructive and network operations have a policy layer, but no per-tool
   capability scopes.
 - The bridge and add-on duplicate parameter knowledge with no shared schema.
 
-## Target v4
+## Proposed package split
 
 ```
 src/blender_mcp/

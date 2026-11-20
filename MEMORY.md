@@ -16,3 +16,7 @@ base character cage before restoring subdivision. The PELAGOS 07 and NEREID
 07 showcase scenes are reproducible in background Blender. Linux CI reopens
 their checked-in projects and exercises the authenticated socket from the
 installed extension on both Blender versions.
+
+The public tool reference and JSON catalog come from the local FastMCP
+registry. Run `python scripts/generate_tool_reference.py` after changing a
+tool, schema or profile. CI checks both outputs.

@@ -30,6 +30,8 @@ coverage still pending.
 - [x] Extension builds, validates and installs in Blender 4.5 and 5.2.
 - [x] GitHub Actions completed all seven jobs for
       [v4.9.0-alpha.2](https://github.com/camilin7483/blender-mcp/actions/runs/44691708164).
+- [x] All seven jobs passed on [the showcase integration](https://github.com/camilin7483/blender-mcp/actions/runs/44766497696),
+      including packaged extension installs and reopening both documented scenes.
 - [x] Windows x64 and macOS arm64 headless smoke checks passed in CI.
 - [ ] Native Windows/macOS interactive socket, rendering, and extension
       installation tests. Windows CI skips render cases.

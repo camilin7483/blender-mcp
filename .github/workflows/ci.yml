@@ -34,6 +34,8 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt -r pro/requirements.txt
       - run: python -m pytest tests/contracts tests/unit tests/integration -q
       - run: python -m ruff check tests scripts bench
+      - name: Check generated tool reference
+        run: python scripts/generate_tool_reference.py --check
 
   blender-cross-platform:
     name: Blender headless (${{ matrix.os }}, experimental)
