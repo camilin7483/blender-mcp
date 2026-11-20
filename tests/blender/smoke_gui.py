@@ -32,6 +32,10 @@ TOKEN_PATH = os.path.join(TOKEN_DIR, "token")
 os.environ["BLENDER_MCP_TOKEN_FILE"] = TOKEN_PATH
 
 state: dict[str, object] = {}
+queued_checks_done = threading.Event()
+dispatch_ready = threading.Event()
+release_started = threading.Event()
+client_done = threading.Event()
 server = bm.BlenderMCPServer(port=0)
 
 
@@ -77,22 +81,27 @@ def client(port: int, token: str) -> None:
 
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             sock.sendall(mutation("abandoned", 4.0, disconnect=True))
+            sock.shutdown(socket.SHUT_WR)
+            if sock.recv(1):
+                raise AssertionError("server returned data to the disconnected client")
+        queued_checks_done.set()
 
-        # Wait until the main thread has resumed dispatching.
-        time.sleep(0.5)
+        if not dispatch_ready.wait(timeout=15.0):
+            raise TimeoutError("Blender's main-thread timer did not start")
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
-            sock.sendall(mutation("started", 0.5))
+            sock.sendall((_request("smoke-single", token=token) + "\n").encode("utf-8"))
+            messages = _read_messages(sock, 1)
+            state["single"] = messages[0] if len(messages) == 1 else {"missing": True}
+
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall(mutation("started", 6.0))
             state["started"] = _read_messages(sock, 1)[0]
+        release_started.set()
 
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             sock.sendall((_request("smoke-bad", token="wrong-token") + "\n").encode("utf-8"))
             messages = _read_messages(sock, 1)
             state["bad_auth"] = messages[0] if len(messages) == 1 else {"missing": True}
-
-        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
-            sock.sendall((_request("smoke-single", token=token) + "\n").encode("utf-8"))
-            messages = _read_messages(sock, 1)
-            state["single"] = messages[0] if len(messages) == 1 else {"missing": True}
 
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             batch = (
@@ -133,9 +142,13 @@ def client(port: int, token: str) -> None:
         state["character_tools"] = len(results)
     except Exception:
         state["client_error"] = traceback.format_exc()
+    finally:
+        queued_checks_done.set()
+        release_started.set()
+        client_done.set()
 
 
-def finish() -> float | None:
+def finish() -> None:
     checks: list[str] = []
 
     bad = state.get("bad_auth")
@@ -180,8 +193,6 @@ def finish() -> float | None:
         checks.append(f"expected only the started mutation to execute: {state.get('mutations')!r}")
 
     if state.get("character_tools") != 12:
-        if not state.get("client_error") and time.monotonic() < state["deadline"]:
-            return 0.25
         checks.append(f"character socket calls did not finish: {state.get('client_error')!r}")
     else:
         print("CHARACTER_SOCKET_TEST_OK: 12/12")
@@ -252,15 +263,29 @@ def main() -> None:
     def execute(command, params):
         if command == "timeout_regression":
             state["mutations"] += 1
-            time.sleep(0.75)
+            if not release_started.wait(timeout=12.0):
+                raise TimeoutError("client did not observe the running request timeout")
             return {}
         return dispatch(command, params)
 
     server._execute_command_internal = execute
     threading.Thread(target=client, args=(port, server.auth_token), daemon=True).start()
-    time.sleep(0.35)  # Keep both cancelled requests queued until their worker has responded.
-    state["deadline"] = time.monotonic() + 120
-    bpy.app.timers.register(finish, first_interval=5.0)
+    # Keep the main thread paused until both queued requests have been cancelled.
+    queued_checks_done.wait(timeout=12.0)
+
+    def signal_dispatch_ready():
+        dispatch_ready.set()
+
+    deadline = time.monotonic() + 120.0
+
+    def finish_when_client_exits():
+        if not client_done.is_set() and time.monotonic() < deadline:
+            return 0.1
+        finish()
+        return None
+
+    bpy.app.timers.register(signal_dispatch_ready, first_interval=0.0)
+    bpy.app.timers.register(finish_when_client_exits, first_interval=0.1)
 
 
 if __name__ == "__main__":

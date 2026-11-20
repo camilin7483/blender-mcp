@@ -115,13 +115,13 @@ All notable changes to this repository are documented here.
 - Release checklist documenting the remaining stable-release gates.
 - Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
   `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
-  registration through `BLENDER_MCP_PROFILE`; unknown names fail open.
+  registration through `BLENDER_MCP_PROFILE`; unknown names fall back to the core profile.
 - Game-ready export profiles (`godot`, `unity`, `unreal`, `generic-gltf`)
   validate scale, materials, UVs, armatures, actions, LOD and collision
   meshes, then reimport the file into the scene and compare dimensions.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
-- Contract test that verifies 1:1 parity between the 53 FastMCP tools and the
+- Contract test that verifies 1:1 parity between the 61 FastMCP tools and the
   add-on command table.
 - `SECURITY.md` threat model, `ARCHITECTURE.md`, `CONTRIBUTING.md`,
   `docs/compatibility.md`, `docs/benchmark.md` and
@@ -138,7 +138,7 @@ All notable changes to this repository are documented here.
 - `pro/sync_addon.sh` now resolves paths relative to the script and accepts
   `BLENDER_ADDONS_DIR`.
 - Root README documents the legacy and Pro editions.
-- Collision decisions use BVH surface intersection; AABB is broad-phase only.
+- Collision decisions use BVH surface intersection and closed-solid containment.
   Geometry Nodes-only objects are measured and audited.
 - `audit_3d_model` computes `passed` after every requirement. Blueprint
   dimensions, ground contact, absolute scale, surface intersections and
@@ -147,6 +147,16 @@ All notable changes to this repository are documented here.
 - `render_multiview_inspection` uses orthographic FRONT/RIGHT/TOP cameras,
   writes under `<output>/inspection/<render_id>/`, returns camera metadata
   and accepts `mode` plus `include_overlays`.
+
+### Fixed
+
+- Detect enclosed solid overlaps and check `inside` against a closed mesh.
+- Require a contact path to the ground in strict audits, with an explicit
+  exemption for suspended parts.
+- Cancel expired requests before dispatch. Report an unknown result if a timed
+  out operation has already started.
+- Preserve the previous assembly if rebuilding raises an exception. Correct
+  the evaluated dimensions and closure of capsule, tube, and torus meshes.
 
 ### Security
 
@@ -171,10 +181,15 @@ All notable changes to this repository are documented here.
 - Commands are routed through a main-thread queue with one persistent timer,
   removing the unsupported `bpy.app.timers.register()` call from socket
   threads.
-- Still open: unrestricted `execute_code`, unsafe ZIP extraction, unvalidated
-  download URLs and the AABB-only collision decision. See `SECURITY.md`.
+- HTTPS downloads connect to validated public addresses and retain TLS
+  hostname verification. Cross-origin redirects drop credentials.
+- The bridge requires PyJWT 2.15.0 or newer within the 2.x series.
+- Explicitly enabling `execute_code` grants access to the Blender Python
+  interpreter. See [the threat model](SECURITY.md).
 
 ## 3.0.0 - 2026-11-18
 
 See [pro/CHANGELOG.md](pro/CHANGELOG.md) for the Pro v3.0.0 feature list.
-The `v3.0.0-baseline` tag marks the code exactly as found before v4 work.
+The [v3.0.0 release](https://github.com/camilin7483/blender-mcp/releases/tag/v3.0.0)
+includes the original `blender_mcp_pro.py` and `mcp_server.py` files. The
+`v3.0.0-baseline` tag marks the local code before v4 work.

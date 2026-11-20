@@ -9,15 +9,17 @@
 
 ## Status
 
-The `v3.0.0-baseline` tag is a development baseline, not a hardened release.
-The tagged baseline had optional authentication. This branch adds a
-per-install token file (0600), routes commands through a main-thread queue,
-disables `execute_code` by default and audits evaluated geometry with a
-requirements-first contract. Collision claims now come from BVH intersection;
-AABB is broad-phase only. Inspection renders use documented orthographic
-cameras for FRONT/RIGHT/TOP, a fixed ISO perspective camera, reproducible
-output paths and camera metadata. Tested with Blender 4.5.4 and 5.2.4 LTS.
-See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
+The default branch contains the **Pro v4 pre-release**, verified with Blender
+4.5.4 and 5.2.4 LTS. Evaluated geometry checks detect enclosed solid overlaps,
+test containment against closed meshes, and trace support to the ground in
+strict mode. Expired requests are cancelled before Blender starts them.
+
+To install the v4 candidate from this repository, use `pro/blender_mcp.py`
+and `pro/mcp_server.py`. The [Pro v3.0.0 release](https://github.com/camilin7483/blender-mcp/releases/tag/v3.0.0)
+contains the previous `blender_mcp_pro.py` and its matching bridge. See the
+[v3 to v4 migration guide](docs/migration-v3-v4.md) before switching editions.
+
+![Four inspection views of a parametric table](pro/docs/table-inspection.png)
 
 ## Documentation
 
