@@ -748,21 +748,23 @@ def create_character_body_pro(server, name="BodyPro", height=1.75,
     hip_z = 0.52 * h
     hip_x = 0.055 * h * wf
     shoulder_z = 0.815 * h
-    shoulder_x = 0.095 * h * wf + 0.03 * h
+    shoulder_x = 0.095 * h * wf + 0.015 * h
     foot_h = 0.045 * h
 
     bm = bmesh.new()
     # Feet (toes toward -Y) and legs.
     foot_len, foot_w = 0.145 * h, 0.055 * h * wf
-    leg_depth = hip_z - foot_h
+    leg_bottom = 0.022 * h
+    leg_top = hip_z + 0.065 * h
+    leg_depth = leg_top - leg_bottom
     for sign in (-1.0, 1.0):
         _box(bm, foot_w, foot_len, foot_h,
              (sign * hip_x, -0.03 * h, foot_h / 2.0))
         _limb(bm, 0.075 * h * wf, 0.048 * h * wf, leg_depth,
-              (sign * hip_x, 0.0, foot_h + leg_depth / 2.0), segments=14)
+              (sign * hip_x, 0.0, leg_bottom + leg_depth / 2.0), segments=14)
     # Pelvis, abdomen, chest: overlapping ellipsoids read as one torso.
     _ball(bm, 0.5, (0.0, 0.0, 0.585 * h), u_segments=20, v_segments=14,
-          scale=(0.165 * h * wf, 0.105 * h * df, 0.13 * h))
+          scale=(0.190 * h * wf, 0.120 * h * df, 0.18 * h))
     _ball(bm, 0.5, (0.0, -0.005 * h, 0.66 * h), u_segments=20, v_segments=14,
           scale=(0.175 * h * wf, 0.110 * h * df, 0.14 * h))
     _ball(bm, 0.5, (0.0, -0.005 * h, 0.745 * h), u_segments=20, v_segments=14,
@@ -774,26 +776,47 @@ def create_character_body_pro(server, name="BodyPro", height=1.75,
               (sign * shoulder_x, 0.0, shoulder_z - arm_len / 2.0),
               segments=12, tilt_y=sign * -0.09)
         _box(bm, 0.045 * h * wf, 0.05 * h, 0.10 * h,
-             (sign * (shoulder_x + 0.035 * h), 0.0, 0.51 * h))
+             (sign * (shoulder_x + 0.011 * h), 0.0, 0.535 * h))
     # Neck and head (head top lands exactly on height).
-    _limb(bm, 0.032 * h, 0.037 * h, 0.07 * h, (0.0, 0.0, 0.845 * h),
+    _limb(bm, 0.032 * h, 0.037 * h, 0.12 * h, (0.0, 0.0, 0.826 * h),
           segments=12)
     _ball(bm, head_r, (0.0, 0.008 * h, head_z), u_segments=22, v_segments=16,
           scale=(0.88, 0.95, 1.05))
 
-    # Organic pass: relax faceted primitives into one smooth base.
-    bm.verts.ensure_lookup_table()
-    for _ in range(2):
-        bmesh.ops.smooth_vert(bm, verts=list(bm.verts), factor=0.5)
     _cleanup(bm)
-    _normalize_height_center(bm, h)
-
     skin = _simple_principled(name + "_Skin", (0.65, 0.45, 0.35, 1.0), 0.55)
-    obj, dims, polys = _finish(bm, name, [skin])
+    obj, _, _ = _finish(bm, name, [skin])
+    # Fuse overlapping primitives into a single surface before UVs and rigging.
+    remesh = obj.modifiers.new("Body union", "REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = height / 120
+    remesh.use_smooth_shade = True
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    surface = bpy.data.meshes.new_from_object(obj.evaluated_get(depsgraph))
+    original = obj.data
+    obj.modifiers.remove(remesh)
+    obj.data = surface
+    bpy.data.meshes.remove(original)
+    if not surface.materials:
+        surface.materials.append(skin)
+    bm = bmesh.new()
+    bm.from_mesh(surface)
+    _normalize_height_center(bm, h)
+    bm.to_mesh(surface)
+    bm.free()
+    surface.update()
     _add_planar_uv(obj)
-    obj.location = (0.0, 0.0, 0.0)
+
     if subdivisions:
         _add_subsurf(obj, subdivisions)
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    min_z = min(corner[2] for corner in evaluated.bound_box)
+    max_z = max(corner[2] for corner in evaluated.bound_box)
+    obj.scale.z = h / (max_z - min_z)
+    obj.location.z = -min_z * obj.scale.z
+    bpy.context.view_layer.update()
+    dims = obj.evaluated_get(bpy.context.evaluated_depsgraph_get()).dimensions
+    polys = len(surface.polygons)
 
     return {
         "success": True,

@@ -118,4 +118,6 @@ jobs:
           BLENDER_BIN: ${{ runner.temp }}/${{ matrix.dir }}/blender
         run: |
           ./scripts/build_extension.sh
-          "$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.6.0.zip
+          archive="$(find build -maxdepth 1 -name 'blender_mcp_pro-*.zip' -print)"
+          test -f "$archive"
+          "$BLENDER_BIN" --factory-startup --command extension validate "$archive"

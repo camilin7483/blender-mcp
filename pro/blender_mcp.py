@@ -233,6 +233,8 @@ def resolve_output_path(filepath: str, allowed_extensions: set) -> str:
     else:
         path = os.path.abspath(os.path.join(base, expanded))
 
+    if not os.path.splitext(path)[1]:
+        path += sorted(allowed_extensions)[0]
     if not allow_any:
         base_real = os.path.normcase(os.path.realpath(base))
         path_real = os.path.normcase(os.path.realpath(path))
@@ -246,8 +248,6 @@ def resolve_output_path(filepath: str, allowed_extensions: set) -> str:
                 f"Set {OUTPUT_DIR_ENV_VAR} or {ALLOW_ANY_PATH_ENV_VAR}=1 for trusted automation."
             )
 
-    if not os.path.splitext(path)[1]:
-        path += sorted(allowed_extensions)[0]
     extension = os.path.splitext(path)[1].lower()
     if extension not in allowed_extensions:
         raise ValueError(
@@ -7708,7 +7708,7 @@ class BlenderMCPServer:
             }
 
         if fmt in ("GLB", "GLTF"):
-            bpy.ops.export_scene.gltf(
+            status = bpy.ops.export_scene.gltf(
                 filepath=path,
                 export_format="GLB" if fmt == "GLB" else "GLTF_SEPARATE",
                 export_apply=True,
@@ -7724,7 +7724,7 @@ class BlenderMCPServer:
                 export_extras=True,
             )
         elif fmt == "FBX":
-            bpy.ops.export_scene.fbx(
+            status = bpy.ops.export_scene.fbx(
                 filepath=path,
                 use_selection=False,
                 apply_scale_options="FBX_SCALE_ALL",
@@ -7736,9 +7736,9 @@ class BlenderMCPServer:
                 use_mesh_modifiers=True,
             )
         elif fmt == "OBJ":
-            bpy.ops.wm.obj_export(filepath=path)
+            status = bpy.ops.wm.obj_export(filepath=path)
 
-        if not os.path.exists(path) or os.path.getsize(path) == 0:
+        if "FINISHED" not in status or not os.path.isfile(path) or os.path.getsize(path) == 0:
             return {
                 "success": False,
                 "filepath": path,

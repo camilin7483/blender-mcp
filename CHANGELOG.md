@@ -4,6 +4,15 @@ All notable changes to this repository are documented here.
 
 ## 4.9.0-alpha.1 - 2026-11-20 (unreleased)
 
+### Independent audit fixes
+
+- Fuse the procedural body into a closed connected mesh and validate rig
+  binding against the requested armature and its actual vertex weights.
+- Constrain the final export filename and check the exporter result before
+  accepting a file. Verify the twelve character commands over the GUI socket.
+- Fail benchmarks on invalid measurements or missing scene artifacts. Run
+  the benchmark on both Blender versions and normalize the extension ZIP.
+
 ### Added
 
 - Tool catalog and discovery: `tools_catalog`, `tools_search`, `tools_describe`

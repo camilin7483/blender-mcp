@@ -3,6 +3,8 @@
     "target": 1.75,
     "tolerance": 0.01
   },
+  "components": 1,
+  "non_manifold_edges": 0,
   "garment": true,
   "bones": {
     "min": 39

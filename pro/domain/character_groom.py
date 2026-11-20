@@ -189,6 +189,7 @@ def _hair_material(name):
 
 
 def _aabb_world(obj):
+    obj = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
     xs = [c.x for c in corners]
     ys = [c.y for c in corners]
@@ -559,7 +560,8 @@ def create_character_rig_pro(server, mesh_name,
     if bpy.data.objects.get(armature_name) is not None:
         raise ValueError(f"Object '{armature_name}' already exists")
 
-    min_x, max_x, _min_y, max_y, min_z, max_z = _aabb_world(mesh_obj)
+    min_x, max_x, min_y, max_y, min_z, max_z = _aabb_world(mesh_obj)
+    center = Vector(((min_x + max_x) / 2, (min_y + max_y) / 2, 0.0))
     width = max_x - min_x
     height = max_z - min_z
     if height <= 0.0:
@@ -633,6 +635,7 @@ def create_character_rig_pro(server, mesh_name,
     arm_data = bpy.data.armatures.new(armature_name + "_Data")
     arm_obj = bpy.data.objects.new(armature_name, arm_data)
     _link(arm_obj)
+    arm_obj.location = center
 
     view_layer = bpy.context.view_layer
     previous_active = view_layer.objects.active
@@ -904,17 +907,20 @@ def character_quality_report(server, mesh_name, armature_name=None,
     hair_objs = _validate_hair_objects(hair_objects)
 
     mesh_data = mesh_obj.data
-    polygon_count = len(mesh_data.polygons)
+    evaluated = mesh_obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    evaluated_mesh = evaluated.to_mesh()
+    polygon_count = len(evaluated_mesh.polygons)
 
     # Non-manifold edge count via a throwaway bmesh (mesh is not modified).
     bm = bmesh.new()
     try:
-        bm.from_mesh(mesh_data)
+        bm.from_mesh(evaluated_mesh)
         bm.edges.ensure_lookup_table()
         non_manifold = sum(
             1 for edge in bm.edges if not edge.is_manifold)
     finally:
         bm.free()
+        evaluated.to_mesh_clear()
 
     materials = [s.name for s in mesh_data.materials if s is not None]
     uv_layers = [uv.name for uv in mesh_data.uv_layers]
@@ -1008,16 +1014,20 @@ def character_quality_report(server, mesh_name, armature_name=None,
         },
     ]
     if arm_obj is not None:
-        bound = len(bones) > 0 and len(vertex_groups) > 0
+        linked = any(mod.type == "ARMATURE" and mod.object == arm_obj and mod.show_viewport
+                     for mod in mesh_obj.modifiers)
+        group_ids = {group.index for group in mesh_obj.vertex_groups
+                     if arm_obj.data.bones.get(group.name) and arm_obj.data.bones[group.name].use_deform}
+        weighted = sum(any(group.group in group_ids and group.weight > 0
+                           for group in vertex.groups) for vertex in mesh_data.vertices)
+        bound = linked and weighted == len(mesh_data.vertices) and weighted > 0
         checks.append({
             "check": "armature_bound",
             "passed": bound,
             "message": (
-                "armature has bones and mesh has vertex groups"
-                if bound
-                else "armature binding incomplete "
-                f"(bones={len(bones)}, "
-                f"vertex_groups={len(vertex_groups)})"
+                "all vertices have weights for the linked armature" if bound
+                else f"armature binding incomplete (modifier_linked={linked}, "
+                     f"weighted_vertices={weighted}/{len(mesh_data.vertices)})"
             ),
         })
     if hair_objs:

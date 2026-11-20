@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "bench"))
 
 import actions  # noqa: E402
 import bpy  # noqa: E402
+from checks import compare  # noqa: E402
 
 from blender_mcp import BlenderMCPServer  # noqa: E402
 
@@ -55,50 +56,12 @@ def discover_tasks(only: str) -> list[dict]:
         task["slug"] = task_dir.name
         task["expected"] = json.loads(expected_file.read_text(encoding="utf-8"))
         tasks.append(task)
+    missing = selected - {task["slug"] for task in tasks}
+    if missing:
+        raise ValueError(f"Unknown benchmark tasks: {', '.join(sorted(missing))}")
     return tasks
 
 
-def compare(expected, observed, path: str = "") -> list[str]:
-    failures: list[str] = []
-    if isinstance(expected, dict):
-        if "target" in expected and "tolerance" in expected:
-            if not isinstance(observed, (int, float)):
-                return [f"{path}: expected a number, got {observed!r}"]
-            if abs(float(observed) - float(expected["target"])) > float(expected["tolerance"]):
-                failures.append(
-                    f"{path}: expected {expected['target']} +/- {expected['tolerance']}, "
-                    f"got {observed}"
-                )
-            return failures
-        if "min" in expected:
-            if not isinstance(observed, (int, float)) or observed < expected["min"]:
-                failures.append(f"{path}: expected >= {expected['min']}, got {observed!r}")
-            return failures
-        for key, value in expected.items():
-            child = f"{path}.{key}" if path else key
-            if key not in observed:
-                failures.append(f"{child}: missing")
-                continue
-            failures.extend(compare(value, observed[key], child))
-        return failures
-    if isinstance(expected, list):
-        if not isinstance(observed, list) or len(expected) != len(observed):
-            failures.append(f"{path}: expected {expected!r}, got {observed!r}")
-            return failures
-        for index, (child_expected, child_observed) in enumerate(
-            zip(expected, observed, strict=False)
-        ):
-            failures.extend(
-                compare(child_expected, child_observed, f"{path}[{index}]")
-            )
-        return failures
-    if isinstance(expected, float) and isinstance(observed, float):
-        if abs(expected - observed) > 1e-6:
-            failures.append(f"{path}: expected {expected}, got {observed}")
-        return failures
-    if expected != observed:
-        failures.append(f"{path}: expected {expected!r}, got {observed!r}")
-    return failures
 
 
 def main() -> int:
@@ -144,16 +107,20 @@ def main() -> int:
             duration_ms = round((time.perf_counter() - started) * 1000.0, 3)
 
             failures = [] if error else compare(task["expected"], observed)
-            passed = error is None and not failures
-            all_passed = all_passed and passed
-
+            scene_path = artifact_dir / "scene.blend"
             try:
-                bpy.ops.wm.save_as_mainfile(
-                    filepath=str(artifact_dir / "scene.blend"),
+                scene_path.unlink(missing_ok=True)
+                save_status = bpy.ops.wm.save_as_mainfile(
+                    filepath=str(scene_path),
                     copy=True,
                 )
+                if "FINISHED" not in save_status or not scene_path.is_file() or scene_path.stat().st_size == 0:
+                    raise RuntimeError(f"Scene was not saved: {save_status}")
             except Exception:
-                error = error or traceback.format_exc()
+                save_error = traceback.format_exc()
+                error = f"{error}\n{save_error}" if error else save_error
+            passed = error is None and not failures
+            all_passed = all_passed and passed
 
             metrics = {
                 "task": slug,
@@ -226,4 +193,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    if main() != 0:
+        raise RuntimeError("Benchmark failed; see the task results above")

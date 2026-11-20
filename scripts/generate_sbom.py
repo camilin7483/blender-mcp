@@ -6,13 +6,17 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from importlib.metadata import version as installed_version
 from pathlib import Path
 
+import tomllib
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "4.9.0-alpha.1"
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
 REQUIREMENTS = [
     ROOT / "pro" / "requirements.txt",
-    ROOT / "requirements-dev.txt",
 ]
 
 
@@ -24,13 +28,17 @@ def parse_requirements(path: Path) -> list[dict]:
         line = raw.strip()
         if not line or line.startswith("#") or line.startswith("-"):
             continue
-        name, _, version = line.partition("==")
+        requirement = Requirement(line)
+        name = canonicalize_name(requirement.name)
+        version = installed_version(requirement.name)
+        if version not in requirement.specifier:
+            raise ValueError(f"{requirement} is not satisfied by {version}")
         components.append({
             "type": "library",
-            "name": name.strip(),
-            "version": version.strip() or "unpinned",
-            "scope": "required" if "dev" not in path.name else "optional",
-            "purl": f"pkg:pypi/{name.strip().lower()}",
+            "name": name,
+            "version": version,
+            "scope": "required",
+            "purl": f"pkg:pypi/{name}@{version}",
         })
     return components
 
@@ -58,7 +66,7 @@ def main() -> int:
                 "type": "application",
                 "name": "blender-mcp",
                 "version": VERSION,
-                "hashes": [{"alg": "SHA-1", "content": commit}],
+                "properties": [{"name": "git.commit", "value": commit}],
             },
             "tools": [{"name": "generate_sbom.py", "version": "1"}],
         },

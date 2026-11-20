@@ -103,11 +103,39 @@ def client(port: int, token: str) -> None:
             )
             sock.sendall(batch.encode("utf-8"))
             state["batch"] = _read_messages(sock, 2)
+        character_calls = [
+            ("create_anatomical_head", {"name": "SocketHead", "subdivisions": 0}),
+            ("create_eye_assembly", {"name": "SocketEye"}),
+            ("create_skin_material_pro", {"name": "SocketSkin"}),
+            ("create_dental_arch", {"name": "SocketDental", "tooth_count": 4}),
+            ("create_character_body_pro", {"name": "SocketBody", "subdivisions": 0}),
+            ("create_garment_shell_pro", {"name": "SocketGarment"}),
+            ("create_hair_groom", {"name": "SocketHair", "head_object": "SocketHead", "strand_count": 10}),
+            ("create_eyebrow_groom", {"name": "SocketBrows", "head_object": "SocketHead", "strand_count": 10}),
+            ("create_eyelash_groom", {"name": "SocketLashes", "head_object": "SocketHead", "strand_count": 10}),
+            ("create_character_rig_pro", {"mesh_name": "SocketBody", "armature_name": "SocketRig"}),
+            ("create_character_studio", {"name": "SocketStudio"}),
+            ("character_quality_report", {"mesh_name": "SocketBody", "armature_name": "SocketRig"}),
+        ]
+        results = {}
+        for index, (name, params) in enumerate(character_calls):
+            request_id = f"character-{index}"
+            request = json.loads(_request(request_id, name, token))
+            request["params"] = params
+            with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+                sock.sendall((json.dumps(request) + "\n").encode())
+                response = _read_messages(sock, 1, timeout=60)[0]
+            assert response["request_id"] == request_id, response
+            assert response["status"] == "success" and response["result"]["success"], (name, response)
+            results[name] = response["result"]
+        report = results["character_quality_report"]
+        assert report["passed"] and report["aaa_certified"] is False, report
+        state["character_tools"] = len(results)
     except Exception:
         state["client_error"] = traceback.format_exc()
 
 
-def finish() -> None:
+def finish() -> float | None:
     checks: list[str] = []
 
     bad = state.get("bad_auth")
@@ -150,6 +178,13 @@ def finish() -> None:
         checks.append(f"running timeout did not report uncertain result: {state.get('started')!r}")
     if state.get("mutations") != 1:
         checks.append(f"expected only the started mutation to execute: {state.get('mutations')!r}")
+
+    if state.get("character_tools") != 12:
+        if not state.get("client_error") and time.monotonic() < state["deadline"]:
+            return 0.25
+        checks.append(f"character socket calls did not finish: {state.get('client_error')!r}")
+    else:
+        print("CHARACTER_SOCKET_TEST_OK: 12/12")
 
     server.stop()
 
@@ -224,6 +259,7 @@ def main() -> None:
     server._execute_command_internal = execute
     threading.Thread(target=client, args=(port, server.auth_token), daemon=True).start()
     time.sleep(0.35)  # Keep both cancelled requests queued until their worker has responded.
+    state["deadline"] = time.monotonic() + 120
     bpy.app.timers.register(finish, first_interval=5.0)
 
 

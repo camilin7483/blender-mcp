@@ -281,6 +281,31 @@ def main() -> None:
             if not os.path.exists(os.path.join(export_dir, "noext.glb")):
                 fail("export did not append the expected extension")
 
+            with tempfile.TemporaryDirectory() as outside:
+                target = os.path.join(outside, "unmodified.glb")
+                marker = b"existing, unrelated file"
+                with open(target, "wb") as handle:
+                    handle.write(marker)
+                link = os.path.join(export_dir, "alias.glb")
+                try:
+                    os.symlink(target, link)
+                except OSError:
+                    if os.name != "nt":
+                        raise
+                else:
+                    try:
+                        bm.resolve_output_path("alias", {".glb"})
+                    except PermissionError:
+                        pass
+                    else:
+                        fail("export sandbox did not check the final filename")
+                    with open(target, "rb") as handle:
+                        assert handle.read() == marker
+
+            with patch.object(bpy.ops.export_scene, "gltf", return_value={"CANCELLED"}):
+                cancelled = server.export_scene("noext.glb", "GLB")
+            assert cancelled["success"] is False, cancelled
+
             try:
                 server.export_scene("../escape.glb", "GLB")
             except PermissionError:
@@ -1605,6 +1630,28 @@ def main() -> None:
         )
         assert quality["success"] and quality["aaa_certified"] is False, quality
         assert quality["tier"] == "procedural_high_detail", quality
+        assert quality["passed"], quality
+        body_object = bpy.data.objects[body["object"]]
+        topology = bm.GeometryService.topology_metrics(body_object)
+        assert topology["disconnected_components"] == 1, topology
+        assert topology["non_manifold_edges"] == 0, topology
+        for build in ("slim", "heavy"):
+            variant = server.create_character_body_pro(f"V49{build}", 1.25, build, 0)
+            metrics = bm.GeometryService.topology_metrics(bpy.data.objects[variant["object"]])
+            assert metrics["disconnected_components"] == 1 and metrics["non_manifold_edges"] == 0, metrics
+
+        body_object.location.x += 2.0
+        bpy.context.view_layer.update()
+        moved = server.create_character_body_pro("V49Moved", 1.25, "average", 0)
+        moved_object = bpy.data.objects[moved["object"]]
+        moved_object.location.x += 3.0
+        bpy.context.view_layer.update()
+        moved_rig = server.create_character_rig_pro(moved_object.name, "V49MovedRig")
+        assert abs(bpy.data.objects[moved_rig["armature"]].location.x - 3.0) < 0.001, moved_rig
+        unrelated = server.character_quality_report(body_object.name, moved_rig["armature"])
+        assert not unrelated["passed"], unrelated
+        assert any(not check["passed"] for check in unrelated["checks"] if check["check"] == "armature_bound")
+
 
         # --- animation and rigging primitives ---
         clear_scene()

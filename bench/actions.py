@@ -807,8 +807,13 @@ def character_body_rig(server: BlenderMCPServer, _artifact_dir: str) -> dict:
     garment = server.create_garment_shell_pro("BenchGarmentPro")
     rig = server.create_character_rig_pro("BenchBodyPro", "BenchCharacterRig")
     studio = server.create_character_studio("BenchCharacterStudio", [0.0, 0.0, 0.9])
+    from blender_mcp import GeometryService
+
+    topology = GeometryService.topology_metrics(bpy.data.objects[body["object"]])
     return {
         "height": body["actual_height"],
+        "components": topology["disconnected_components"],
+        "non_manifold_edges": topology["non_manifold_edges"],
         "garment": garment["success"],
         "bones": rig["bone_count"],
         "lights": len(studio["lights"]),
