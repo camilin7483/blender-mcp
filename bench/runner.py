@@ -82,8 +82,15 @@ def compare(expected, observed, path: str = "") -> list[str]:
             failures.extend(compare(value, observed[key], child))
         return failures
     if isinstance(expected, list):
-        if expected != observed:
+        if not isinstance(observed, list) or len(expected) != len(observed):
             failures.append(f"{path}: expected {expected!r}, got {observed!r}")
+            return failures
+        for index, (child_expected, child_observed) in enumerate(
+            zip(expected, observed, strict=False)
+        ):
+            failures.extend(
+                compare(child_expected, child_observed, f"{path}[{index}]")
+            )
         return failures
     if isinstance(expected, float) and isinstance(observed, float):
         if abs(expected - observed) > 1e-6:

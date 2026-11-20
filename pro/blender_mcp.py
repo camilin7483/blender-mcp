@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 1, 0),
+    "version": (4, 2, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2220,6 +2220,24 @@ class BlenderMCPServer:
             "add_collision": lambda p: self.add_collision(**p),
             "add_cloth": lambda p: self.add_cloth(**p),
             "bake_simulation": lambda p: self.bake_simulation(**p),
+            "create_room_shell": lambda p: self.create_room_shell(**p),
+            "create_door": lambda p: self.create_door(**p),
+            "create_window": lambda p: self.create_window(**p),
+            "create_table": lambda p: self.create_table(**p),
+            "create_chair": lambda p: self.create_chair(**p),
+            "create_shelf": lambda p: self.create_shelf(**p),
+            "create_bed": lambda p: self.create_bed(**p),
+            "create_sofa": lambda p: self.create_sofa(**p),
+            "create_kitchen_block": lambda p: self.create_kitchen_block(**p),
+            "add_bevel_modifier": lambda p: self.add_bevel_modifier(**p),
+            "add_solidify_modifier": lambda p: self.add_solidify_modifier(**p),
+            "add_array_modifier": lambda p: self.add_array_modifier(**p),
+            "add_mirror_modifier": lambda p: self.add_mirror_modifier(**p),
+            "apply_all_modifiers": lambda p: self.apply_all_modifiers(**p),
+            "create_text_object": lambda p: self.create_text_object(**p),
+            "create_curve_tube": lambda p: self.create_curve_tube(**p),
+            "create_metaball": lambda p: self.create_metaball(**p),
+            "convert_to_mesh": lambda p: self.convert_to_mesh(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -2455,6 +2473,77 @@ class BlenderMCPServer:
     def bake_simulation(self, frame_start: int = 1, frame_end: int = 250) -> Dict[str, Any]:
         """Bake all point caches in the scene for a frame range."""
         return self._domain_call("physics", "bake_simulation", {k: v for k, v in locals().items() if k != "self"})
+    def create_room_shell(self, name: str = "Room", width: float = 5.0, depth: float = 4.0, height: float = 3.0, wall_thickness: float = 0.12, floor_thickness: float = 0.10, door_width: float = 0.9, door_height: float = 2.1, window_width: float = 1.2, window_height: float = 1.2, location: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a room shell with floor, four walls and real door and window openings."""
+        return self._domain_call("architecture_shell", "create_room_shell", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_door(self, name: str = "Door", width: float = 0.9, height: float = 2.1, thickness: float = 0.04, frame_thickness: float = 0.06, location: List[float] = [0.0, 0.0, 0.0], rotation: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a joined door slab and frame grounded at the requested location."""
+        return self._domain_call("architecture_shell", "create_door", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_window(self, name: str = "Window", width: float = 1.2, height: float = 1.2, frame_thickness: float = 0.06, glass_thickness: float = 0.01, location: List[float] = [0.0, 0.0, 0.0], rotation: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a joined window frame and glass pane with explicit dimensions."""
+        return self._domain_call("architecture_shell", "create_window", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_table(self, name: str = "Table", width: float = 1.4, depth: float = 0.8, height: float = 0.75, top_thickness: float = 0.04, leg_size: float = 0.06) -> Dict[str, Any]:
+        """Create a joined table with top, legs and apron grounded at Z=0."""
+        return self._domain_call("architecture_furniture", "create_table", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_chair(self, name: str = "Chair", seat_width: float = 0.45, seat_depth: float = 0.45, seat_height: float = 0.45, back_height: float = 0.45, leg_size: float = 0.04) -> Dict[str, Any]:
+        """Create a joined chair with seat, legs and backrest grounded at Z=0."""
+        return self._domain_call("architecture_furniture", "create_chair", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_shelf(self, name: str = "Shelf", width: float = 1.0, height: float = 1.8, depth: float = 0.3, shelf_count: int = 4, board_thickness: float = 0.03) -> Dict[str, Any]:
+        """Create a joined shelf unit with sides, boards and shelf_count levels."""
+        return self._domain_call("architecture_furniture", "create_shelf", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bed(self, name: str = "Bed", width: float = 1.6, length: float = 2.0, height: float = 0.5, headboard_height: float = 0.9) -> Dict[str, Any]:
+        """Create a joined bed with frame, mattress and headboard grounded at Z=0."""
+        return self._domain_call("architecture_furniture", "create_bed", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_sofa(self, name: str = "Sofa", width: float = 2.0, depth: float = 0.9, height: float = 0.8, seat_count: int = 3) -> Dict[str, Any]:
+        """Create a joined sofa with base, armrests, back and seat cushions."""
+        return self._domain_call("architecture_furniture", "create_sofa", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_kitchen_block(self, name: str = "Kitchen", width: float = 2.4, depth: float = 0.6, height: float = 0.9, cabinet_count: int = 4, counter_thickness: float = 0.04) -> Dict[str, Any]:
+        """Create a joined kitchen cabinet block with doors and countertop."""
+        return self._domain_call("architecture_furniture", "create_kitchen_block", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_bevel_modifier(self, object_name: str, width: float = 0.02, segments: int = 2, angle_limit: float = 30.0) -> Dict[str, Any]:
+        """Add or update a bevel modifier with angle limit, width and segments."""
+        return self._domain_call("hardsurface_modifiers", "add_bevel_modifier", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_solidify_modifier(self, object_name: str, thickness: float = 0.02, offset: float = -1.0) -> Dict[str, Any]:
+        """Add or update a solidify modifier with thickness and offset."""
+        return self._domain_call("hardsurface_modifiers", "add_solidify_modifier", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_array_modifier(self, object_name: str, count: int = 3, offset: List[float] = [0.0, 0.0, 0.0], relative: bool = False) -> Dict[str, Any]:
+        """Add or update an array modifier with count and constant or relative offset."""
+        return self._domain_call("hardsurface_modifiers", "add_array_modifier", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_mirror_modifier(self, object_name: str, axis: str = "X", bisect: bool = False) -> Dict[str, Any]:
+        """Add or update a mirror modifier on X, Y or Z with optional bisect."""
+        return self._domain_call("hardsurface_modifiers", "add_mirror_modifier", {k: v for k, v in locals().items() if k != "self"})
+
+    def apply_all_modifiers(self, object_name: str) -> Dict[str, Any]:
+        """Apply every modifier on a mesh object in stack order."""
+        return self._domain_call("hardsurface_modifiers", "apply_all_modifiers", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_text_object(self, text: str = "Text", name: str = "Text", size: float = 1.0, extrude: float = 0.0, align_x: str = "CENTER") -> Dict[str, Any]:
+        """Create a Blender text object with size, extrude and horizontal alignment."""
+        return self._domain_call("hardsurface_primitives", "create_text_object", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_curve_tube(self, name: str = "Tube", points: Optional[List[List[float]]] = None, radius: float = 0.05, resolution: int = 12, cyclic: bool = False) -> Dict[str, Any]:
+        """Create a poly curve with bevel depth from points, with optional cyclic closure."""
+        return self._domain_call("hardsurface_primitives", "create_curve_tube", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_metaball(self, name: str = "Metaball", radius: float = 0.5, stiffness: float = 2.0, location: List[float] = [0.0, 0.0, 0.0]) -> Dict[str, Any]:
+        """Create a metaball object with one element radius and stiffness."""
+        return self._domain_call("hardsurface_primitives", "create_metaball", {k: v for k, v in locals().items() if k != "self"})
+
+    def convert_to_mesh(self, object_name: str) -> Dict[str, Any]:
+        """Convert a curve, text, surface or metaball object to a mesh in place."""
+        return self._domain_call("hardsurface_primitives", "convert_to_mesh", {k: v for k, v in locals().items() if k != "self"})
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION
     # ==========================================================================

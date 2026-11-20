@@ -1,0 +1,23 @@
+{
+  "room_objects": 2,
+  "table_dimensions": [
+    {
+      "target": 1.4,
+      "tolerance": 0.01
+    },
+    {
+      "target": 0.8,
+      "tolerance": 0.01
+    },
+    {
+      "target": 0.75,
+      "tolerance": 0.01
+    }
+  ],
+  "chair_height": {
+    "target": 0.9,
+    "tolerance": 0.01
+  },
+  "door": true,
+  "window": true
+}

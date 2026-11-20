@@ -16,6 +16,16 @@ EXPECTED = {
     "materials_uv": {"create_procedural_material", "smart_uv_unwrap", "pack_uv_islands", "list_materials"},
     "lighting": {"create_light", "create_camera", "setup_world_background", "render_still"},
     "physics": {"add_rigid_body", "add_collision", "add_cloth", "bake_simulation"},
+    "architecture_shell": {"create_room_shell", "create_door", "create_window"},
+    "architecture_furniture": {
+        "create_table", "create_chair", "create_shelf", "create_bed",
+        "create_sofa", "create_kitchen_block",
+    },
+    "hardsurface_modifiers": {
+        "add_bevel_modifier", "add_solidify_modifier", "add_array_modifier",
+        "add_mirror_modifier", "apply_all_modifiers",
+    },
+    "hardsurface_primitives": {"create_text_object", "create_curve_tube", "create_metaball", "convert_to_mesh"},
 }
 
 

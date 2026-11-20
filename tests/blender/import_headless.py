@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 1, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 2, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1007,6 +1007,56 @@ def main() -> None:
         finally:
             os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
             shutil.rmtree(domain_dir, ignore_errors=True)
+
+        # --- v4.2 architecture and hard-surface packs ---
+        clear_scene()
+        room = server.create_room_shell(
+            "V42Room", width=5.0, depth=4.0, height=3.0
+        )
+        assert room["success"] and bpy.data.objects.get("V42Room_Floor"), room
+        assert bpy.data.objects.get("V42Room_Walls"), room
+        door = server.create_door("V42Door", location=[0.0, -2.0, 0.0])
+        assert door["success"] and bpy.data.objects.get("V42Door"), door
+        window = server.create_window("V42Window", location=[2.5, 0.0, 1.0])
+        assert window["success"] and bpy.data.objects.get("V42Window"), window
+        for name, factory in (
+            ("V42Table", server.create_table),
+            ("V42Chair", server.create_chair),
+            ("V42Shelf", server.create_shelf),
+            ("V42Bed", server.create_bed),
+            ("V42Sofa", server.create_sofa),
+            ("V42Kitchen", server.create_kitchen_block),
+        ):
+            result = factory(name)
+            assert result["success"] and bpy.data.objects.get(name), result
+            assert result["polygon_count"] > 0, result
+
+        server.create_parametric_part(
+            "V42Hard", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+            location=[0.0, 0.0, 0.25],
+        )
+        for modifier in (
+            server.add_bevel_modifier("V42Hard", width=0.01),
+            server.add_solidify_modifier("V42Hard", thickness=0.01),
+            server.add_array_modifier("V42Hard", count=2, offset=[0.6, 0.0, 0.0]),
+            server.add_mirror_modifier("V42Hard", axis="X"),
+        ):
+            assert modifier["success"], modifier
+        applied = server.apply_all_modifiers("V42Hard")
+        assert applied["success"] and len(applied["applied"]) == 4, applied
+
+        text = server.create_text_object("V42", name="V42Text", size=0.5)
+        assert text["success"] and bpy.data.objects.get("V42Text"), text
+        tube = server.create_curve_tube(
+            "V42Tube", points=[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]], radius=0.05
+        )
+        assert tube["success"] and bpy.data.objects.get("V42Tube"), tube
+        meta = server.create_metaball("V42Meta", radius=0.4)
+        assert meta["success"] and bpy.data.objects.get("V42Meta"), meta
+        converted_tube = server.convert_to_mesh("V42Tube")
+        assert converted_tube["success"] and converted_tube["type"] == "MESH", converted_tube
+        converted_meta = server.convert_to_mesh("V42Meta")
+        assert converted_meta["success"] and converted_meta["type"] == "MESH", converted_meta
 
         # --- animation and rigging primitives ---
         clear_scene()

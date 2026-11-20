@@ -1,0 +1,5 @@
+{
+  "category": "architecture",
+  "runner": "architecture_interior",
+  "description": "Build a room shell with door/window and table/chair; verify dimensions."
+}

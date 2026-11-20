@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "inspection",
-  "duration_ms": 1738.096,
+  "duration_ms": 1688.811,
   "error": null,
   "expected": {
     "camera_type": "ORTHO",

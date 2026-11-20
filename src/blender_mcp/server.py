@@ -958,6 +958,24 @@ TOOL_METADATA = {
     "add_collision": {"category": "physics", "safety": "write", "cost": "low", "units": "meters"},
     "add_cloth": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
     "bake_simulation": {"category": "physics", "safety": "write", "cost": "high", "units": "frames"},
+    "create_room_shell": {"category": "architecture", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_door": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_window": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_table": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_chair": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_shelf": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bed": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_sofa": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "create_kitchen_block": {"category": "architecture", "safety": "write", "cost": "low", "units": "meters"},
+    "add_bevel_modifier": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "add_solidify_modifier": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "add_array_modifier": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "add_mirror_modifier": {"category": "hardsurface", "safety": "write", "cost": "low", "units": ""},
+    "apply_all_modifiers": {"category": "hardsurface", "safety": "write", "cost": "medium", "units": ""},
+    "create_text_object": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "create_curve_tube": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "create_metaball": {"category": "hardsurface", "safety": "write", "cost": "low", "units": "meters"},
+    "convert_to_mesh": {"category": "hardsurface", "safety": "write", "cost": "low", "units": ""},
 }
 
 
@@ -1237,6 +1255,96 @@ def bake_simulation(frame_start: int = 1, frame_end: int = 250) -> str:
     """Bake all point caches in the scene for a frame range."""
     return json.dumps(send_blender_command("bake_simulation", {"frame_start": frame_start, "frame_end": frame_end}), indent=2)
 
+@mcp.tool()
+def create_room_shell(name: str = "Room", width: float = 5.0, depth: float = 4.0, height: float = 3.0, wall_thickness: float = 0.12, floor_thickness: float = 0.10, door_width: float = 0.9, door_height: float = 2.1, window_width: float = 1.2, window_height: float = 1.2, location: List[float] = [0.0, 0.0, 0.0]) -> str:
+    """Create a room shell with floor, four walls and real door and window openings."""
+    return json.dumps(send_blender_command("create_room_shell", {"name": name, "width": width, "depth": depth, "height": height, "wall_thickness": wall_thickness, "floor_thickness": floor_thickness, "door_width": door_width, "door_height": door_height, "window_width": window_width, "window_height": window_height, "location": location}), indent=2)
+
+@mcp.tool()
+def create_door(name: str = "Door", width: float = 0.9, height: float = 2.1, thickness: float = 0.04, frame_thickness: float = 0.06, location: List[float] = [0.0, 0.0, 0.0], rotation: List[float] = [0.0, 0.0, 0.0]) -> str:
+    """Create a joined door slab and frame grounded at the requested location."""
+    return json.dumps(send_blender_command("create_door", {"name": name, "width": width, "height": height, "thickness": thickness, "frame_thickness": frame_thickness, "location": location, "rotation": rotation}), indent=2)
+
+@mcp.tool()
+def create_window(name: str = "Window", width: float = 1.2, height: float = 1.2, frame_thickness: float = 0.06, glass_thickness: float = 0.01, location: List[float] = [0.0, 0.0, 0.0], rotation: List[float] = [0.0, 0.0, 0.0]) -> str:
+    """Create a joined window frame and glass pane with explicit dimensions."""
+    return json.dumps(send_blender_command("create_window", {"name": name, "width": width, "height": height, "frame_thickness": frame_thickness, "glass_thickness": glass_thickness, "location": location, "rotation": rotation}), indent=2)
+
+@mcp.tool()
+def create_table(name: str = "Table", width: float = 1.4, depth: float = 0.8, height: float = 0.75, top_thickness: float = 0.04, leg_size: float = 0.06) -> str:
+    """Create a joined table with top, legs and apron grounded at Z=0."""
+    return json.dumps(send_blender_command("create_table", {"name": name, "width": width, "depth": depth, "height": height, "top_thickness": top_thickness, "leg_size": leg_size}), indent=2)
+
+@mcp.tool()
+def create_chair(name: str = "Chair", seat_width: float = 0.45, seat_depth: float = 0.45, seat_height: float = 0.45, back_height: float = 0.45, leg_size: float = 0.04) -> str:
+    """Create a joined chair with seat, legs and backrest grounded at Z=0."""
+    return json.dumps(send_blender_command("create_chair", {"name": name, "seat_width": seat_width, "seat_depth": seat_depth, "seat_height": seat_height, "back_height": back_height, "leg_size": leg_size}), indent=2)
+
+@mcp.tool()
+def create_shelf(name: str = "Shelf", width: float = 1.0, height: float = 1.8, depth: float = 0.3, shelf_count: int = 4, board_thickness: float = 0.03) -> str:
+    """Create a joined shelf unit with sides, boards and shelf_count levels."""
+    return json.dumps(send_blender_command("create_shelf", {"name": name, "width": width, "height": height, "depth": depth, "shelf_count": shelf_count, "board_thickness": board_thickness}), indent=2)
+
+@mcp.tool()
+def create_bed(name: str = "Bed", width: float = 1.6, length: float = 2.0, height: float = 0.5, headboard_height: float = 0.9) -> str:
+    """Create a joined bed with frame, mattress and headboard grounded at Z=0."""
+    return json.dumps(send_blender_command("create_bed", {"name": name, "width": width, "length": length, "height": height, "headboard_height": headboard_height}), indent=2)
+
+@mcp.tool()
+def create_sofa(name: str = "Sofa", width: float = 2.0, depth: float = 0.9, height: float = 0.8, seat_count: int = 3) -> str:
+    """Create a joined sofa with base, armrests, back and seat cushions."""
+    return json.dumps(send_blender_command("create_sofa", {"name": name, "width": width, "depth": depth, "height": height, "seat_count": seat_count}), indent=2)
+
+@mcp.tool()
+def create_kitchen_block(name: str = "Kitchen", width: float = 2.4, depth: float = 0.6, height: float = 0.9, cabinet_count: int = 4, counter_thickness: float = 0.04) -> str:
+    """Create a joined kitchen cabinet block with doors and countertop."""
+    return json.dumps(send_blender_command("create_kitchen_block", {"name": name, "width": width, "depth": depth, "height": height, "cabinet_count": cabinet_count, "counter_thickness": counter_thickness}), indent=2)
+
+@mcp.tool()
+def add_bevel_modifier(object_name: str, width: float = 0.02, segments: int = 2, angle_limit: float = 30.0) -> str:
+    """Add or update a bevel modifier with angle limit, width and segments."""
+    return json.dumps(send_blender_command("add_bevel_modifier", {"object_name": object_name, "width": width, "segments": segments, "angle_limit": angle_limit}), indent=2)
+
+@mcp.tool()
+def add_solidify_modifier(object_name: str, thickness: float = 0.02, offset: float = -1.0) -> str:
+    """Add or update a solidify modifier with thickness and offset."""
+    return json.dumps(send_blender_command("add_solidify_modifier", {"object_name": object_name, "thickness": thickness, "offset": offset}), indent=2)
+
+@mcp.tool()
+def add_array_modifier(object_name: str, count: int = 3, offset: List[float] = [0.0, 0.0, 0.0], relative: bool = False) -> str:
+    """Add or update an array modifier with count and constant or relative offset."""
+    return json.dumps(send_blender_command("add_array_modifier", {"object_name": object_name, "count": count, "offset": offset, "relative": relative}), indent=2)
+
+@mcp.tool()
+def add_mirror_modifier(object_name: str, axis: str = "X", bisect: bool = False) -> str:
+    """Add or update a mirror modifier on X, Y or Z with optional bisect."""
+    return json.dumps(send_blender_command("add_mirror_modifier", {"object_name": object_name, "axis": axis, "bisect": bisect}), indent=2)
+
+@mcp.tool()
+def apply_all_modifiers(object_name: str) -> str:
+    """Apply every modifier on a mesh object in stack order."""
+    return json.dumps(send_blender_command("apply_all_modifiers", {"object_name": object_name}), indent=2)
+
+@mcp.tool()
+def create_text_object(text: str = "Text", name: str = "Text", size: float = 1.0, extrude: float = 0.0, align_x: str = "CENTER") -> str:
+    """Create a Blender text object with size, extrude and horizontal alignment."""
+    return json.dumps(send_blender_command("create_text_object", {"text": text, "name": name, "size": size, "extrude": extrude, "align_x": align_x}), indent=2)
+
+@mcp.tool()
+def create_curve_tube(name: str = "Tube", points: Optional[List[List[float]]] = None, radius: float = 0.05, resolution: int = 12, cyclic: bool = False) -> str:
+    """Create a poly curve with bevel depth from points, with optional cyclic closure."""
+    return json.dumps(send_blender_command("create_curve_tube", {"name": name, "points": points, "radius": radius, "resolution": resolution, "cyclic": cyclic}), indent=2)
+
+@mcp.tool()
+def create_metaball(name: str = "Metaball", radius: float = 0.5, stiffness: float = 2.0, location: List[float] = [0.0, 0.0, 0.0]) -> str:
+    """Create a metaball object with one element radius and stiffness."""
+    return json.dumps(send_blender_command("create_metaball", {"name": name, "radius": radius, "stiffness": stiffness, "location": location}), indent=2)
+
+@mcp.tool()
+def convert_to_mesh(object_name: str) -> str:
+    """Convert a curve, text, surface or metaball object to a mesh in place."""
+    return json.dumps(send_blender_command("convert_to_mesh", {"object_name": object_name}), indent=2)
+
 CORE_TOOLS = {
     "get_scene_info",
     "get_object_info",
@@ -1271,6 +1379,18 @@ PROFILE_EXTRAS = {
         "create_staircase", "create_building_shell", "array_grid_on_surface",
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
         "validate_constraints", "apply_constraints",
+    },
+    "architecture": {
+        "create_room_shell", "create_door", "create_window", "create_table",
+        "create_chair", "create_shelf", "create_bed", "create_sofa",
+        "create_kitchen_block", "create_floorplan_walls", "cut_wall_opening",
+        "create_parametric_roof", "create_staircase", "create_building_shell",
+    },
+    "hardsurface": {
+        "add_bevel_modifier", "add_solidify_modifier", "add_array_modifier",
+        "add_mirror_modifier", "apply_all_modifiers", "create_text_object",
+        "create_curve_tube", "create_metaball", "convert_to_mesh",
+        "boolean_operation", "symmetry_mirror", "radial_array", "deform_object",
     },
     "materials": {
         "create_material", "assign_material",

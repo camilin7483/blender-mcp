@@ -399,3 +399,36 @@ def lighting_render(server: BlenderMCPServer, artifact_dir: str) -> dict:
         "resolution": render["resolution"],
         "engine_nonempty": bool(render["engine"]),
     }
+
+
+def architecture_interior(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    room = server.create_room_shell(
+        "BenchRoom", width=5.0, depth=4.0, height=3.0
+    )
+    table = server.create_table("BenchTable")
+    chair = server.create_chair("BenchChair")
+    door = server.create_door("BenchDoor", location=[0.0, -2.0, 0.0])
+    window = server.create_window("BenchWindow", location=[2.5, 0.0, 1.0])
+    return {
+        "room_objects": len(room["objects"]),
+        "table_dimensions": table["dimensions"],
+        "chair_height": chair["dimensions"][2],
+        "door": door["success"],
+        "window": window["success"],
+    }
+
+
+def hardsurface_modifiers(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.add_bevel_modifier("BenchCube", width=0.02, segments=2)
+    server.add_solidify_modifier("BenchCube", thickness=0.01)
+    server.add_array_modifier(
+        "BenchCube", count=2, offset=[1.2, 0.0, 0.0]
+    )
+    applied = server.apply_all_modifiers("BenchCube")
+    cube = bpy.data.objects["BenchCube"]
+    return {
+        "applied": len(applied.get("applied", [])),
+        "polygon_count": len(cube.data.polygons),
+        "dimensions": [round(float(value), 4) for value in cube.dimensions],
+    }

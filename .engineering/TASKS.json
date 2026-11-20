@@ -111,11 +111,18 @@
     {
       "id": "T12",
       "title": "Architecture and hard-surface pack",
-      "status": "pending",
+      "status": "completed",
       "files": [
         "pro/domain/architecture.py",
         "pro/domain/hardsurface.py"
-      ]
+      ],
+      "evidence": "18 tools, tested in Blender 4.5/5.2 and benchmark 22/22"
+    },
+    {
+      "id": "T13",
+      "title": "Release v4.2.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag and extension 4.2.0"
     }
   ]
 }

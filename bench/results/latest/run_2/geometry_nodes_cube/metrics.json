@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "geometry_nodes",
-  "duration_ms": 0.864,
+  "duration_ms": 0.971,
   "error": null,
   "expected": {
     "dimensions_mm": {

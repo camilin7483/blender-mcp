@@ -1,8 +1,6 @@
 # Next action
 
-1. Implement architecture/interior tools: room shell, door, window, table,
-   chair, shelf, bed, sofa, kitchen block.
-2. Implement hard-surface modifiers and primitive tools: bevel, solidify,
-   array, mirror, apply modifiers, text, curve tube, metaball.
-3. Register, test in Blender 4.5/5.2, benchmark and update docs.
-4. Tag `v4.2.0-alpha.1` only after evidence.
+1. Environment pack: sky, sun, fog, clouds, ground, biome scatter.
+2. Character blockout pack: humanoid, eyes, teeth, hair cap, garment.
+3. Materials: PBR library, baking, texture export.
+4. Register, test in 4.5/5.2, benchmark, docs and tag.
