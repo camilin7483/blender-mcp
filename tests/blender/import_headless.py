@@ -1626,7 +1626,14 @@ def main() -> None:
         assert brows["success"] and brows["spline_count"] == 30, brows
         lashes = server.create_eyelash_groom("V49Lashes", "V49Head", 30, 0.014, 1)
         assert lashes["success"] and lashes["spline_count"] == 30, lashes
+        body_object = bpy.data.objects[body["object"]]
+        existing_subdivision = body_object.modifiers[0]
+        selected_before_rig = set(bpy.context.selected_objects)
+        active_before_rig = bpy.context.view_layer.objects.active
         rig = server.create_character_rig_pro("V49Body", "V49Rig")
+        assert existing_subdivision.show_viewport and existing_subdivision.levels == 1
+        assert set(bpy.context.selected_objects) == selected_before_rig
+        assert bpy.context.view_layer.objects.active == active_before_rig
         assert rig["success"] and rig["bone_count"] >= 39, rig
         studio = server.create_character_studio("V49Studio", [0.0, 0.0, 0.9])
         assert studio["success"] and len(studio["lights"]) == 3, studio
@@ -1636,7 +1643,6 @@ def main() -> None:
         assert quality["success"] and quality["aaa_certified"] is False, quality
         assert quality["tier"] == "procedural_high_detail", quality
         assert quality["passed"], quality
-        body_object = bpy.data.objects[body["object"]]
         topology = bm.GeometryService.topology_metrics(body_object)
         assert topology["disconnected_components"] == 1, topology
         assert topology["non_manifold_edges"] == 0, topology

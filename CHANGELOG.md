@@ -2,6 +2,13 @@
 
 All notable changes to this repository are documented here.
 
+## 4.9.0-alpha.2 - 2026-11-20 (pre-release)
+
+- Write planar UVs in bulk and avoid repeated subdivision evaluation while
+  Blender computes the same automatic skin weights.
+- Preserve scene selection, modifier visibility and active object after rigging.
+- Integrate the upstream CI timeout fixes and the independent geometry/export audit.
+
 ## 4.9.0-alpha.1 - 2026-11-20 (unreleased)
 
 ### Independent audit fixes

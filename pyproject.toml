@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blender-mcp"
-version = "4.9.0a1"
+version = "4.9.0a2"
 description = "MCP bridge for the Blender MCP Pro add-on"
 requires-python = ">=3.10"
 dependencies = ["mcp==1.30.0", "PyJWT>=2.15.0,<3"]

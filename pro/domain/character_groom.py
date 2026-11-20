@@ -503,28 +503,6 @@ def create_eyelash_groom(server, name="LashesPro", head_object=None,
 # Armature helpers
 # ---------------------------------------------------------------------------
 
-def _restore_mode(view_layer, target_obj, previous_active, previous_mode):
-    try:
-        if target_obj is not None:
-            view_layer.objects.active = target_obj
-        try:
-            bpy.ops.object.mode_set(mode="OBJECT")
-        except Exception:
-            pass
-    finally:
-        try:
-            view_layer.objects.active = previous_active
-        except Exception:
-            pass
-        if previous_active is not None and previous_mode not in (
-            None, "OBJECT",
-        ):
-            try:
-                bpy.ops.object.mode_set(mode=previous_mode)
-            except Exception:
-                pass
-
-
 def _new_edit_bone(edit_bones, bone_name, head, tail, parent=None,
                    use_connect=False):
     if bone_name in edit_bones:
@@ -639,61 +617,52 @@ def create_character_rig_pro(server, mesh_name,
 
     view_layer = bpy.context.view_layer
     previous_active = view_layer.objects.active
-    try:
-        previous_mode = previous_active.mode
-    except Exception:
-        previous_mode = "OBJECT"
-    try:
-        view_layer.objects.active = arm_obj
-        arm_obj.select_set(True)
-        bpy.ops.object.mode_set(mode="EDIT")
-        try:
-            edit_map = {}
-            for bone_name, head_p, tail_p, parent, conn in specs:
-                parent_bone = edit_map.get(parent) if parent else None
-                edit_map[bone_name] = _new_edit_bone(
-                    arm_obj.data.edit_bones, bone_name, head_p, tail_p,
-                    parent=parent_bone, use_connect=conn,
-                )
-        finally:
-            _restore_mode(view_layer, arm_obj, previous_active,
-                          previous_mode)
-    except ValueError:
-        raise
-    except RuntimeError as exc:
-        raise ValueError(
-            f"Could not edit armature '{arm_obj.name}': {exc}")
-    view_layer.update()
-
-    # Parent the mesh with automatic weights.
-    previous_selection = list(bpy.context.selected_objects)
-    try:
+    previous_mode = previous_active.mode if previous_active else "OBJECT"
+    previously_selected = arm_obj.select_get()
+    if previous_mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
-    except Exception:
-        pass
+    # Auto weights use the base cage. Keep other modifier stacks untouched.
+    subdivision = None
+    if len(mesh_obj.modifiers) == 1:
+        candidate = mesh_obj.modifiers[0]
+        if candidate.type == "SUBSURF" and candidate.show_viewport:
+            subdivision = candidate
     try:
-        bpy.ops.object.select_all(action="DESELECT")
-        mesh_obj.select_set(True)
-        arm_obj.select_set(True)
+        if subdivision is not None:
+            subdivision.show_viewport = False
         view_layer.objects.active = arm_obj
-        bpy.ops.object.parent_set(type="ARMATURE_AUTO")
-    except RuntimeError as exc:
-        raise ValueError(
-            f"Could not parent '{mesh_obj.name}' to "
-            f"'{arm_obj.name}' with automatic weights: {exc}"
-        )
-    finally:
-        try:
-            bpy.ops.object.select_all(action="DESELECT")
-        except Exception:
-            pass
-        for item in previous_selection:
+        arm_obj.select_set(True)
+        with bpy.context.temp_override(
+            selected_objects=[arm_obj], selected_editable_objects=[arm_obj],
+        ):
+            bpy.ops.object.mode_set(mode="EDIT")
             try:
-                item.select_set(True)
-            except Exception:
-                continue
-        _restore_mode(view_layer, arm_obj, previous_active, previous_mode)
-    view_layer.update()
+                edit_map = {}
+                for bone_name, head_p, tail_p, parent, conn in specs:
+                    parent_bone = edit_map.get(parent) if parent else None
+                    edit_map[bone_name] = _new_edit_bone(
+                        arm_obj.data.edit_bones, bone_name, head_p, tail_p,
+                        parent=parent_bone, use_connect=conn,
+                    )
+            finally:
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+        # Retain Blender's native heat weights while avoiding scene-wide selection operators.
+        with bpy.context.temp_override(
+            selected_objects=[mesh_obj, arm_obj], selected_editable_objects=[mesh_obj, arm_obj],
+        ):
+            status = bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+        if "FINISHED" not in status or mesh_obj.parent != arm_obj:
+            raise ValueError(f"Could not bind '{mesh_obj.name}' to '{arm_obj.name}'")
+    except RuntimeError as exc:
+        raise ValueError(f"Could not rig '{mesh_obj.name}' with '{arm_obj.name}': {exc}") from exc
+    finally:
+        if subdivision is not None:
+            subdivision.show_viewport = True
+        arm_obj.select_set(previously_selected)
+        view_layer.objects.active = previous_active
+        if previous_mode != "OBJECT":
+            bpy.ops.object.mode_set(mode=previous_mode)
 
     bones = sorted(bone.name for bone in arm_obj.data.bones)
     groups = sorted(group.name for group in mesh_obj.vertex_groups)

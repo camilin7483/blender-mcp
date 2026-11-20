@@ -11,6 +11,7 @@ AAA or photoreal characters.
 """
 
 import math
+from array import array
 
 import bmesh
 import bpy
@@ -282,20 +283,21 @@ def _add_planar_uv(obj):
         return False
     if len(mesh.vertices) == 0:
         return False
-    xs = [vertex.co.x for vertex in mesh.vertices]
-    zs = [vertex.co.z for vertex in mesh.vertices]
-    min_x, max_x = min(xs), max(xs)
-    min_z, max_z = min(zs), max(zs)
-    width = max(max_x - min_x, 1e-9)
-    height = max(max_z - min_z, 1e-9)
-    uv_layer = mesh.uv_layers.new(name="UVMap")
-    for polygon in mesh.polygons:
-        for loop_index in polygon.loop_indices:
-            vertex = mesh.vertices[mesh.loops[loop_index].vertex_index]
-            uv_layer.data[loop_index].uv = (
-                (vertex.co.x - min_x) / width,
-                (vertex.co.z - min_z) / height,
-            )
+    coordinates = array("f", [0]) * (len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", coordinates)
+    xs, zs = coordinates[::3], coordinates[2::3]
+    min_x, min_z = min(xs), min(zs)
+    width = max(max(xs) - min_x, 1e-9)
+    height = max(max(zs) - min_z, 1e-9)
+    u = [(x - min_x) / width for x in xs]
+    v = [(z - min_z) / height for z in zs]
+    indices = array("i", [0]) * len(mesh.loops)
+    mesh.loops.foreach_get("vertex_index", indices)
+    values = array("f", [0]) * (2 * len(indices))
+    for loop, vertex in enumerate(indices):
+        values[2 * loop] = u[vertex]
+        values[2 * loop + 1] = v[vertex]
+    mesh.uv_layers.new(name="UVMap").uv.foreach_set("vector", values)
     return True
 
 
