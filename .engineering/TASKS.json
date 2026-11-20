@@ -100,7 +100,22 @@
         "README.md",
         "bench"
       ],
-      "evidence": "implemented and tested"
+      "evidence": "29 host tests, 20/20 bench, 4.5 and 5.2 headless+GUI"
+    },
+    {
+      "id": "T11",
+      "title": "Release v4.1.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag v4.1.0-alpha.1, extension 4.1.0 installed in 4.5/5.2"
+    },
+    {
+      "id": "T12",
+      "title": "Architecture and hard-surface pack",
+      "status": "pending",
+      "files": [
+        "pro/domain/architecture.py",
+        "pro/domain/hardsurface.py"
+      ]
     }
   ]
 }
