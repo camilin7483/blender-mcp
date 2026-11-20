@@ -59,7 +59,7 @@ extension checksum and CI run. A local rerun writes `gate.json`, `SHA256SUMS`,
 
 | Tag | Meaning |
 |---|---|
-| `v4.9.0-alpha.2` | Published prerelease with 313 registered tools and verified Linux gate. |
+| `v4.9.0-alpha.2` | Published alpha build with 313 registered tools and a verified Linux gate. |
 | Beta | After the full cross-platform Blender checks are validated. |
 | Release candidate | After an external benchmark comparison is published and critical defects are resolved. |
 | Stable | After all required checks pass. |

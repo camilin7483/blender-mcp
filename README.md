@@ -1,7 +1,7 @@
 # Blender MCP Pro
 
 [![CI on main](https://github.com/camilin7483/blender-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/camilin7483/blender-mcp/actions/workflows/ci.yml)
-[![Latest Pro prerelease](https://img.shields.io/badge/Pro-v4.9.0--alpha.2-176a70)](https://github.com/camilin7483/blender-mcp/releases/tag/v4.9.0-alpha.2)
+[![Published Pro alpha build](https://img.shields.io/badge/Pro-v4.9.0--alpha.2-176a70)](https://github.com/camilin7483/blender-mcp/releases/tag/v4.9.0-alpha.2)
 
 Blender MCP Pro connects an MCP client to Blender for precision 3D modeling,
 rigging, scene inspection, rendering, and export. The default `full` profile
@@ -14,7 +14,7 @@ MCP client over stdio and sends authenticated requests to Blender on
 
 ## What's new
 
-The published [v4.9.0-alpha.2 prerelease](docs/releases/v4.9.0-alpha.2.md)
+The published [v4.9.0-alpha.2 build](docs/releases/v4.9.0-alpha.2.md)
 includes the v4 character, scene and pipeline tool packs. The independent
 audit and performance update made these changes.
 

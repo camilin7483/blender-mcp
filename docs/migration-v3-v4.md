@@ -2,7 +2,7 @@
 
 ## Status
 
-The published [v4.9.0-alpha.2 prerelease](releases/v4.9.0-alpha.2.md) includes
+The published [v4.9.0-alpha.2 build](releases/v4.9.0-alpha.2.md) includes
 the v4 bridge and extension. Follow the
 [stable-release checklist](release-checklist.md) for remaining validation.
 
