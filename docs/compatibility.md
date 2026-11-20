@@ -27,13 +27,13 @@
   names. Enable only one at a time.
 - `pro/sync_addon.sh` installs the add-on as both `blender_mcp_pro.py` and
   `blender_mcp.py`. Do not enable both copies. The extension package
-  (`build/blender_mcp_pro-4.0.0.zip`) is a third install path; enable only one.
+  (`build/blender_mcp_pro-4.1.0.zip`) is a third install path; enable only one.
 - The v4 add-on creates a token file on first start. The bridge and add-on must
   read the same path. See `SECURITY.md`.
 
 ## Versioning
 
-- The repository follows SemVer. The current pre-release is `4.0.0-alpha.4`.
+- The repository follows SemVer. The current pre-release is `4.1.0-alpha.1`.
 - v3 tools keep their names during the v4 migration. Breaking changes require
   a wrapper and a note in `docs/migration-v3-v4.md`.
 - A v4 stable release requires the acceptance criteria in the project plan,

@@ -1,0 +1,17 @@
+{
+  "terrain_dimensions": [
+    4.0,
+    4.0
+  ],
+  "height": {
+    "target": 0.5,
+    "tolerance": 0.01
+  },
+  "rock_vertices": {
+    "min": 12
+  },
+  "tree_polygons": {
+    "min": 1
+  },
+  "scattered": 6
+}

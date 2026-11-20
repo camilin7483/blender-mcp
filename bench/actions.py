@@ -298,3 +298,104 @@ def rigging_armature(server: BlenderMCPServer, _artifact_dir: str) -> dict:
     }
 
 
+
+
+def terrain_landscape(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    terrain = server.create_terrain(
+        "BenchTerrain", size=4.0, subdivisions=16, height=0.5, seed=7
+    )
+    rock = server.create_rock("BenchRock", size=0.3, seed=7)
+    tree = server.create_tree("BenchTree", height=2.0, crown_radius=0.5, seed=7)
+    scattered = server.scatter_objects("BenchRock", "BenchTerrain", count=6, seed=7)
+    return {
+        "terrain_dimensions": terrain["dimensions"][:2],
+        "height": terrain["dimensions"][2],
+        "rock_vertices": rock["vertex_count"],
+        "tree_polygons": tree["polygon_count"],
+        "scattered": scattered["count"],
+    }
+
+
+def water_surface(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    water = server.create_water_plane("BenchWater", size=3.0, subdivisions=8)
+    river = server.create_river("BenchRiver", width=0.5, segments=4)
+    pond = server.create_pond("BenchPond", radius=1.0, segments=12)
+    return {
+        "water_dimensions": water["dimensions"],
+        "has_material": bool(water.get("material")),
+        "river_faces": river["face_count"],
+        "pond_faces": pond["face_count"],
+    }
+
+
+def vegetation_patch(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    tree = server.create_tree("BenchTree", height=2.0, crown_radius=0.5, seed=8)
+    bush = server.create_bush("BenchBush", radius=0.3, height=0.3, seed=8)
+    grass = server.create_grass_patch(
+        "BenchGrass", radius=0.3, blade_count=10, seed=8
+    )
+    flowers = server.create_flower_patch(
+        "BenchFlowers", radius=0.3, count=3, seed=8
+    )
+    return {
+        "tree_polygons": tree["polygon_count"],
+        "bush_polygons": bush["polygon_count"],
+        "grass_polygons": grass["polygon_count"],
+        "flower_polygons": flowers["polygon_count"],
+    }
+
+
+def materials_uv(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_parametric_part(
+        "BenchUV", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+        location=[0.0, 0.0, 0.25],
+    )
+    server.create_procedural_material("BenchProcedural")
+    server.assign_material("BenchUV", "BenchProcedural")
+    uv = server.smart_uv_unwrap("BenchUV")
+    server.pack_uv_islands("BenchUV")
+    materials = server.list_materials()
+    mesh = bpy.data.objects["BenchUV"].data
+    material_data = bpy.data.materials["BenchProcedural"]
+    return {
+        "uv_layer_present": bool(uv.get("uv_layer")) and len(mesh.uv_layers) > 0,
+        "material_assigned": len(mesh.materials) > 0,
+        "material_nodes": len(material_data.node_tree.nodes),
+        "materials_count": materials["count"],
+    }
+
+
+def physics_rigid(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.add_rigid_body(
+        "BenchCube", body_type="ACTIVE", mass=2.0, friction=0.4
+    )
+    collision = server.add_collision("BenchCube")
+    body = bpy.data.objects["BenchCube"].rigid_body
+    return {
+        "rigid_body_type": body.type if body else None,
+        "mass": float(body.mass) if body else 0.0,
+        "collision_modifier": bool(
+            bpy.data.objects["BenchCube"].modifiers.get("Collision")
+        )
+        and collision["success"],
+        "friction": float(body.friction) if body else 0.0,
+    }
+
+
+def lighting_render(server: BlenderMCPServer, artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_light("BenchLight", energy=50.0)
+    server.create_camera(
+        "BenchCamera", location=[3.0, -3.0, 2.0], look_at=[0.0, 0.0, 0.5]
+    )
+    server.setup_world_background(color=[0.05, 0.05, 0.05], strength=1.0)
+    render = server.render_still(
+        "bench_render.png", camera_name="BenchCamera",
+        resolution_x=64, resolution_y=64, samples=4,
+    )
+    return {
+        "file_exists": os.path.exists(render["filepath"]),
+        "resolution": render["resolution"],
+        "engine_nonempty": bool(render["engine"]),
+    }

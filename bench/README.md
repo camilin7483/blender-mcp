@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **14/14 tasks passed** in every run.
+- **20/20 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -26,6 +26,12 @@ same scenarios.
 | export | godot GLB + reimport | reimport matches dimensions |
 | anchors | cube top-center | position `[0,0,1]`, source |
 | constraints | desk ground + no-intersection | all constraints pass |
+| terrain | terrain + rock + scatter | 4×4 m, six instances |
+| vegetation | tree, bush, grass, flowers | non-empty meshes |
+| water | plane, river, pond | dimensions and faces |
+| materials/UV | procedural + unwrap | UV layer, nodes |
+| physics | rigid body + collision | ACTIVE, mass 2 |
+| lighting/render | light, camera, 64 px still | file exists |
 | materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
 | geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
 | repair | non-uniform scale | normalized scale |

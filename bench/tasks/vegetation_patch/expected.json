@@ -1,0 +1,14 @@
+{
+  "tree_polygons": {
+    "min": 1
+  },
+  "bush_polygons": {
+    "min": 1
+  },
+  "grass_polygons": {
+    "min": 1
+  },
+  "flower_polygons": {
+    "min": 1
+  }
+}

@@ -20,6 +20,8 @@ for name in blender_mcp_pro.py blender_mcp.py; do
   dst="$ADDONS_DIR/$name"
   if [ -f "$dst" ]; then cp "$dst" "$dst.bak"; fi
   cp "$SRC" "$dst"
-  echo "synced: $dst"
+  rm -rf "$ADDONS_DIR/domain"
+  cp -R "$SCRIPT_DIR/domain" "$ADDONS_DIR/domain"
+  echo "synced: $dst (+ domain/)"
 done
 echo "DONE. Toggle the add-on off/on in Blender (or restart it)."

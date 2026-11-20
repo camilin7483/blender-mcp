@@ -24,7 +24,7 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `src/blender_mcp/server.py` | Registers 61 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| MCP bridge | `src/blender_mcp/server.py` | Registers 89 FastMCP tools; serializes each call to a socket command; returns JSON text. |
 | Socket transport | `src/blender_mcp/transport.py` | Auth token loading, one connection per command, framing, request IDs and response limits. |
 | Bridge config | `src/blender_mcp/config.py` | Host, port, token paths, response limits and heavy-command timeouts. |
 | Legacy entry point | `pro/mcp_server.py` | Thin wrapper that imports the package and keeps old MCP configurations working. |
@@ -35,6 +35,7 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 | Geometry service | `pro/blender_mcp.py` | Evaluated snapshots, world BVH, contact graph, topology, symmetry, tolerances. |
 | Anchors | `pro/blender_mcp.py` | Center/face/surface/edge/corner/socket/bone/custom anchors and operations. |
 | Audit | `pro/blender_mcp.py` | Collects metrics, evaluates requirements, computes the score, sets `passed` last. |
+| Domain packs | `pro/domain/` | Terrain, vegetation, water, materials/UV, lighting and physics modules loaded dynamically by the add-on. |
 | Rendering | `pro/blender_mcp.py` | Deterministic inspection cameras, modes, metadata and optional AABB overlay. |
 | Export | `pro/blender_mcp.py` | Game profiles, scene validation, file write and reimport dimension check. |
 | Asset downloads | `pro/blender_mcp.py` | Poly Haven and Sketchfab search/download/import. |

@@ -1,0 +1,10 @@
+{
+  "uv_layer_present": true,
+  "material_assigned": true,
+  "material_nodes": {
+    "min": 3
+  },
+  "materials_count": {
+    "min": 1
+  }
+}

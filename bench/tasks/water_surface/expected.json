@@ -1,0 +1,13 @@
+{
+  "water_dimensions": [
+    3.0,
+    3.0
+  ],
+  "has_material": true,
+  "river_faces": {
+    "min": 1
+  },
+  "pond_faces": {
+    "min": 1
+  }
+}

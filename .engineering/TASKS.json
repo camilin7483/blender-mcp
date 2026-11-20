@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "updated": "2026-11-19",
+  "tasks": [
+    {
+      "id": "T0",
+      "title": "Verify baseline, branch and tool count",
+      "status": "completed",
+      "evidence": "17 host tests, ruff clean, 61 tools"
+    },
+    {
+      "id": "T1",
+      "title": "Persist engineering state and roadmap",
+      "status": "completed",
+      "evidence": "AGENTS.md, ROADMAP.md, .engineering/"
+    },
+    {
+      "id": "T2",
+      "title": "Add tool catalog metadata and discovery tools",
+      "status": "completed",
+      "files": [
+        "src/blender_mcp/server.py",
+        "tests/contracts/test_tool_catalog.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T3",
+      "title": "Implement terrain domain pack",
+      "status": "completed",
+      "files": [
+        "pro/domain/terrain.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T4",
+      "title": "Implement vegetation domain pack",
+      "status": "completed",
+      "files": [
+        "pro/domain/vegetation.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T5",
+      "title": "Implement water and material/UV packs",
+      "status": "completed",
+      "files": [
+        "pro/domain/water.py",
+        "pro/domain/materials_uv.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T6",
+      "title": "Implement lighting/render and physics packs",
+      "status": "completed",
+      "files": [
+        "pro/domain/lighting.py",
+        "pro/domain/physics.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T7",
+      "title": "Load domain packs in add-on and dispatch",
+      "status": "completed",
+      "files": [
+        "pro/blender_mcp.py",
+        "pro/domain/__init__.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T8",
+      "title": "Register bridge tools and profiles",
+      "status": "completed",
+      "files": [
+        "src/blender_mcp/server.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T9",
+      "title": "Real-Blender tests for every new domain tool",
+      "status": "completed",
+      "files": [
+        "tests/blender/import_headless.py"
+      ],
+      "evidence": "implemented and tested"
+    },
+    {
+      "id": "T10",
+      "title": "Contract tests, docs, benchmark and commit",
+      "status": "completed",
+      "files": [
+        "tests/contracts",
+        "CHANGELOG.md",
+        "README.md",
+        "bench"
+      ],
+      "evidence": "implemented and tested"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 0, 0),
+    "version": (4, 1, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -31,6 +31,7 @@ import traceback
 import urllib.request
 import urllib.parse
 import zipfile
+import importlib.util
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import suppress
@@ -77,6 +78,32 @@ MAIN_THREAD_TICK_SECONDS = 0.02
 MAX_REQUESTS_PER_TICK = 8
 MAX_CLIENTS = 5
 MAX_QUEUE_SECONDS = 175.0
+
+
+def _load_domain_pack():
+    """Load the sibling domain package without requiring the add-on to be a package."""
+    domain_dir = osp.join(osp.dirname(osp.abspath(__file__)), "domain")
+    init_path = osp.join(domain_dir, "__init__.py")
+    if not osp.isfile(init_path):
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "blender_mcp_domain",
+            init_path,
+            submodule_search_locations=[domain_dir],
+        )
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["blender_mcp_domain"] = module
+        spec.loader.exec_module(module)
+        return module
+    except Exception:
+        traceback.print_exc()
+        return None
+
+
+DOMAIN = _load_domain_pack()
 
 
 @dataclass
@@ -2168,6 +2195,31 @@ class BlenderMCPServer:
     def _execute_command_internal(self, cmd_type: str, params: Dict[str, Any]) -> Any:
         handlers = {
             # Scene & Blueprint Inspection
+            "run_workflow": lambda p: self.run_workflow(**p),
+            "create_terrain": lambda p: self.create_terrain(**p),
+            "sculpt_terrain_region": lambda p: self.sculpt_terrain_region(**p),
+            "scatter_objects": lambda p: self.scatter_objects(**p),
+            "create_rock": lambda p: self.create_rock(**p),
+            "create_tree": lambda p: self.create_tree(**p),
+            "create_bush": lambda p: self.create_bush(**p),
+            "create_grass_patch": lambda p: self.create_grass_patch(**p),
+            "create_flower_patch": lambda p: self.create_flower_patch(**p),
+            "create_water_plane": lambda p: self.create_water_plane(**p),
+            "create_river": lambda p: self.create_river(**p),
+            "create_pond": lambda p: self.create_pond(**p),
+            "create_water_material": lambda p: self.create_water_material(**p),
+            "create_procedural_material": lambda p: self.create_procedural_material(**p),
+            "smart_uv_unwrap": lambda p: self.smart_uv_unwrap(**p),
+            "pack_uv_islands": lambda p: self.pack_uv_islands(**p),
+            "list_materials": lambda p: self.list_materials(**p),
+            "create_light": lambda p: self.create_light(**p),
+            "create_camera": lambda p: self.create_camera(**p),
+            "setup_world_background": lambda p: self.setup_world_background(**p),
+            "render_still": lambda p: self.render_still(**p),
+            "add_rigid_body": lambda p: self.add_rigid_body(**p),
+            "add_collision": lambda p: self.add_collision(**p),
+            "add_cloth": lambda p: self.add_cloth(**p),
+            "bake_simulation": lambda p: self.bake_simulation(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -2243,6 +2295,166 @@ class BlenderMCPServer:
             raise ValueError(f"Unknown command type '{cmd_type}'.")
         return handlers[cmd_type](params)
 
+    def run_workflow(
+        self,
+        steps: List[Dict[str, Any]],
+        stop_on_error: bool = True,
+        max_steps: int = 50,
+    ) -> Dict[str, Any]:
+        """Execute a bounded sequence of tool calls in one main-thread command."""
+        if not isinstance(steps, list) or not steps:
+            raise ValueError("steps must be a non-empty list")
+        if len(steps) > int(max_steps):
+            raise ValueError(f"steps exceeds max_steps ({max_steps})")
+        blocked = {"run_workflow", "execute_code"}
+        results: List[Dict[str, Any]] = []
+        for index, step in enumerate(steps):
+            if not isinstance(step, dict):
+                raise ValueError(f"step {index} must be an object")
+            tool = str(step.get("tool") or step.get("type") or "").strip()
+            if not tool:
+                raise ValueError(f"step {index} needs a tool name")
+            if tool in blocked:
+                raise ValueError(f"step {index} may not call '{tool}'")
+            params = step.get("params") or {}
+            if not isinstance(params, dict):
+                raise ValueError(f"step {index} params must be an object")
+            try:
+                result = self._execute_command_internal(tool, params)
+                results.append({
+                    "index": index,
+                    "tool": tool,
+                    "success": True,
+                    "result": result,
+                })
+            except Exception as exc:
+                results.append({
+                    "index": index,
+                    "tool": tool,
+                    "success": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+                if stop_on_error:
+                    break
+        return {
+            "success": len(results) == len(steps)
+            and all(item["success"] for item in results),
+            "executed": len(results),
+            "total": len(steps),
+            "results": results,
+        }
+
+    def _domain_call(self, pack_name: str, function_name: str, params: Dict[str, Any]) -> Any:
+        if DOMAIN is None:
+            raise RuntimeError("Blender MCP domain pack is not available")
+        pack = getattr(DOMAIN, pack_name, None)
+        if pack is None:
+            raise RuntimeError(f"Domain pack '{pack_name}' is not available")
+        function = getattr(pack, function_name, None)
+        if function is None:
+            raise RuntimeError(f"Domain function '{pack_name}.{function_name}' is not available")
+        return function(self, **params)
+
+    def create_terrain(self, name: str = "Terrain", size: float = 10.0, subdivisions: int = 64, height: float = 1.0, noise_scale: float = 2.0, seed: int = 0, style: str = "mountains") -> Dict[str, Any]:
+        """Create a deterministic multi-octave terrain mesh (mountains, hills, dunes or flat) with metric size and height."""
+        return self._domain_call("terrain", "create_terrain", {k: v for k, v in locals().items() if k != "self"})
+
+    def sculpt_terrain_region(self, object_name: str, center: List[float] = [0.0, 0.0, 0.0], radius: float = 1.0, strength: float = 0.5, direction: str = "UP") -> Dict[str, Any]:
+        """Sculpt a circular region of a terrain mesh up or down with smooth falloff."""
+        return self._domain_call("terrain", "sculpt_terrain_region", {k: v for k, v in locals().items() if k != "self"})
+
+    def scatter_objects(self, source_name: str, target_name: str, count: int = 50, seed: int = 0, scale_min: float = 0.8, scale_max: float = 1.2, align_to_normal: bool = True) -> Dict[str, Any]:
+        """Scatter linked instances of a source object over the surface of a target mesh, with deterministic placement and scale."""
+        return self._domain_call("terrain", "scatter_objects", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_rock(self, name: str = "Rock", size: float = 1.0, roughness: float = 0.35, seed: int = 0, subdivisions: int = 2) -> Dict[str, Any]:
+        """Create a deterministic noise-displaced rock mesh with approximate metric size."""
+        return self._domain_call("terrain", "create_rock", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_tree(self, name: str = "Tree", height: float = 4.0, trunk_radius: float = 0.15, crown_radius: float = 1.5, tree_type: str = "deciduous", seed: int = 0) -> Dict[str, Any]:
+        """Create a joined tree mesh (deciduous, conifer or palm) with trunk and crown/leaf materials."""
+        return self._domain_call("vegetation", "create_tree", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_bush(self, name: str = "Bush", radius: float = 0.8, height: float = 0.6, seed: int = 0) -> Dict[str, Any]:
+        """Create a joined low bush mesh from deterministic displaced blobs."""
+        return self._domain_call("vegetation", "create_bush", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_grass_patch(self, name: str = "GrassPatch", radius: float = 1.0, blade_count: int = 100, blade_height: float = 0.15, seed: int = 0) -> Dict[str, Any]:
+        """Create one mesh containing many tapered grass blades in a circular patch."""
+        return self._domain_call("vegetation", "create_grass_patch", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_flower_patch(self, name: str = "Flowers", radius: float = 1.0, count: int = 20, seed: int = 0) -> Dict[str, Any]:
+        """Create one joined mesh with stems, petals and centers for a flower patch."""
+        return self._domain_call("vegetation", "create_flower_patch", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_water_plane(self, name: str = "Water", size: float = 10.0, subdivisions: int = 64, wave_height: float = 0.08, wave_scale: float = 1.5, color: List[float] = [0.05, 0.25, 0.35, 1.0], roughness: float = 0.15) -> Dict[str, Any]:
+        """Create a wave-displaced water surface with a Principled water material."""
+        return self._domain_call("water", "create_water_plane", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_river(self, name: str = "River", points: Optional[List[List[float]]] = None, width: float = 2.0, depth: float = 0.2, segments: int = 32) -> Dict[str, Any]:
+        """Create a water ribbon mesh following a polyline with width and depth."""
+        return self._domain_call("water", "create_river", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_pond(self, name: str = "Pond", radius: float = 3.0, depth: float = 0.4, segments: int = 48) -> Dict[str, Any]:
+        """Create a circular pond surface with a shallow bed and raised rim."""
+        return self._domain_call("water", "create_pond", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_water_material(self, name: str = "WaterMaterial", color: List[float] = [0.05, 0.25, 0.35, 1.0], roughness: float = 0.1, transmission: float = 0.6, wave_scale: float = 1.5) -> Dict[str, Any]:
+        """Create a Principled water material with transmission, IOR and procedural bump."""
+        return self._domain_call("water", "create_water_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_procedural_material(self, name: str = "Procedural", base_color: List[float] = [0.6, 0.6, 0.6, 1.0], roughness: float = 0.5, metallic: float = 0.0, noise_scale: float = 5.0, bump_strength: float = 0.2, color_variation: float = 0.1) -> Dict[str, Any]:
+        """Create a Principled material with procedural color variation and bump."""
+        return self._domain_call("materials_uv", "create_procedural_material", {k: v for k, v in locals().items() if k != "self"})
+
+    def smart_uv_unwrap(self, object_name: str, angle_limit: float = 66.0, island_margin: float = 0.02) -> Dict[str, Any]:
+        """Smart-project UVs for a mesh object and return the active UV layer."""
+        return self._domain_call("materials_uv", "smart_uv_unwrap", {k: v for k, v in locals().items() if k != "self"})
+
+    def pack_uv_islands(self, object_name: str, margin: float = 0.001) -> Dict[str, Any]:
+        """Pack UV islands of a mesh object with a margin."""
+        return self._domain_call("materials_uv", "pack_uv_islands", {k: v for k, v in locals().items() if k != "self"})
+
+    def list_materials(self, used_only: bool = False) -> Dict[str, Any]:
+        """List materials with user counts, node types and optional used-only filtering."""
+        return self._domain_call("materials_uv", "list_materials", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_light(self, name: str = "Light", light_type: str = "POINT", energy: float = 100.0, color: List[float] = [1.0, 1.0, 1.0], location: List[float] = [0.0, 0.0, 3.0], rotation: List[float] = [0.0, 0.0, 0.0], size: float = 0.1, spot_size: float = 45.0) -> Dict[str, Any]:
+        """Create a point, sun, area or spot light with metric location and energy in watts."""
+        return self._domain_call("lighting", "create_light", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_camera(self, name: str = "Camera", location: List[float] = [7.0, -7.0, 5.0], look_at: List[float] = [0.0, 0.0, 1.0], lens: float = 50.0, ortho_scale: float = 6.0, camera_type: str = "PERSP") -> Dict[str, Any]:
+        """Create a perspective or orthographic camera aimed at a target point."""
+        return self._domain_call("lighting", "create_camera", {k: v for k, v in locals().items() if k != "self"})
+
+    def setup_world_background(self, color: List[float] = [0.05, 0.05, 0.05], strength: float = 1.0) -> Dict[str, Any]:
+        """Create or update the World background color and strength."""
+        return self._domain_call("lighting", "setup_world_background", {k: v for k, v in locals().items() if k != "self"})
+
+    def render_still(self, filepath: str, camera_name: Optional[str] = None, resolution_x: int = 960, resolution_y: int = 540, samples: int = 32, engine: str = "BLENDER_EEVEE_NEXT", transparent: bool = False) -> Dict[str, Any]:
+        """Render a still image with a chosen camera and engine into the output sandbox."""
+        resolved = resolve_output_path(filepath, {".png", ".jpg", ".jpeg", ".exr"})
+        return self._domain_call("lighting", "render_still", {
+            "filepath": resolved, "camera_name": camera_name,
+            "resolution_x": resolution_x, "resolution_y": resolution_y,
+            "samples": samples, "engine": engine, "transparent": transparent,
+        })
+
+    def add_rigid_body(self, object_name: str, body_type: str = "ACTIVE", mass: float = 1.0, friction: float = 0.5, restitution: float = 0.0) -> Dict[str, Any]:
+        """Add a rigid body to an object with active/passive type, mass, friction and restitution."""
+        return self._domain_call("physics", "add_rigid_body", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_collision(self, object_name: str, shape: str = "CONVEX_HULL", margin: float = 0.04) -> Dict[str, Any]:
+        """Add a collision modifier to an object with a shape and margin."""
+        return self._domain_call("physics", "add_collision", {k: v for k, v in locals().items() if k != "self"})
+
+    def add_cloth(self, object_name: str, quality: int = 5, mass: float = 0.3, tension: float = 15.0, bending: float = 0.5) -> Dict[str, Any]:
+        """Add a cloth modifier to a mesh with quality, mass, tension and bending."""
+        return self._domain_call("physics", "add_cloth", {k: v for k, v in locals().items() if k != "self"})
+
+    def bake_simulation(self, frame_start: int = 1, frame_end: int = 250) -> Dict[str, Any]:
+        """Bake all point caches in the scene for a frame range."""
+        return self._domain_call("physics", "bake_simulation", {k: v for k, v in locals().items() if k != "self"})
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION
     # ==========================================================================

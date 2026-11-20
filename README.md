@@ -5,7 +5,7 @@
 ## Editions
 
 - **Legacy** — `legacy/blender_mcp.py`. Original single-file v3 add-on, kept for compatibility.
-- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 61-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
+- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 89-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
 ## Status
 
@@ -41,7 +41,9 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
   silhouette, wireframe, normals and UV checker modes, with camera metadata
   and a reproducible output hash.
-- **Benchmarked workflows** — 14 deterministic tasks across all 11 requested categories, with published raw artifacts.
+- **Benchmarked workflows** — 20 deterministic tasks across all 11 requested categories plus domain packs, with published raw artifacts.
+- **Domain packs** — Terrain, vegetation, water, materials/UV, lighting/camera/render and physics primitives, all implemented with real Blender geometry.
+- **Tool discovery** — `tools_catalog`, `tools_search`, `tools_describe` and `run_workflow` for small models and token-efficient batch execution.
 - **Game-ready export** — `godot`, `unity`, `unreal` and `generic-gltf`
   profiles validate scale, materials, UVs, armatures, actions, LOD and
   collision meshes, then reimport the file and compare dimensions.
@@ -60,9 +62,9 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 ## Tool profiles
 
 Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
-tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
+tool surface. Profiles are `nano` (13), `guided` (26), `core` (17), `modeling`, `materials`,
 `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
-and `full` (default, 61 tools). `execute_code` is full-only and remains
+and `full` (default, 89 tools). `execute_code` is full-only and remains
 disabled in the add-on by default. Unknown profile names fall back to
 `core`. Profiles filter bridge registration only; the add-on keeps every
 handler.
@@ -93,7 +95,7 @@ The add-on starts a **socket server** inside Blender on `localhost:9876`. When a
 1. Open **Blender**
 2. Go to **Edit > Preferences > Add-ons**
 3. Click **Install from Disk...**
-4. Select `pro/blender_mcp.py` (or install `build/blender_mcp_pro-4.0.0.zip` as an extension)
+4. Select `pro/blender_mcp.py` (or install `build/blender_mcp_pro-4.1.0.zip` as an extension)
 5. Enable **Blender MCP Pro Engine**
 6. Find the panel in **View3D > Sidebar > MCP Pro**
 

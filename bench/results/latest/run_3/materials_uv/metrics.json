@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "materials",
+  "duration_ms": 8.04,
+  "error": null,
+  "expected": {
+    "material_assigned": true,
+    "material_nodes": {
+      "min": 3
+    },
+    "materials_count": {
+      "min": 1
+    },
+    "uv_layer_present": true
+  },
+  "failures": [],
+  "observed": {
+    "material_assigned": true,
+    "material_nodes": 7,
+    "materials_count": 3,
+    "uv_layer_present": true
+  },
+  "passed": true,
+  "run": 3,
+  "task": "materials_uv"
+}

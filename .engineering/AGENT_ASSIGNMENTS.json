@@ -1,0 +1,36 @@
+{
+  "supervisor": "build",
+  "contributor_model": "opencode-go/muse-spark-1.3-contributor#xhigh",
+  "assignments": [
+    {
+      "agent": "terrain",
+      "files": [
+        "pro/domain/terrain.py"
+      ],
+      "status": "dispatched"
+    },
+    {
+      "agent": "vegetation",
+      "files": [
+        "pro/domain/vegetation.py"
+      ],
+      "status": "dispatched"
+    },
+    {
+      "agent": "water-materials",
+      "files": [
+        "pro/domain/water.py",
+        "pro/domain/materials_uv.py"
+      ],
+      "status": "dispatched"
+    },
+    {
+      "agent": "lighting-physics",
+      "files": [
+        "pro/domain/lighting.py",
+        "pro/domain/physics.py"
+      ],
+      "status": "dispatched"
+    }
+  ]
+}

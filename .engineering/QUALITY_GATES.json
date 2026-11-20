@@ -1,0 +1,34 @@
+{
+  "gates": [
+    {
+      "id": "QG1",
+      "name": "tool parity",
+      "command": "python3 -m pytest tests/contracts -q",
+      "required": true
+    },
+    {
+      "id": "QG2",
+      "name": "real Blender headless",
+      "command": "BLENDER_BIN=... ./scripts/run_blender_tests.sh",
+      "required": true
+    },
+    {
+      "id": "QG3",
+      "name": "ruff",
+      "command": "uvx ruff check tests scripts bench src",
+      "required": true
+    },
+    {
+      "id": "QG4",
+      "name": "benchmark",
+      "command": "BLENDER_BIN=... ./scripts/run_bench.sh --runs 3",
+      "required": true
+    },
+    {
+      "id": "QG5",
+      "name": "Blender 5.2",
+      "command": "BLENDER_BIN=... ./scripts/run_blender_tests.sh",
+      "required": true
+    }
+  ]
+}

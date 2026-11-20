@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "terrain",
+  "duration_ms": 17.482,
+  "error": null,
+  "expected": {
+    "height": {
+      "target": 0.5,
+      "tolerance": 0.01
+    },
+    "rock_vertices": {
+      "min": 12
+    },
+    "scattered": 6,
+    "terrain_dimensions": [
+      4.0,
+      4.0
+    ],
+    "tree_polygons": {
+      "min": 1
+    }
+  },
+  "failures": [],
+  "observed": {
+    "height": 0.5,
+    "rock_vertices": 42,
+    "scattered": 6,
+    "terrain_dimensions": [
+      4.0,
+      4.0
+    ],
+    "tree_polygons": 331
+  },
+  "passed": true,
+  "run": 3,
+  "task": "terrain_landscape"
+}

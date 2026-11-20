@@ -1,0 +1,5 @@
+{
+  "category": "physics",
+  "runner": "physics_rigid",
+  "description": "Add a rigid body and collision modifier."
+}

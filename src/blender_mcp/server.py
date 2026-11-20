@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server.fastmcp import FastMCP, Image
 
+from .config import HEAVY_TIMEOUT_COMMANDS
 from .transport import send_blender_command
 
 logging.basicConfig(level=logging.INFO)
@@ -921,6 +922,321 @@ def download_sketchfab_model(uid: str, normalize_size: bool = True, target_size:
     }), indent=2)
 
 
+# ==============================================================================
+# 10. TOOL DISCOVERY, CATALOG AND BATCH EXECUTION
+# ==============================================================================
+BRIDGE_ONLY_TOOLS = {"tools_catalog", "tools_search", "tools_describe"}
+
+TOOL_METADATA = {
+    "execute_code": {"category": "automation", "safety": "privileged", "cost": "high", "units": ""},
+    "delete_object": {"category": "core", "safety": "destructive", "cost": "low", "units": ""},
+    "clear_scene": {"category": "core", "safety": "destructive", "cost": "low", "units": ""},
+    "rollback_checkpoint": {"category": "core", "safety": "destructive", "cost": "low", "units": ""},
+    "render_multiview_inspection": {"category": "inspection", "safety": "write", "cost": "high", "units": "pixels"},
+    "render_still": {"category": "render", "safety": "write", "cost": "medium", "units": "pixels"},
+    "export_scene": {"category": "export", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_terrain": {"category": "terrain", "safety": "write", "cost": "medium", "units": "meters"},
+    "sculpt_terrain_region": {"category": "terrain", "safety": "write", "cost": "medium", "units": "meters"},
+    "scatter_objects": {"category": "terrain", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_rock": {"category": "terrain", "safety": "write", "cost": "low", "units": "meters"},
+    "create_tree": {"category": "vegetation", "safety": "write", "cost": "low", "units": "meters"},
+    "create_bush": {"category": "vegetation", "safety": "write", "cost": "low", "units": "meters"},
+    "create_grass_patch": {"category": "vegetation", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_flower_patch": {"category": "vegetation", "safety": "write", "cost": "low", "units": "meters"},
+    "create_water_plane": {"category": "water", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_river": {"category": "water", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_pond": {"category": "water", "safety": "write", "cost": "low", "units": "meters"},
+    "create_water_material": {"category": "water", "safety": "write", "cost": "low", "units": ""},
+    "create_procedural_material": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "smart_uv_unwrap": {"category": "materials", "safety": "write", "cost": "medium", "units": "degrees"},
+    "pack_uv_islands": {"category": "materials", "safety": "write", "cost": "low", "units": ""},
+    "list_materials": {"category": "materials", "safety": "read", "cost": "low", "units": ""},
+    "create_light": {"category": "lighting", "safety": "write", "cost": "low", "units": "watts"},
+    "create_camera": {"category": "lighting", "safety": "write", "cost": "low", "units": "meters"},
+    "setup_world_background": {"category": "lighting", "safety": "write", "cost": "low", "units": ""},
+    "add_rigid_body": {"category": "physics", "safety": "write", "cost": "low", "units": "kilograms"},
+    "add_collision": {"category": "physics", "safety": "write", "cost": "low", "units": "meters"},
+    "add_cloth": {"category": "physics", "safety": "write", "cost": "low", "units": ""},
+    "bake_simulation": {"category": "physics", "safety": "write", "cost": "high", "units": "frames"},
+}
+
+
+def _profile_names(tool_name: str) -> set[str]:
+    profiles: set[str] = {"full"}
+    for name, allowed in TOOL_PROFILES.items():
+        if allowed is not None and tool_name in allowed:
+            profiles.add(name)
+    if tool_name in CORE_TOOLS:
+        profiles.add("core")
+    if tool_name in BRIDGE_ONLY_TOOLS:
+        profiles.add("bridge")
+    return profiles
+
+
+def _tool_category(tool_name: str) -> str:
+    explicit = TOOL_METADATA.get(tool_name, {}).get("category")
+    if explicit:
+        return str(explicit)
+    for category, names in PROFILE_EXTRAS.items():
+        if tool_name in names:
+            return category
+    if tool_name in CORE_TOOLS:
+        return "core"
+    return "general"
+
+
+def _tool_safety(tool_name: str) -> str:
+    explicit = TOOL_METADATA.get(tool_name, {}).get("safety")
+    if explicit:
+        return str(explicit)
+    if tool_name.startswith(("download_", "search_polyhaven", "search_sketchfab")):
+        return "network"
+    if tool_name.startswith(("get_", "list_", "audit_", "validate_", "compare_")):
+        return "read"
+    return "write"
+
+
+def _tool_cost(tool_name: str) -> str:
+    explicit = TOOL_METADATA.get(tool_name, {}).get("cost")
+    if explicit:
+        return str(explicit)
+    if tool_name in HEAVY_TIMEOUT_COMMANDS:
+        return "high"
+    if tool_name.startswith(("render_", "export_", "generate_", "bake_")):
+        return "medium"
+    return "low"
+
+
+def _tool_units(tool_name: str) -> str:
+    return str(TOOL_METADATA.get(tool_name, {}).get("units", ""))
+
+
+def _catalog_entries(category: Optional[str] = None, include_schema: bool = False) -> list[dict]:
+    manager = getattr(mcp, "_tool_manager", None)
+    tools = getattr(manager, "_tools", {}) or {}
+    wanted = (category or "").strip().lower()
+    entries = []
+    for name in sorted(tools):
+        if wanted and _tool_category(name) != wanted:
+            continue
+        tool = tools[name]
+        entry = {
+            "name": name,
+            "category": _tool_category(name),
+            "safety": _tool_safety(name),
+            "cost": _tool_cost(name),
+            "units": _tool_units(name),
+            "profiles": sorted(_profile_names(name)),
+            "description": tool.description or "",
+        }
+        if include_schema:
+            entry["input_schema"] = tool.parameters
+        entries.append(entry)
+    return entries
+
+
+@mcp.tool()
+def tools_catalog(category: Optional[str] = None, include_schema: bool = False) -> str:
+    """List active tools with category, safety, cost, units and profiles. Optionally include JSON input schemas."""
+    entries = _catalog_entries(category, include_schema)
+    manager = getattr(mcp, "_tool_manager", None)
+    total = len(getattr(manager, "_tools", {}) or {})
+    return json.dumps({
+        "success": True,
+        "count": len(entries),
+        "total_tools": total,
+        "category": category,
+        "tools": entries,
+    }, indent=2)
+
+
+@mcp.tool()
+def tools_search(query: str, limit: int = 10) -> str:
+    """Search tool names and descriptions. Use this before guessing a tool name."""
+    needle = str(query or "").strip().lower()
+    if not needle:
+        raise ValueError("query must not be empty")
+    limit = max(1, min(int(limit), 50))
+    scored = []
+    for entry in _catalog_entries(include_schema=False):
+        name = entry["name"].lower()
+        description = entry["description"].lower()
+        if needle == name:
+            score = 100
+        elif name.startswith(needle):
+            score = 80
+        elif needle in name:
+            score = 60
+        elif needle in description:
+            score = 30
+        else:
+            continue
+        scored.append((score, entry))
+    scored.sort(key=lambda item: (-item[0], item[1]["name"]))
+    matches = [entry for _, entry in scored[:limit]]
+    return json.dumps({
+        "success": True,
+        "query": query,
+        "count": len(matches),
+        "matches": matches,
+    }, indent=2)
+
+
+@mcp.tool()
+def tools_describe(name: str) -> str:
+    """Describe one active tool: description, safety, cost, units, profiles and input schema."""
+    manager = getattr(mcp, "_tool_manager", None)
+    tools = getattr(manager, "_tools", {}) or {}
+    if name not in tools:
+        raise ValueError(f"Unknown tool '{name}'")
+    tool = tools[name]
+    return json.dumps({
+        "success": True,
+        "name": name,
+        "category": _tool_category(name),
+        "safety": _tool_safety(name),
+        "cost": _tool_cost(name),
+        "units": _tool_units(name),
+        "profiles": sorted(_profile_names(name)),
+        "description": tool.description or "",
+        "input_schema": tool.parameters,
+    }, indent=2)
+
+
+@mcp.tool()
+def run_workflow(
+    steps: List[Dict[str, Any]],
+    stop_on_error: bool = True,
+    max_steps: int = 50,
+) -> str:
+    """Execute a bounded sequence of tool calls in one command. steps: [{"tool": "...", "params": {...}}]. Rejects run_workflow and execute_code."""
+    return json.dumps(send_blender_command("run_workflow", {
+        "steps": steps,
+        "stop_on_error": stop_on_error,
+        "max_steps": max_steps,
+    }), indent=2)
+
+
+@mcp.tool()
+def create_terrain(name: str = "Terrain", size: float = 10.0, subdivisions: int = 64, height: float = 1.0, noise_scale: float = 2.0, seed: int = 0, style: str = "mountains") -> str:
+    """Create a deterministic multi-octave terrain mesh (mountains, hills, dunes or flat) with metric size and height."""
+    return json.dumps(send_blender_command("create_terrain", {"name": name, "size": size, "subdivisions": subdivisions, "height": height, "noise_scale": noise_scale, "seed": seed, "style": style}), indent=2)
+
+@mcp.tool()
+def sculpt_terrain_region(object_name: str, center: List[float] = [0.0, 0.0, 0.0], radius: float = 1.0, strength: float = 0.5, direction: str = "UP") -> str:
+    """Sculpt a circular region of a terrain mesh up or down with smooth falloff."""
+    return json.dumps(send_blender_command("sculpt_terrain_region", {"object_name": object_name, "center": center, "radius": radius, "strength": strength, "direction": direction}), indent=2)
+
+@mcp.tool()
+def scatter_objects(source_name: str, target_name: str, count: int = 50, seed: int = 0, scale_min: float = 0.8, scale_max: float = 1.2, align_to_normal: bool = True) -> str:
+    """Scatter linked instances of a source object over the surface of a target mesh, with deterministic placement and scale."""
+    return json.dumps(send_blender_command("scatter_objects", {"source_name": source_name, "target_name": target_name, "count": count, "seed": seed, "scale_min": scale_min, "scale_max": scale_max, "align_to_normal": align_to_normal}), indent=2)
+
+@mcp.tool()
+def create_rock(name: str = "Rock", size: float = 1.0, roughness: float = 0.35, seed: int = 0, subdivisions: int = 2) -> str:
+    """Create a deterministic noise-displaced rock mesh with approximate metric size."""
+    return json.dumps(send_blender_command("create_rock", {"name": name, "size": size, "roughness": roughness, "seed": seed, "subdivisions": subdivisions}), indent=2)
+
+@mcp.tool()
+def create_tree(name: str = "Tree", height: float = 4.0, trunk_radius: float = 0.15, crown_radius: float = 1.5, tree_type: str = "deciduous", seed: int = 0) -> str:
+    """Create a joined tree mesh (deciduous, conifer or palm) with trunk and crown/leaf materials."""
+    return json.dumps(send_blender_command("create_tree", {"name": name, "height": height, "trunk_radius": trunk_radius, "crown_radius": crown_radius, "tree_type": tree_type, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_bush(name: str = "Bush", radius: float = 0.8, height: float = 0.6, seed: int = 0) -> str:
+    """Create a joined low bush mesh from deterministic displaced blobs."""
+    return json.dumps(send_blender_command("create_bush", {"name": name, "radius": radius, "height": height, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_grass_patch(name: str = "GrassPatch", radius: float = 1.0, blade_count: int = 100, blade_height: float = 0.15, seed: int = 0) -> str:
+    """Create one mesh containing many tapered grass blades in a circular patch."""
+    return json.dumps(send_blender_command("create_grass_patch", {"name": name, "radius": radius, "blade_count": blade_count, "blade_height": blade_height, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_flower_patch(name: str = "Flowers", radius: float = 1.0, count: int = 20, seed: int = 0) -> str:
+    """Create one joined mesh with stems, petals and centers for a flower patch."""
+    return json.dumps(send_blender_command("create_flower_patch", {"name": name, "radius": radius, "count": count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_water_plane(name: str = "Water", size: float = 10.0, subdivisions: int = 64, wave_height: float = 0.08, wave_scale: float = 1.5, color: List[float] = [0.05, 0.25, 0.35, 1.0], roughness: float = 0.15) -> str:
+    """Create a wave-displaced water surface with a Principled water material."""
+    return json.dumps(send_blender_command("create_water_plane", {"name": name, "size": size, "subdivisions": subdivisions, "wave_height": wave_height, "wave_scale": wave_scale, "color": color, "roughness": roughness}), indent=2)
+
+@mcp.tool()
+def create_river(name: str = "River", points: Optional[List[List[float]]] = None, width: float = 2.0, depth: float = 0.2, segments: int = 32) -> str:
+    """Create a water ribbon mesh following a polyline with width and depth."""
+    return json.dumps(send_blender_command("create_river", {"name": name, "points": points, "width": width, "depth": depth, "segments": segments}), indent=2)
+
+@mcp.tool()
+def create_pond(name: str = "Pond", radius: float = 3.0, depth: float = 0.4, segments: int = 48) -> str:
+    """Create a circular pond surface with a shallow bed and raised rim."""
+    return json.dumps(send_blender_command("create_pond", {"name": name, "radius": radius, "depth": depth, "segments": segments}), indent=2)
+
+@mcp.tool()
+def create_water_material(name: str = "WaterMaterial", color: List[float] = [0.05, 0.25, 0.35, 1.0], roughness: float = 0.1, transmission: float = 0.6, wave_scale: float = 1.5) -> str:
+    """Create a Principled water material with transmission, IOR and procedural bump."""
+    return json.dumps(send_blender_command("create_water_material", {"name": name, "color": color, "roughness": roughness, "transmission": transmission, "wave_scale": wave_scale}), indent=2)
+
+@mcp.tool()
+def create_procedural_material(name: str = "Procedural", base_color: List[float] = [0.6, 0.6, 0.6, 1.0], roughness: float = 0.5, metallic: float = 0.0, noise_scale: float = 5.0, bump_strength: float = 0.2, color_variation: float = 0.1) -> str:
+    """Create a Principled material with procedural color variation and bump."""
+    return json.dumps(send_blender_command("create_procedural_material", {"name": name, "base_color": base_color, "roughness": roughness, "metallic": metallic, "noise_scale": noise_scale, "bump_strength": bump_strength, "color_variation": color_variation}), indent=2)
+
+@mcp.tool()
+def smart_uv_unwrap(object_name: str, angle_limit: float = 66.0, island_margin: float = 0.02) -> str:
+    """Smart-project UVs for a mesh object and return the active UV layer."""
+    return json.dumps(send_blender_command("smart_uv_unwrap", {"object_name": object_name, "angle_limit": angle_limit, "island_margin": island_margin}), indent=2)
+
+@mcp.tool()
+def pack_uv_islands(object_name: str, margin: float = 0.001) -> str:
+    """Pack UV islands of a mesh object with a margin."""
+    return json.dumps(send_blender_command("pack_uv_islands", {"object_name": object_name, "margin": margin}), indent=2)
+
+@mcp.tool()
+def list_materials(used_only: bool = False) -> str:
+    """List materials with user counts, node types and optional used-only filtering."""
+    return json.dumps(send_blender_command("list_materials", {"used_only": used_only}), indent=2)
+
+@mcp.tool()
+def create_light(name: str = "Light", light_type: str = "POINT", energy: float = 100.0, color: List[float] = [1.0, 1.0, 1.0], location: List[float] = [0.0, 0.0, 3.0], rotation: List[float] = [0.0, 0.0, 0.0], size: float = 0.1, spot_size: float = 45.0) -> str:
+    """Create a point, sun, area or spot light with metric location and energy in watts."""
+    return json.dumps(send_blender_command("create_light", {"name": name, "light_type": light_type, "energy": energy, "color": color, "location": location, "rotation": rotation, "size": size, "spot_size": spot_size}), indent=2)
+
+@mcp.tool()
+def create_camera(name: str = "Camera", location: List[float] = [7.0, -7.0, 5.0], look_at: List[float] = [0.0, 0.0, 1.0], lens: float = 50.0, ortho_scale: float = 6.0, camera_type: str = "PERSP") -> str:
+    """Create a perspective or orthographic camera aimed at a target point."""
+    return json.dumps(send_blender_command("create_camera", {"name": name, "location": location, "look_at": look_at, "lens": lens, "ortho_scale": ortho_scale, "camera_type": camera_type}), indent=2)
+
+@mcp.tool()
+def setup_world_background(color: List[float] = [0.05, 0.05, 0.05], strength: float = 1.0) -> str:
+    """Create or update the World background color and strength."""
+    return json.dumps(send_blender_command("setup_world_background", {"color": color, "strength": strength}), indent=2)
+
+@mcp.tool()
+def render_still(filepath: str, camera_name: Optional[str] = None, resolution_x: int = 960, resolution_y: int = 540, samples: int = 32, engine: str = "BLENDER_EEVEE_NEXT", transparent: bool = False) -> str:
+    """Render a still image with a chosen camera and engine into the output sandbox."""
+    return json.dumps(send_blender_command("render_still", {"filepath": filepath, "camera_name": camera_name, "resolution_x": resolution_x, "resolution_y": resolution_y, "samples": samples, "engine": engine, "transparent": transparent}), indent=2)
+
+@mcp.tool()
+def add_rigid_body(object_name: str, body_type: str = "ACTIVE", mass: float = 1.0, friction: float = 0.5, restitution: float = 0.0) -> str:
+    """Add a rigid body to an object with active/passive type, mass, friction and restitution."""
+    return json.dumps(send_blender_command("add_rigid_body", {"object_name": object_name, "body_type": body_type, "mass": mass, "friction": friction, "restitution": restitution}), indent=2)
+
+@mcp.tool()
+def add_collision(object_name: str, shape: str = "CONVEX_HULL", margin: float = 0.04) -> str:
+    """Add a collision modifier to an object with a shape and margin."""
+    return json.dumps(send_blender_command("add_collision", {"object_name": object_name, "shape": shape, "margin": margin}), indent=2)
+
+@mcp.tool()
+def add_cloth(object_name: str, quality: int = 5, mass: float = 0.3, tension: float = 15.0, bending: float = 0.5) -> str:
+    """Add a cloth modifier to a mesh with quality, mass, tension and bending."""
+    return json.dumps(send_blender_command("add_cloth", {"object_name": object_name, "quality": quality, "mass": mass, "tension": tension, "bending": bending}), indent=2)
+
+@mcp.tool()
+def bake_simulation(frame_start: int = 1, frame_end: int = 250) -> str:
+    """Bake all point caches in the scene for a frame range."""
+    return json.dumps(send_blender_command("bake_simulation", {"frame_start": frame_start, "frame_end": frame_end}), indent=2)
+
 CORE_TOOLS = {
     "get_scene_info",
     "get_object_info",
@@ -935,6 +1251,10 @@ CORE_TOOLS = {
     "audit_3d_model",
     "repair_mesh_geometry",
     "ground_model",
+    "tools_catalog",
+    "tools_search",
+    "tools_describe",
+    "run_workflow",
 }
 
 PROFILE_EXTRAS = {
@@ -955,6 +1275,27 @@ PROFILE_EXTRAS = {
     "materials": {
         "create_material", "assign_material",
         "apply_smart_procedural_material", "setup_studio_lighting",
+        "create_procedural_material", "smart_uv_unwrap",
+        "pack_uv_islands", "list_materials", "create_water_material",
+    },
+    "terrain": {
+        "create_terrain", "sculpt_terrain_region", "scatter_objects",
+        "create_rock",
+    },
+    "vegetation": {
+        "create_tree", "create_bush", "create_grass_patch",
+        "create_flower_patch",
+    },
+    "water": {
+        "create_water_plane", "create_river", "create_pond",
+        "create_water_material",
+    },
+    "lighting": {
+        "create_light", "create_camera", "setup_world_background",
+        "render_still",
+    },
+    "physics": {
+        "add_rigid_body", "add_collision", "add_cloth", "bake_simulation",
     },
     "animation": {
         "create_articulation_joint", "auto_rig_humanoid",
@@ -990,6 +1331,18 @@ TOOL_PROFILES = {
     for name, extras in PROFILE_EXTRAS.items()
 }
 TOOL_PROFILES["core"] = set(CORE_TOOLS)
+TOOL_PROFILES["nano"] = {
+    "tools_catalog", "tools_search", "tools_describe", "run_workflow",
+    "get_scene_info", "get_object_info", "list_objects",
+    "audit_3d_model", "create_parametric_part", "create_assembly",
+    "render_multiview_inspection", "create_checkpoint", "rollback_checkpoint",
+}
+TOOL_PROFILES["guided"] = TOOL_PROFILES["nano"] | {
+    "validate_constraints", "apply_constraints", "repair_mesh_geometry",
+    "ground_model", "export_scene", "create_material", "assign_material",
+    "place_on_surface_raycast", "create_terrain", "create_tree",
+    "create_water_plane", "create_light", "create_camera",
+}
 TOOL_PROFILES["full"] = None
 
 

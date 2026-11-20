@@ -9,6 +9,7 @@ PKG_DIR="$BUILD_DIR/blender_mcp_pro"
 rm -rf "$PKG_DIR"
 mkdir -p "$PKG_DIR"
 cp "$ROOT/pro/blender_mcp.py" "$PKG_DIR/blender_mcp.py"
+cp -R "$ROOT/pro/domain" "$PKG_DIR/domain"
 cp "$ROOT/pro/extension/blender_manifest.toml" "$PKG_DIR/blender_manifest.toml"
 cat > "$PKG_DIR/__init__.py" <<'PY'
 """Blender MCP Pro extension entry point."""

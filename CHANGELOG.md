@@ -2,10 +2,20 @@
 
 All notable changes to this repository are documented here.
 
-## 4.0.0-alpha.4 - 2026-11-19 (unreleased)
+## 4.1.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
+- Tool catalog and discovery: `tools_catalog`, `tools_search`, `tools_describe`
+  with category, safety, cost, units, profiles and JSON schemas.
+- `run_workflow` bounded batch execution in one main-thread command; rejects
+  recursive workflows and `execute_code`.
+- Domain packs loaded dynamically from `pro/domain/`: terrain (terrain, sculpt,
+  scatter, rock), vegetation (tree, bush, grass, flowers), water (plane, river,
+  pond, material), materials/UV (procedural material, smart UV, pack, list),
+  lighting (light, camera, world, still render) and physics (rigid body,
+  collision, cloth, bake).
+- `nano` (13 tools) and `guided` (26 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
   relative tolerance model.
@@ -30,9 +40,9 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 14 deterministic tasks covering all 11 requested
-  categories (plus inspection, anchors and constraints), published raw
-  artifacts in `bench/results/latest/` and 3 local runs at 14/14.
+- BlenderMCP-Bench runner with 20 deterministic tasks covering all 11 requested
+  categories plus terrain, water, vegetation, materials/UV, physics and
+  lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
   portability, CI matrix for 4.5.4 and 5.2.4.
 - Release checklist documenting the remaining stable-release gates.

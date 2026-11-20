@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "lighting",
+  "duration_ms": 519.255,
+  "error": null,
+  "expected": {
+    "engine_nonempty": true,
+    "file_exists": true,
+    "resolution": [
+      64,
+      64
+    ]
+  },
+  "failures": [],
+  "observed": {
+    "engine_nonempty": true,
+    "file_exists": true,
+    "resolution": [
+      64,
+      64
+    ]
+  },
+  "passed": true,
+  "run": 1,
+  "task": "lighting_render"
+}

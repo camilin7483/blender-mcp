@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 0, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 1, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -923,6 +923,90 @@ def main() -> None:
                 "custom component assembly failed: "
                 f"{bracket.get('audit', {}).get('failures')} {bracket.get('constraints')}"
             )
+
+        # --- domain packs: terrain, vegetation, water, materials, lighting, physics ---
+        clear_scene()
+        domain_dir = tempfile.mkdtemp(prefix="blendermcp_domain_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = domain_dir
+        try:
+            terrain = server.create_terrain(
+                "DomainTerrain", size=4.0, subdivisions=16, height=0.5, seed=2
+            )
+            assert terrain["success"] and terrain["dimensions"][0] == 4.0, terrain
+            sculpted = server.sculpt_terrain_region(
+                "DomainTerrain", center=[0.0, 0.0, 0.0], radius=1.0,
+                strength=0.1, direction="UP",
+            )
+            assert sculpted["success"] and sculpted["moved_count"] > 0, sculpted
+            rock = server.create_rock("DomainRock", size=0.5, subdivisions=1, seed=2)
+            assert rock["success"] and max(rock["dimensions"]) > 0.0, rock
+            scattered = server.scatter_objects(
+                "DomainRock", "DomainTerrain", count=4, seed=2
+            )
+            assert scattered["success"] and scattered["count"] == 4, scattered
+            tree = server.create_tree("DomainTree", height=2.0, crown_radius=0.5, seed=2)
+            assert tree["success"] and tree["polygon_count"] > 0, tree
+            bush = server.create_bush("DomainBush", radius=0.3, height=0.3, seed=2)
+            assert bush["success"] and bush["polygon_count"] > 0, bush
+            grass = server.create_grass_patch(
+                "DomainGrass", radius=0.3, blade_count=10, seed=2
+            )
+            assert grass["success"] and grass["polygon_count"] > 0, grass
+            flowers = server.create_flower_patch(
+                "DomainFlowers", radius=0.3, count=3, seed=2
+            )
+            assert flowers["success"] and flowers["polygon_count"] > 0, flowers
+            water = server.create_water_plane("DomainWater", size=3.0, subdivisions=8)
+            assert water["success"] and water["dimensions"] == [3.0, 3.0], water
+            river = server.create_river("DomainRiver", width=0.5, segments=4)
+            assert river["success"] and river["length"] > 0.0, river
+            pond = server.create_pond("DomainPond", radius=1.0, segments=12)
+            assert pond["success"] and pond["face_count"] > 0, pond
+            water_material = server.create_water_material("DomainWaterMaterial")
+            assert water_material["success"], water_material
+            procedural = server.create_procedural_material("DomainProcedural")
+            assert procedural["success"], procedural
+
+            server.create_parametric_part(
+                "DomainCube", shape="BOX", dimensions=[0.5, 0.5, 0.5],
+                location=[0.0, 0.0, 0.25],
+            )
+            uv = server.smart_uv_unwrap("DomainCube")
+            assert uv["success"] and uv["uv_layer"], uv
+            packed = server.pack_uv_islands("DomainCube")
+            assert packed["success"], packed
+            materials = server.list_materials()
+            assert materials["success"] and materials["count"] > 0, materials
+
+            light = server.create_light("DomainLight", energy=50.0)
+            assert light["success"] and light["type"] == "POINT", light
+            camera = server.create_camera(
+                "DomainCamera", location=[3.0, -3.0, 2.0], look_at=[0.0, 0.0, 0.5]
+            )
+            assert camera["success"] and camera["type"] == "PERSP", camera
+            world = server.setup_world_background(color=[0.05, 0.05, 0.05])
+            assert world["success"], world
+            render = server.render_still(
+                "domain.png", camera_name="DomainCamera",
+                resolution_x=64, resolution_y=64, samples=4,
+            )
+            assert render["success"] and os.path.exists(render["filepath"]), render
+
+            rigid = server.add_rigid_body("DomainCube", body_type="ACTIVE")
+            assert rigid["success"], rigid
+            collision = server.add_collision("DomainCube")
+            assert collision["success"], collision
+            server.create_parametric_part(
+                "DomainCloth", shape="ROUNDED_BOX", dimensions=[0.5, 0.5, 0.02],
+                location=[0.0, 0.0, 1.0],
+            )
+            cloth = server.add_cloth("DomainCloth")
+            assert cloth["success"], cloth
+            baked = server.bake_simulation(1, 1)
+            assert baked["success"] and baked["baked"], baked
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(domain_dir, ignore_errors=True)
 
         # --- animation and rigging primitives ---
         clear_scene()

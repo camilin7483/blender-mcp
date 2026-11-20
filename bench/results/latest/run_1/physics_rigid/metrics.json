@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "physics",
+  "duration_ms": 4.956,
+  "error": null,
+  "expected": {
+    "collision_modifier": true,
+    "mass": {
+      "target": 2.0,
+      "tolerance": 0.001
+    },
+    "rigid_body_type": "ACTIVE"
+  },
+  "failures": [],
+  "observed": {
+    "collision_modifier": true,
+    "friction": 0.4000000059604645,
+    "mass": 2.0,
+    "rigid_body_type": "ACTIVE"
+  },
+  "passed": true,
+  "run": 1,
+  "task": "physics_rigid"
+}
