@@ -1,0 +1,5 @@
+{
+  "category": "assemblies",
+  "runner": "desk_update",
+  "description": "Build a 1600 mm desk, change width to 1200 mm and verify rebuild without duplicates."
+}

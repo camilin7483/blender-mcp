@@ -1,0 +1,26 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "animation",
+  "duration_ms": 1.658,
+  "error": null,
+  "expected": {
+    "frame_end": 20.0,
+    "frame_start": 1.0,
+    "has_action": true,
+    "keyframe_count": {
+      "min": 6
+    }
+  },
+  "failures": [],
+  "observed": {
+    "frame_end": 20.0,
+    "frame_start": 1.0,
+    "has_action": true,
+    "keyframe_count": 6
+  },
+  "passed": true,
+  "run": 3,
+  "task": "animation_keyframes"
+}

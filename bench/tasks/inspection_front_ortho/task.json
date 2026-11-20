@@ -1,0 +1,5 @@
+{
+  "category": "inspection",
+  "runner": "front_ortho",
+  "description": "Render the front orthographic inspection view with overlays and metadata."
+}

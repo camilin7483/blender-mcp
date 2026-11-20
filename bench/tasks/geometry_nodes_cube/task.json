@@ -1,0 +1,5 @@
+{
+  "category": "geometry_nodes",
+  "runner": "geometry_nodes_cube",
+  "description": "Audit a cube generated only by a Geometry Nodes modifier."
+}

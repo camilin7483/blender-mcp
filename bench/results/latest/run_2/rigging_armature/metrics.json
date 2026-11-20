@@ -1,0 +1,20 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "rigging",
+  "duration_ms": 0.407,
+  "error": null,
+  "expected": {
+    "bone_count": 2,
+    "parent_ok": true
+  },
+  "failures": [],
+  "observed": {
+    "bone_count": 2,
+    "parent_ok": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "rigging_armature"
+}

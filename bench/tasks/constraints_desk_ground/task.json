@@ -1,0 +1,5 @@
+{
+  "category": "constraints",
+  "runner": "desk_constraints",
+  "description": "Validate ground contact and no-intersection constraints on the desk assembly."
+}

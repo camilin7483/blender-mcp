@@ -1,0 +1,4 @@
+# Development dependencies for the MCP bridge and tests.
+# Blender runs its own bundled Python; do not install these into Blender.
+pytest>=8.0
+ruff>=0.6

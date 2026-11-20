@@ -1,72 +1,173 @@
-# Blender MCP Pro
+# Blender MCP
 
-Blender MCP Pro connects an MCP client to Blender for metric 3D modeling, scene inspection, and export. The `mcp_server.py` bridge exposes 53 tools over MCP stdio. It sends JSON commands to the Blender add-on on `localhost:9876`, where they run on Blender’s main thread.
+**Blender MCP** is a Blender add-on that enables AI-powered 3D content creation through the **Model Context Protocol (MCP)**. It connects Blender to AI coding assistants like Claude, OpenCode, Cursor, and other MCP-compatible tools, allowing you to control Blender using natural language.
 
-[**Download Blender MCP Pro v3.0.0**](https://github.com/camilin7483/blender-mcp/releases/latest)
+## Editions
 
-![Front, right, top, and isometric views of a parametric table made with Blender MCP Pro](docs/table-inspection.png)
+- **Legacy** — `legacy/blender_mcp.py`. Original single-file v3 add-on, kept for compatibility.
+- **Pro v4 (pre-release)** — [`pro/`](pro/README.md). 61-tool FastMCP bridge plus the precision geometry engine. Both editions use `localhost:9876`; enable only one at a time.
 
-## What’s new
+## Status
 
-| Workflow | Pro tools |
-| --- | --- |
-| Precision assembly | Metric blueprints, parametric parts, semantic anchors, surface placement, and symmetry |
-| Modeling and rigging | Revolved profiles, curve sweeps, lofts, deformation, mesh fusion, and humanoid auto-rigging |
-| Architecture | Floorplan walls, fitted openings, roofs, stairs, building shells, and façade arrays |
-| Inspection and recovery | Grounding, contact and overlap audits, mesh repair, four-angle renders, and scene checkpoints |
-| Materials, assets, and export | Procedural materials, Poly Haven search and import, Sketchfab search and download, collision hulls, and GLB, glTF, FBX, or OBJ export |
-| Network visualization | Build a 3D room with devices and cables from Packet Tracer TopologyPlan JSON |
+The default branch contains the **Pro v4 pre-release**, verified with Blender
+4.5.4 and 5.2.4 LTS. Evaluated geometry checks detect enclosed solid overlaps,
+test containment against closed meshes, and trace support to the ground in
+strict mode. Expired requests are cancelled before Blender starts them.
 
-See the [changelog](CHANGELOG.md) and [Precision 3D Modeling Protocol](MODELING_SYSTEM_PROMPT.md) for the modeling workflow and migration details.
+To install the v4 candidate from this repository, use `pro/blender_mcp.py`
+and `pro/mcp_server.py`. The [Pro v3.0.0 release](https://github.com/camilin7483/blender-mcp/releases/tag/v3.0.0)
+contains the previous `blender_mcp_pro.py` and its matching bridge. See the
+[v3 to v4 migration guide](docs/migration-v3-v4.md) before switching editions.
 
-## Set up Pro
+![Four inspection views of a parametric table](pro/docs/table-inspection.png)
 
-Use Blender 4.5 LTS and a separate Python 3.10+ environment for the MCP bridge. The integration was tested with Blender 4.5.4 LTS and `mcp` 1.30.0.
+## Documentation
 
-1. Download and extract `Blender-MCP-Pro-3.0.0.zip` from the [release page](https://github.com/camilin7483/blender-mcp/releases/tag/v3.0.0). If you have the original Blender MCP add-on installed, disable it before enabling Pro.
-2. In Blender, open **Edit → Preferences → Add-ons → Install from Disk** and select `blender_mcp_pro.py` from the extracted folder. Enable **Blender MCP Pro Engine** and find the controls in **3D Viewport → Sidebar → MCP Pro**. [Blender add-on installation guide](https://docs.blender.org/manual/en/4.5/editors/preferences/addons.html)
-3. Open a terminal in the extracted folder or the repository root and install the MCP bridge dependency.
+- [Architecture](ARCHITECTURE.md)
+- [Security and threat model](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Compatibility](docs/compatibility.md)
+- [Migration v3 -> v4](docs/migration-v3-v4.md)
+- [Benchmark methodology and results](bench/README.md)
+- [Release checklist](docs/release-checklist.md)
+- [Changelog](CHANGELOG.md)
 
-   ```bash
-   python3 -m venv .venv
-   .venv/bin/python -m pip install "mcp==1.30.0"
-   ```
+## Features
 
-4. Configure your MCP client to launch `mcp_server.py` over stdio using the virtual environment’s Python. Replace the example paths with the actual absolute paths. On Windows, use `.venv\Scripts\python.exe` for the executable.
 
-   ```json
-   {
-     "mcpServers": {
-       "blender-mcp-pro": {
-         "command": "/absolute/path/to/blender-mcp-pro-3.0.0/.venv/bin/python",
-         "args": ["/absolute/path/to/blender-mcp-pro-3.0.0/mcp_server.py"]
-       }
-     }
-   }
-   ```
 
-   Clients with their own configuration use the same executable and argument. [OpenCode local MCP setup](https://opencode.ai/docs/mcp-servers/)
+- **Natural Language Control** — Create, modify, and manipulate 3D scenes using plain English
+- **Socket Server** — Runs a local server inside Blender (port 9876) that listens for JSON commands
+- **Full Blender API Access** — Create objects, materials, cameras, lights, animations, and more
+- **Poly Haven Integration** — Download free HDRI, texture, and 3D model assets directly into your scene
+- **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
+  silhouette, wireframe, normals and UV checker modes, with camera metadata
+  and a reproducible output hash.
+- **Benchmarked workflows** — 14 deterministic tasks across all 11 requested categories, with published raw artifacts.
+- **Game-ready export** — `godot`, `unity`, `unreal` and `generic-gltf`
+  profiles validate scale, materials, UVs, armatures, actions, LOD and
+  collision meshes, then reimport the file and compare dimensions.
+- **Constraint validation and solving** — Read-only checks plus apply for positioning constraints: mate, align, flush,
+  center, offset, distance, parallel, perpendicular, ground contact,
+  symmetry, no-intersection, inside and surface contact, with structured
+  expected/actual/tolerance/method results.
+- **Declarative assemblies** — `create_assembly` builds a desk from
+  `dimensions_mm` or any explicit component list; `update_assembly` merges a
+  patch and rebuilds without duplicating objects.
+- **Animation and rigging primitives** — `keyframe_object` inserts property
+  keyframes; `create_armature` builds named bones with parent relationships and
+  optional automatic weights.
+- **MCP Compatible** — Works with Claude, OpenCode, Cursor, and any MCP-compatible assistant
 
-5. Ask the client to inspect the active scene with `get_scene_info`. Then try a work request such as “Build a table from the metric blueprint, check its ground contact, and show the four inspection views.”
+## Tool profiles
 
-## Verification
+Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
+tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
+`animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
+and `full` (default, 61 tools). `execute_code` is full-only and remains
+disabled in the add-on by default. Unknown profile names fall back to
+`core`. Profiles filter bridge registration only; the add-on keeps every
+handler.
 
-The featured table was generated from a metric blueprint and scored 100 in the geometry audit. The Linux smoke test also covered startup and port-conflict recovery, the 53-tool catalog, a four-view render, GLB export, checkpoint restoration, and invalid-token rejection. Windows, macOS, external asset downloads, and the other export formats still need verification.
+## How It Works
 
-## Local configuration
+```
++-------------------+      JSON Commands      +---------------------+
+|  AI Assistant     | ----------------------> |  Blender Add-On     |
+|  (Claude/Code)    |                         |  (this add-on)      |
+|                   | <---------------------- |                     |
+|  MCP Client       |      JSON Responses     |  Socket Server      |
++-------------------+                         |  localhost:9876     |
+                                              +---------------------+
+```
 
-| Environment variable | Where to set it | Purpose |
-| --- | --- | --- |
-| `BLENDER_AUTH_TOKEN` | Blender and the MCP bridge | Optional shared token. Supply the same value to both processes. |
-| `BLENDER_HOST`, `BLENDER_PORT` | MCP bridge | Socket destination. The add-on listens on `localhost:9876` in a standard installation. |
-| `SKETCHFAB_API_TOKEN` | Blender | Required by the Sketchfab download tool. |
+The add-on starts a **socket server** inside Blender on `localhost:9876`. When an AI assistant sends a command, the server executes it using Blender's Python API (`bpy`) and returns the result.
 
-Keep the Blender socket on loopback and grant access only to trusted clients. The tools can modify the active scene, write files, and execute Python inside Blender.
+## Installation
+
+### Prerequisites
+
+- **Blender 4.5 LTS or 5.2 LTS** (tested with 4.5.4 and 5.2.4)
+- **Python 3.10+** for the bridge (Blender bundles its own interpreter)
+
+### Install the Add-on
+
+1. Open **Blender**
+2. Go to **Edit > Preferences > Add-ons**
+3. Click **Install from Disk...**
+4. Select `pro/blender_mcp.py` (or install `build/blender_mcp_pro-4.0.0.zip` as an extension)
+5. Enable **Blender MCP Pro Engine**
+6. Find the panel in **View3D > Sidebar > MCP Pro**
+
+The bridge runs outside Blender: `pro/mcp_server.py` (legacy entry point) or
+the installed `blender-mcp` console script. The legacy v3 add-on remains at
+`legacy/blender_mcp.py` and is not the Pro bridge.
+
+## Usage
+
+### Starting the Server
+
+1. Open Blender
+2. Go to **View3D > Sidebar > MCP Pro**
+3. Click **Start Server**
+4. The server will start listening on `localhost:9876`
+
+### Example Commands
+
+Once the server is running and connected to your AI assistant, you can ask things like:
+
+- "Create a red sphere at position (0, 0, 0)"
+- "Add a camera pointing at the origin"
+- "Import an HDRI from Poly Haven"
+- "Create an animation of a rotating cube"
+- "Apply a metallic material to the selected object"
+
+## Technical Architecture
+
+### Server (BlenderMCPServer)
+
+The core of the add-on is the `BlenderMCPServer` class which:
+
+1. Opens a **TCP socket** on `localhost:9876`
+2. Listens for **JSON-encoded commands** in a background thread
+3. Routes each command to the appropriate **handler function**
+4. Returns **JSON responses** with results or error messages
+
+### Available tools
+
+The MCP client discovers the active tools and argument schemas through
+`tools/list`. Use `create_parametric_part` for geometry, `create_material`
+and `assign_material` for materials, `setup_studio_lighting` for studio
+lighting, and `render_multiview_inspection` for image output.
+
+The Pro bridge exposes `search_polyhaven_assets` and
+`download_polyhaven_asset` for Poly Haven assets. Sketchfab search and
+download use `search_sketchfab_models` and `download_sketchfab_model`.
+Downloads from Sketchfab require `SKETCHFAB_API_TOKEN` in Blender's environment.
+
+## Development
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt -r pro/requirements.txt
+.venv/bin/python -m pytest tests/contracts tests/unit tests/integration -q
+BLENDER_BIN=/path/to/blender-4.5.4-linux-x64/blender ./scripts/run_blender_tests.sh
+```
+
+The Pro tests need a real Blender 4.5 LTS with its event loop. On Linux
+without `DISPLAY`, the script uses `xvfb-run`; `blender --background` does not
+pump timers. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Credits
 
-Original code by **Siddharth Ahuja**. Repository maintained by **CamiloDev**. [Original Blender MCP project](https://github.com/ahujasid/blender-mcp)
+
+Original code by **Siddharth Ahuja** (github.com/ahujasid)
+Repository maintained by **CamiloDev**
+
+- Poly Haven integration uses the Poly Haven API
+- Rodin AI integration for text-to-3D generation
+- Replicate integration for AI texture generation
 
 ## License
 
-[MIT](LICENSE).
+MIT - See LICENSE for details.

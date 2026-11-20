@@ -1,0 +1,5 @@
+{
+  "category": "export",
+  "runner": "godot_glb",
+  "description": "Export a material and UV cube as GLB with the godot profile, then reimport and compare."
+}

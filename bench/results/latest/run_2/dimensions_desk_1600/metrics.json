@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "dimensions",
+  "duration_ms": 9.578,
+  "error": null,
+  "expected": {
+    "components": 5,
+    "dimensions_mm": {
+      "depth": {
+        "target": 800,
+        "tolerance": 5
+      },
+      "height": {
+        "target": 750,
+        "tolerance": 5
+      },
+      "width": {
+        "target": 1600,
+        "tolerance": 5
+      }
+    },
+    "passed": true
+  },
+  "failures": [],
+  "observed": {
+    "components": 5,
+    "dimensions_mm": {
+      "depth": 800.0,
+      "height": 750.0,
+      "width": 1600.0
+    },
+    "passed": true
+  },
+  "passed": true,
+  "run": 2,
+  "task": "dimensions_desk_1600"
+}

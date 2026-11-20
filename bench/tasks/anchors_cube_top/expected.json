@@ -1,0 +1,11 @@
+{
+  "top_position": [
+    0.0,
+    0.0,
+    1.0
+  ],
+  "anchor_count_min": {
+    "min": 30
+  },
+  "top_source": "evaluated_aabb"
+}

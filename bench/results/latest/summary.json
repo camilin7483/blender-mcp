@@ -1,0 +1,363 @@
+{
+  "benchmark": "BlenderMCP-Bench",
+  "blender": "4.5.4 LTS",
+  "external_comparison": {
+    "performed": false,
+    "reason": "Requires a second server with the same LLM, prompt, budget and machine."
+  },
+  "passed_tasks": 14,
+  "runs": 3,
+  "tasks": {
+    "anchors_cube_top": {
+      "category": "anchors",
+      "median_ms": 2.492,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 3.131,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 1.645,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 2.492,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "animation_keyframes": {
+      "category": "animation",
+      "median_ms": 1.339,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1.191,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 1.339,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 1.658,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "assemblies_desk_update": {
+      "category": "assemblies",
+      "median_ms": 24.731,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 30.052,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 24.731,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 20.778,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "constraints_desk_ground": {
+      "category": "constraints",
+      "median_ms": 11.943,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 14.716,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 11.208,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 11.943,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "dimensions_desk_1600": {
+      "category": "dimensions",
+      "median_ms": 12.144,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 12.144,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 9.578,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 13.275,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "export_godot_glb": {
+      "category": "export",
+      "median_ms": 15.127,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 100.654,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 15.127,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 14.677,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "geometry_nodes_cube": {
+      "category": "geometry_nodes",
+      "median_ms": 1.097,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1.097,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 2.133,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 0.878,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "inspection_front_ortho": {
+      "category": "inspection",
+      "median_ms": 1427.374,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1827.412,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 1427.374,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 1418.952,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "materials_pbr_cube": {
+      "category": "materials",
+      "median_ms": 2.606,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1.756,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 2.914,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 2.606,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "primitives_cube_1000mm": {
+      "category": "primitives",
+      "median_ms": 2.867,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 1.852,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 2.867,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 3.35,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "repair_nonuniform_scale": {
+      "category": "repair",
+      "median_ms": 3.094,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 5.796,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 3.088,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 3.094,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "rigging_armature": {
+      "category": "rigging",
+      "median_ms": 0.457,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 0.806,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 0.407,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 0.457,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "topology_clean_cube": {
+      "category": "topology",
+      "median_ms": 2.703,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 2.427,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 3.133,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 2.703,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    },
+    "visual_scene_desk": {
+      "category": "visual_scenes",
+      "median_ms": 18.476,
+      "pass_rate": 1.0,
+      "runs": [
+        {
+          "duration_ms": 17.405,
+          "failures": [],
+          "passed": true,
+          "run": 1
+        },
+        {
+          "duration_ms": 18.476,
+          "failures": [],
+          "passed": true,
+          "run": 2
+        },
+        {
+          "duration_ms": 19.893,
+          "failures": [],
+          "passed": true,
+          "run": 3
+        }
+      ]
+    }
+  },
+  "total_tasks": 14
+}

@@ -1,0 +1,5 @@
+{
+  "category": "topology",
+  "runner": "clean_topology",
+  "description": "Audit a clean cube for non-manifold edges, loose vertices and zero-area faces."
+}

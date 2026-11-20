@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "primitives",
+  "duration_ms": 1.852,
+  "error": null,
+  "expected": {
+    "dimensions_mm": {
+      "depth": {
+        "target": 1000,
+        "tolerance": 1
+      },
+      "height": {
+        "target": 1000,
+        "tolerance": 1
+      },
+      "width": {
+        "target": 1000,
+        "tolerance": 1
+      }
+    },
+    "passed": true,
+    "topology": {
+      "loose_vertices": 0,
+      "non_manifold_edges": 0
+    }
+  },
+  "failures": [],
+  "observed": {
+    "dimensions_mm": {
+      "depth": 1000.0,
+      "height": 1000.0,
+      "width": 1000.0
+    },
+    "passed": true,
+    "topology": {
+      "loose_vertices": 0,
+      "non_manifold_edges": 0
+    }
+  },
+  "passed": true,
+  "run": 1,
+  "task": "primitives_cube_1000mm"
+}

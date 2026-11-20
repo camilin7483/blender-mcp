@@ -1,21 +1,118 @@
-# Blender MCP Pro changelog
+# Changelog
 
-## [3.0.0] - 2026-11-18
+All notable changes to this repository are documented here.
+
+## 4.0.0-alpha.4 - 2026-11-19 (unreleased)
 
 ### Added
 
-- A FastMCP stdio bridge with 53 tools and a Blender add-on that schedules socket commands on Blender’s main thread.
-- Metric blueprints, parametric parts, semantic snapping, and surface alignment for assembling models from evaluated geometry.
-- Revolved profiles, curve sweeps, lofts, deformation, organic mesh fusion, humanoid rigging, and architectural generators.
-- Geometry audits for ground alignment, floating parts, and overlaps, with mesh repair, scene checkpoints, and four-view inspection renders.
-- Procedural materials, game asset preparation with optional convex collision hulls, and scene export in GLB, glTF, FBX, or OBJ.
-- A 3D network room generator for Packet Tracer TopologyPlan JSON.
+- Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
+  graph, topology metrics, symmetry error, ground contact and absolute/
+  relative tolerance model.
+- `audit_3d_model` now returns `requirements`, `dimensions`, `topology`,
+  `contacts`, `collisions`, `symmetry` and structured `failures`, while
+  preserving the legacy `critical_issues`, `warnings`, `joints` and
+  `llm_fix_commands` views.
+- Deterministic inspection renders: orthographic FRONT/RIGHT/TOP, fixed ISO
+  perspective, `silhouette`/`wireframe`/`normals`/`uv_checker` modes,
+  reproducible output directories, camera metadata and optional AABB overlay.
+- Semantic anchors with position, normal, tangent, local frame, source,
+  confidence and tolerance: center, face, surface (BVH raycast), edge, corner,
+  socket (empty), bone and custom anchors. `list_semantic_anchors` and
+  `anchor_operation` cover align, mate, offset, orient_normal, distribute and
+  mirror.
+- Constraint validation and solving: `validate_constraints` covers mate,
+  align, flush, center, offset, distance, parallel, perpendicular,
+  ground_contact, symmetry, no_intersection, inside and surface_contact;
+  `apply_constraints` moves align/mate/offset/ground/center/distance.
+- Declarative assemblies: `create_assembly` builds from a spec (desk template
+  from `dimensions_mm` or explicit components), stores the spec on a root
+  empty, and `update_assembly` deep-merges changes and rebuilds.
+- Animation and rigging primitives: `keyframe_object` and `create_armature`
+  with optional automatic weights.
+- BlenderMCP-Bench runner with 14 deterministic tasks covering all 11 requested
+  categories (plus inspection, anchors and constraints), published raw
+  artifacts in `bench/results/latest/` and 3 local runs at 14/14.
+- Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
+  portability, CI matrix for 4.5.4 and 5.2.4.
+- Release checklist documenting the remaining stable-release gates.
+- Tool profiles (`core`, `modeling`, `materials`, `animation`, `rigging`,
+  `geometry_nodes`, `inspection`, `export`, `assets`, `full`) filter FastMCP
+  registration through `BLENDER_MCP_PROFILE`; unknown names fall back to the core profile.
+- Game-ready export profiles (`godot`, `unity`, `unreal`, `generic-gltf`)
+  validate scale, materials, UVs, armatures, actions, LOD and collision
+  meshes, then reimport the file into the scene and compare dimensions.
+- Baseline harness with real Blender 4.5 LTS: headless import/geometry test
+  and GUI socket round-trip under `xvfb-run`.
+- Contract test that verifies 1:1 parity between the 61 FastMCP tools and the
+  add-on command table.
+- `SECURITY.md` threat model, `ARCHITECTURE.md`, `CONTRIBUTING.md`,
+  `docs/compatibility.md`, `docs/benchmark.md` and
+  `docs/migration-v3-v4.md`.
+- Pinned bridge dependency in `pro/requirements.txt` (`mcp==1.30.0`).
+
+### Changed
+
+- Bridge split: `src/blender_mcp/server.py`, `transport.py` and `config.py`;
+  `pro/mcp_server.py` is now a thin legacy entry-point wrapper.
+- Legacy v3 add-on moved to `legacy/blender_mcp.py` so it no longer
+  shadows the `blender_mcp` Python package.
+- Consolidated the Pro v3 sources under `pro/` in the canonical repository.
+- `pro/sync_addon.sh` now resolves paths relative to the script and accepts
+  `BLENDER_ADDONS_DIR`.
+- Root README documents the legacy and Pro editions.
+- Collision decisions use BVH surface intersection and closed-solid containment.
+  Geometry Nodes-only objects are measured and audited.
+- `audit_3d_model` computes `passed` after every requirement. Blueprint
+  dimensions, ground contact, absolute scale, surface intersections and
+  optional symmetry now block `passed`; topology is report-only unless
+  `topology_policy="strict"`. Negative scale is accepted as a mirror.
+- `render_multiview_inspection` uses orthographic FRONT/RIGHT/TOP cameras,
+  writes under `<output>/inspection/<render_id>/`, returns camera metadata
+  and accepts `mode` plus `include_overlays`.
 
 ### Fixed
 
-- Removed six duplicate MCP tool registrations, clearing the startup warnings while preserving each tool’s name, parameters, and behavior.
-- The sidebar now shows the live server status after automatic startup. The Start button can retry after a port conflict.
+- Detect enclosed solid overlaps and check `inside` against a closed mesh.
+- Require a contact path to the ground in strict audits, with an explicit
+  exemption for suspended parts.
+- Cancel expired requests before dispatch. Report an unknown result if a timed
+  out operation has already started.
+- Preserve the previous assembly if rebuilding raises an exception. Correct
+  the evaluated dimensions and closure of capsule, tube, and torus meshes.
 
-### Upgrade
+### Security
 
-- Install `blender_mcp_pro.py` and point the MCP client to `mcp_server.py` in the extracted release. The Pro bridge has its own command schema.
+- Local authentication is enabled by default. The add-on creates a per-install
+  token file (0600) and the bridge reads it; `BLENDER_AUTH_TOKEN` still
+  overrides the file. `BLENDER_MCP_ALLOW_NO_AUTH=1` is the explicit unsafe
+  escape hatch.
+- `execute_code` is disabled by default. Enable it in the add-on preferences
+  or with `BLENDER_MCP_ALLOW_EXECUTE_CODE=1`.
+- `clear_scene`, `delete_object`, `rollback_checkpoint` and
+  `setup_studio_lighting` return a dry-run unless called with `confirm=true`.
+  `BLENDER_MCP_ALLOW_UNSAFE_OPS=1` preserves the old behavior for trusted
+  automation.
+- `export_scene` is confined to `BLENDER_MCP_OUTPUT_DIR`, validates the
+  extension and rejects unknown formats. `BLENDER_MCP_ALLOW_ANY_PATH=1`
+  preserves the old behavior for trusted automation.
+- Remote assets are limited to HTTPS Poly Haven and Sketchfab hosts, reject
+  private/link-local/loopback addresses and redirects to them, cap download
+  size, and extract ZIPs with path, symlink, file-count and size checks.
+- Batched requests are parsed incrementally instead of being dropped, and
+  request/response sizes are bounded.
+- Commands are routed through a main-thread queue with one persistent timer,
+  removing the unsupported `bpy.app.timers.register()` call from socket
+  threads.
+- HTTPS downloads connect to validated public addresses and retain TLS
+  hostname verification. Cross-origin redirects drop credentials.
+- The bridge requires PyJWT 2.15.0 or newer within the 2.x series.
+- Explicitly enabling `execute_code` grants access to the Blender Python
+  interpreter. See [the threat model](SECURITY.md).
+
+## 3.0.0 - 2026-11-18
+
+See [pro/CHANGELOG.md](pro/CHANGELOG.md) for the Pro v3.0.0 feature list.
+The [v3.0.0 release](https://github.com/camilin7483/blender-mcp/releases/tag/v3.0.0)
+includes the original `blender_mcp_pro.py` and `mcp_server.py` files. The
+`v3.0.0-baseline` tag marks the local code before v4 work.

@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "export",
+  "duration_ms": 100.654,
+  "error": null,
+  "expected": {
+    "file_exists": true,
+    "reimport_checked": true,
+    "reimport_passed": true,
+    "success": true
+  },
+  "failures": [],
+  "observed": {
+    "file_exists": true,
+    "reimport_checked": true,
+    "reimport_passed": true,
+    "success": true
+  },
+  "passed": true,
+  "run": 1,
+  "task": "export_godot_glb"
+}
