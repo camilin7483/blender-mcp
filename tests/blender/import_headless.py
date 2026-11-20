@@ -757,6 +757,48 @@ def main() -> None:
         if not desk_leg or abs(desk_leg.location.x + 0.72) > 0.001:
             fail("desk leg is not at the expected inset")
 
+        for shape in ("CAPSULE", "TORUS", "TUBE"):
+            dimensions = [0.6, 0.4, 0.2] if shape == "TORUS" else [0.6, 0.4, 0.8]
+            part = server.create_parametric_part(
+                name=f"Audit_{shape}", shape=shape, dimensions=dimensions, bevel_width=0,
+            )
+            if part["dimensions"] != dimensions:
+                fail(f"{shape} dimensions {part['dimensions']} != {dimensions}")
+            metrics = bm.GeometryService.topology_metrics(bpy.data.objects[part["name"]])
+            if metrics["non_manifold_edges"] or metrics["zero_area_faces"]:
+                fail(f"{shape} is not a clean closed mesh: {metrics}")
+
+        names_before = set(bpy.data.objects.keys())
+        invalid_components = [
+            {"name": "Valid", "color": [0.1, 0.2, 0.3, 1.0]},
+            {"name": "Invalid", "material_name": "MissingAssemblyMaterial"},
+        ]
+        try:
+            server.update_assembly("ParamDesk", spec={"components": invalid_components})
+        except ValueError:
+            pass
+        else:
+            fail("Invalid assembly update returned successfully")
+        if bpy.data.objects.get("ParamDesk_Top") != desk_top or set(bpy.data.objects.keys()) != names_before:
+            fail("Failed assembly update changed scene objects")
+        if bpy.data.materials.get("Mat_ParamDesk_Valid") or bpy.data.meshes.get("ParamDesk_Valid_Mesh"):
+            fail("Failed assembly update left unused data")
+
+        for kwargs in (
+            {"object_names": ["ParamDesk_Leg_FL", "MissingPart"]},
+            {"blueprint_name": "missing_blueprint"},
+            {"symmetry_axis": "invalid"},
+            {"topology_policy": "invalid"},
+        ):
+            arguments = {"object_names": desk["components"]}
+            arguments.update(kwargs)
+            try:
+                report = server.audit_3d_model(**arguments)
+            except ValueError:
+                continue
+            if report["passed"]:
+                fail(f"Audit approved an unverifiable requirement: {kwargs}")
+
         updated_desk = server.update_assembly(
             "ParamDesk",
             changes={"dimensions_mm": {"width": 1200}},

@@ -29,7 +29,7 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 | Bridge config | `src/blender_mcp/config.py` | Host, port, token paths, response limits and heavy-command timeouts. |
 | Legacy entry point | `pro/mcp_server.py` | Thin wrapper that imports the package and keeps old MCP configurations working. |
 | Legacy add-on | `legacy/blender_mcp.py` | Original v3 single-file add-on; not the Pro bridge. |
-| Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; validates optional token; rate-limits. |
+| Add-on server | `pro/blender_mcp.py` | Binds `localhost:9876`; accepts clients in threads; requires a token by default; rate-limits. |
 | Main-thread dispatcher | `pro/blender_mcp.py` | Persistent queue drained by one timer; background and worker starts fail fast. |
 | Command table | `pro/blender_mcp.py` | Maps command names to `BlenderMCPServer` methods. |
 | Geometry service | `pro/blender_mcp.py` | Evaluated snapshots, world BVH, contact graph, topology, symmetry, tolerances. |
@@ -46,21 +46,15 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 2. Socket threads may parse JSON, validate auth, rate-limit and enqueue work.
 3. `bpy.app.timers` callbacks run on the main thread. A real Blender 4.5.4 +
    `xvfb-run` round-trip confirmed the callback thread, not a mock.
-4. **Registering a timer from a worker thread is not supported by Blender.**
-   It does not raise, but it mutates a global timer list without a lock
-   (`bpy_app_timers.cc` / `BLI_timer.cc`). The current per-request
-   `bpy.app.timers.register()` from the socket thread is therefore a data
-   race. The v4 dispatcher must use a `queue.Queue` plus one persistent timer
-   registered from the main thread that drains the queue.
-5. A permanent pump timer must use `persistent=True`. Opening a `.blend`
-   file removes non-persistent timers; after `open_mainfile`, all previous
-   `bpy` references are invalid.
-6. `blender --background` does **not** pump timers. The add-on therefore
-   cannot serve commands in pure background mode. Tests must use a GUI event
-   loop (`xvfb-run` on Linux). The legacy add-on warned about this; Pro does
-   not yet.
-7. A socket handler blocks one thread until the main thread finishes or the
-   timeout expires. There is no queue, cancellation or fairness policy.
+4. The add-on registers one timer on the main thread and uses a
+   `queue.Queue` to transfer requests from socket threads.
+5. The timer uses `persistent=True` so it can keep dispatching after a
+   checkpoint load. Scene data references must be reacquired after
+   `open_mainfile`.
+6. `blender --background` lacks the timer event loop. The add-on rejects
+   server startup in that mode. Headless geometry tests call handlers directly.
+7. A socket thread waits for the main thread to finish or for its response
+   timeout. A timeout does not cancel queued work or a running handler.
 
 ### Geometry authority
 
@@ -68,7 +62,9 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
   AABB, world vertices, face centers/areas and a world-space BVH.
 - `contact_graph()` uses AABB only as a broad-phase filter. Surface
   intersection comes from `BVHTree.overlap`; separation distance comes from
-  BVH nearest queries with a method and confidence label.
+  BVH nearest queries with a method and confidence label. This is a
+  surface test. Closed volumes can overlap by containment without their
+  boundaries intersecting.
 - `topology_metrics()` reports non-manifold and boundary edges, loose
   vertices/edges, zero-area and degenerate faces, duplicate vertices,
   inverted normals, disconnected components and optional self-intersections.

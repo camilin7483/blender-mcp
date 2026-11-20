@@ -125,8 +125,6 @@ def load_or_create_auth_token() -> str:
 
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, mode=0o700, exist_ok=True)
-    with suppress(Exception):
-        os.chmod(directory, 0o700)
 
     token = secrets.token_hex(32)
     try:
@@ -508,8 +506,10 @@ class GeometryService:
         cls,
         objects: List[bpy.types.Object],
         tolerance: float = 0.001,
+        snapshots: Optional[List[GeometrySnapshot]] = None,
     ) -> Dict[str, Any]:
-        snapshots = [cls.snapshot(obj) for obj in objects]
+        if snapshots is None:
+            snapshots = [cls.snapshot(obj) for obj in objects]
         pairs_out: List[Dict[str, Any]] = []
         threshold = max(float(tolerance), 0.6)
 
@@ -1642,7 +1642,11 @@ class BlenderMCPServer:
                     request_id = msg.get("request_id")
                     expected_token = self.auth_token or ""
                     if expected_token:
-                        if not hmac.compare_digest(str(msg.get("auth_token", "")), expected_token):
+                        received_token = msg.get("auth_token")
+                        if not isinstance(received_token, str) or not hmac.compare_digest(
+                            received_token.encode("utf-8", errors="surrogatepass"),
+                            expected_token.encode("utf-8"),
+                        ):
                             send_response({"status": "error", "message": "Authentication failed: invalid or missing token"}, request_id)
                             return
                     elif os.environ.get(ALLOW_NO_AUTH_ENV_VAR) != "1":
@@ -1651,6 +1655,9 @@ class BlenderMCPServer:
 
                     cmd_type = msg.get("type", "")
                     params = msg.get("params", {})
+                    if not isinstance(cmd_type, str) or not cmd_type:
+                        send_response({"status": "error", "message": "'type' must be a non-empty string"}, request_id)
+                        continue
                     if not isinstance(params, dict):
                         send_response({"status": "error", "message": "'params' must be a JSON object"}, request_id)
                         continue
@@ -2116,6 +2123,37 @@ class BlenderMCPServer:
     # ==========================================================================
     # 2. PARAMETRIC & RELATIONAL MODELING TOOLS
     # ==========================================================================
+    @staticmethod
+    def _revolve_profile(
+        bm: bmesh.types.BMesh, profile: List[Tuple[float, float, float]],
+        segments: int, closed: bool = False,
+    ) -> None:
+        angles = [math.tau * index / segments for index in range(segments)]
+        ring_points = [(math.cos(angle), math.sin(angle)) for angle in angles]
+        # Compensar la discretización para mantener el tamaño de la envolvente.
+        x_span = max(x for x, _ in ring_points) - min(x for x, _ in ring_points)
+        y_span = max(y for _, y in ring_points) - min(y for _, y in ring_points)
+        rings = []
+        for rx, ry, z in profile:
+            if rx == 0 and ry == 0:
+                rings.append([bm.verts.new((0, 0, z))])
+            else:
+                rings.append([
+                    bm.verts.new((2 * rx * x / x_span, 2 * ry * y / y_span, z))
+                    for x, y in ring_points
+                ])
+        next_rings = rings[1:] + (rings[:1] if closed else [])
+        for lower, upper in zip(rings, next_rings):
+            for index in range(segments):
+                following = (index + 1) % segments
+                if len(lower) == 1:
+                    vertices = (lower[0], upper[following], upper[index])
+                elif len(upper) == 1:
+                    vertices = (lower[index], lower[following], upper[0])
+                else:
+                    vertices = (lower[index], lower[following], upper[following], upper[index])
+                bm.faces.new(vertices)
+
     def create_parametric_part(
         self,
         name: str,
@@ -2135,10 +2173,16 @@ class BlenderMCPServer:
         segments: int = 32,
     ) -> Dict[str, Any]:
         dx, dy, dz = [float(abs(d)) for d in dimensions]
+        shape_upper = shape.upper()
+        revolved = shape_upper in ("CAPSULE", "TORUS", "TUBE")
+        if revolved:
+            if segments < 3 or any(not math.isfinite(value) or value <= 0 for value in (dx, dy, dz)):
+                raise ValueError("Revolved primitives need positive finite dimensions and at least three segments")
+            if shape_upper != "CAPSULE" and not 0 < thickness < min(dx, dy) / 2:
+                raise ValueError("Thickness must be positive and smaller than the shortest horizontal radius")
         mesh = bpy.data.meshes.new(name=f"{name}_Mesh")
         bm = bmesh.new()
 
-        shape_upper = shape.upper()
         if shape_upper in ("BOX", "ROUNDED_BOX"):
             bmesh.ops.create_cube(bm, size=1.0)
             bmesh.ops.scale(bm, vec=Vector((dx, dy, dz)), verts=bm.verts[:])
@@ -2158,35 +2202,37 @@ class BlenderMCPServer:
             bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=max(16, segments // 2), radius=dx / 2.0)
             bmesh.ops.scale(bm, vec=Vector((1.0, dy / dx if dx > 0 else 1.0, dz / dx if dx > 0 else 1.0)), verts=bm.verts[:])
         elif shape_upper == "CAPSULE":
-            r = min(dx, dy) / 2.0
-            cyl_len = max(0.001, dz - 2 * r)
-            bmesh.ops.create_cone(bm, cap_ends=False, segments=segments, radius1=r, radius2=r, depth=cyl_len)
-            # Top Dome
-            bm_top = bmesh.new()
-            bmesh.ops.create_uvsphere(bm_top, u_segments=segments, v_segments=16, radius=r)
-            bmesh.ops.translate(bm_top, vec=Vector((0, 0, cyl_len / 2.0)), verts=bm_top.verts[:])
-            verts_to_keep = [v for v in bm_top.verts if v.co.z >= cyl_len / 2.0 - 0.0001]
-            bmesh.ops.delete(bm_top, geom=[v for v in bm_top.verts if v not in verts_to_keep], context="VERTS")
-            for f in bm_top.faces:
-                bm.faces.new([bm.verts.new(v.co) for v in f.verts])
-            bm_top.free()
-            bmesh.ops.scale(bm, vec=Vector((dx / (2 * r), dy / (2 * r), 1.0)), verts=bm.verts[:])
+            rx, ry = dx / 2, dy / 2
+            cap = min(rx, ry, dz / 2)
+            half_body = dz / 2 - cap
+            steps = 8
+            profile = [(0, 0, -dz / 2)]
+            for index in range(1, 2 * steps):
+                angle = (index - steps) * math.pi / (2 * steps)
+                radius = math.cos(angle)
+                if index <= steps:
+                    profile.append((rx * radius, ry * radius, -half_body + cap * math.sin(angle)))
+                if index == steps and half_body > 0:
+                    profile.append((rx, ry, half_body))
+                if index > steps:
+                    profile.append((rx * radius, ry * radius, half_body + cap * math.sin(angle)))
+            profile.append((0, 0, dz / 2))
+            self._revolve_profile(bm, profile, segments)
         elif shape_upper == "TORUS":
-            major_r = dx / 2.0
-            minor_r = max(0.005, thickness / 2.0)
-            # Torus via Spin
-            bmesh.ops.create_circle(bm, cap_ends=False, segments=16, radius=minor_r)
-            bmesh.ops.translate(bm, vec=Vector((major_r, 0, 0)), verts=bm.verts[:])
-            bmesh.ops.spin(bm, geom=bm.verts[:] + bm.edges[:], cent=(0, 0, 0), axis=(0, 0, 1), angle=math.radians(360.0), steps=segments, use_merge=True)
+            profile = []
+            for index in range(16):
+                angle = math.tau * index / 16
+                inset = thickness * (1 - math.cos(angle)) / 2
+                profile.append((dx / 2 - inset, dy / 2 - inset, dz / 2 * math.sin(angle)))
+            self._revolve_profile(bm, profile, segments, closed=True)
         elif shape_upper == "TUBE":
-            outer_r = dx / 2.0
-            inner_r = max(0.001, outer_r - thickness)
-            bmesh.ops.create_cone(bm, cap_ends=False, segments=segments, radius1=outer_r, radius2=outer_r, depth=dz)
-            bm_inner = bmesh.new()
-            bmesh.ops.create_cone(bm_inner, cap_ends=False, segments=segments, radius1=inner_r, radius2=inner_r, depth=dz)
-            for f in bm_inner.faces:
-                bm.faces.new([bm.verts.new(v.co) for v in reversed(f.verts)])
-            bm_inner.free()
+            rx, ry, half_height = dx / 2, dy / 2, dz / 2
+            profile = [
+                (rx, ry, -half_height), (rx, ry, half_height),
+                (rx - thickness, ry - thickness, half_height),
+                (rx - thickness, ry - thickness, -half_height),
+            ]
+            self._revolve_profile(bm, profile, segments, closed=True)
         elif shape_upper == "WEDGE":
             bmesh.ops.create_cube(bm, size=1.0)
             bmesh.ops.scale(bm, vec=Vector((dx, dy, dz)), verts=bm.verts[:])
@@ -2197,7 +2243,8 @@ class BlenderMCPServer:
             bmesh.ops.create_cube(bm, size=1.0)
             bmesh.ops.scale(bm, vec=Vector((dx, dy, dz)), verts=bm.verts[:])
 
-        bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.0005)
+        if not revolved:
+            bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.0005)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
         bm.to_mesh(mesh)
         bm.free()
@@ -2245,7 +2292,7 @@ class BlenderMCPServer:
             values = [float(value) / 1000.0 for value in component["dimensions_mm"]]
         else:
             values = [float(value) for value in component.get("dimensions", [0.5, 0.5, 0.5])]
-        if len(values) != 3 or any(value <= 0.0 for value in values):
+        if len(values) != 3 or any(not math.isfinite(value) or value <= 0.0 for value in values):
             raise ValueError("Component dimensions must be three positive numbers")
         return values
 
@@ -2319,16 +2366,13 @@ class BlenderMCPServer:
             mapped.append(item)
         return mapped
 
-    def _delete_assembly(self, name: str) -> None:
-        root = bpy.data.objects.get(f"{name}_Root") or bpy.data.objects.get(name)
-        if not root or "mcp_assembly_spec" not in root:
-            raise ValueError(f"Assembly '{name}' not found")
+    @staticmethod
+    def _assembly_objects(root: bpy.types.Object) -> List[bpy.types.Object]:
         tracked = json.loads(root.get("mcp_assembly_objects", "[]"))
-        for object_name in tracked:
-            obj = bpy.data.objects.get(object_name)
-            if obj:
-                bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.data.objects.remove(root, do_unlink=True)
+        return [
+            obj for name in dict.fromkeys(tracked)
+            if (obj := bpy.data.objects.get(name)) is not None and obj.parent == root
+        ] + [root]
 
     def create_assembly(
         self,
@@ -2342,15 +2386,59 @@ class BlenderMCPServer:
         if not name:
             raise ValueError("Assembly spec needs a name")
         root_name = f"{name}_Root"
+        if len(root_name.encode("utf-8")) > 63:
+            raise ValueError("Assembly root name exceeds Blender's 63-byte limit")
         existing = bpy.data.objects.get(root_name)
         if existing:
-            if not replace:
+            if "mcp_assembly_spec" not in existing:
+                raise ValueError(f"Object '{root_name}' is not an assembly")
+            if replace is not True:
                 raise ValueError(
                     f"Assembly '{name}' already exists; use update_assembly or replace=True"
                 )
-            self._delete_assembly(name)
+        return self._replace_assembly(name, root_name, spec, existing)
 
+    def _replace_assembly(
+        self, name: str, root_name: str, spec: Dict[str, Any], existing: Optional[bpy.types.Object]
+    ) -> Dict[str, Any]:
         components = self._assembly_component_specs(spec)
+        previous = (
+            [(obj, obj.name) for obj in self._assembly_objects(existing)] if existing else []
+        )
+        data_collections = (bpy.data.objects, bpy.data.meshes, bpy.data.materials)
+        before = [set(collection) for collection in data_collections]
+        try:
+            # Los nombres se reservan hasta que la reconstrucción termine.
+            for obj, _ in previous:
+                obj.name = f"MCP_Backup_{secrets.token_hex(12)}"
+            result = self._build_assembly(name, root_name, spec, components)
+        except Exception:
+            for collection, originals in zip(data_collections, before):
+                for item in set(collection) - originals:
+                    collection.remove(item, do_unlink=True)
+            for obj, original_name in previous:
+                obj.name = original_name
+            raise
+        for obj, _ in previous:
+            mesh = obj.data if obj.type == "MESH" else None
+            bpy.data.objects.remove(obj, do_unlink=True)
+            if mesh and mesh.users == 0:
+                materials = [mat for mat in mesh.materials if mat and mat.get("mcp_assembly_material")]
+                bpy.data.meshes.remove(mesh)
+                for material in materials:
+                    if material.users == 0:
+                        bpy.data.materials.remove(material)
+        for component_name in result["components"]:
+            obj = bpy.data.objects[component_name]
+            material = obj.active_material
+            preferred = f"Mat_{component_name}"
+            if material and material.get("mcp_assembly_material") == preferred and not bpy.data.materials.get(preferred):
+                material.name = preferred
+        return result
+
+    def _build_assembly(
+        self, name: str, root_name: str, spec: Dict[str, Any], components: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         root = bpy.data.objects.new(root_name, None)
         root.empty_display_type = "PLAIN_AXES"
         root["mcp_assembly_spec"] = json.dumps(spec)
@@ -2366,6 +2454,17 @@ class BlenderMCPServer:
             if not component_name:
                 raise ValueError(f"Component {index} needs a name")
             object_name = f"{name}_{component_name}"
+            if len(object_name.encode("utf-8")) > 63:
+                raise ValueError("Assembly component name exceeds Blender's 63-byte limit")
+            if bpy.data.objects.get(object_name) or component_name in name_map:
+                raise ValueError(f"Component '{object_name}' conflicts with an existing object")
+            material_name = component.get("material_name")
+            if not material_name and component.get("color"):
+                preferred = f"Mat_{object_name}"
+                material = bpy.data.materials.new(preferred)
+                material["mcp_assembly_material"] = preferred
+                material_name = material.name
+                self.create_material(material_name, color=component["color"])
             result = self.create_parametric_part(
                 name=object_name,
                 shape=str(component.get("shape", "BOX")),
@@ -2378,9 +2477,8 @@ class BlenderMCPServer:
                 subsurf_levels=int(component.get("subsurf_levels", 0)),
                 taper_ratio=float(component.get("taper_ratio", 0.7)),
                 thickness=float(component.get("thickness", 0.05)),
-                color=component.get("color"),
-                material_name=component.get("material_name"),
-                parent_name=root_name,
+                material_name=material_name,
+                parent_name=root.name,
                 segments=int(component.get("segments", 32)),
             )
             actual_name = result["name"]
@@ -2423,9 +2521,12 @@ class BlenderMCPServer:
         new_spec = spec if spec is not None else self._deep_merge(stored, changes or {})
         if not isinstance(new_spec, dict):
             raise ValueError("Updated assembly spec must be an object")
-        new_spec["name"] = name
-        self._delete_assembly(name)
-        result = self.create_assembly(new_spec, replace=True)
+        root_name = f"{name}_Root"
+        if root.name != root_name and bpy.data.objects.get(root_name):
+            raise ValueError(f"Object '{root_name}' conflicts with the assembly")
+        if len(root_name.encode("utf-8")) > 63:
+            raise ValueError("Assembly root name exceeds Blender's 63-byte limit")
+        result = self._replace_assembly(name, root_name, {**new_spec, "name": name}, root)
         result["changes"] = changes or {}
         return result
 
@@ -4466,10 +4567,18 @@ class BlenderMCPServer:
         check_self_intersections: bool = False,
     ) -> Dict[str, Any]:
         """Audit evaluated geometry. AABB is broad-phase; `passed` is computed last."""
+        if topology_policy not in ("report", "strict"):
+            raise ValueError("topology_policy must be 'report' or 'strict'")
+        for tolerance in (contact_tolerance, ground_tolerance, scale_tolerance, symmetry_tolerance):
+            if not math.isfinite(tolerance) or tolerance < 0:
+                raise ValueError("Audit tolerances must be finite and non-negative")
+        if not math.isfinite(symmetry_plane):
+            raise ValueError("symmetry_plane must be finite")
         bpy.context.view_layer.update()
+        requested = list(dict.fromkeys(object_names or []))
         candidates = (
-            [bpy.data.objects.get(name) for name in object_names]
-            if object_names
+            [bpy.context.scene.objects.get(name) for name in requested]
+            if object_names is not None
             else list(bpy.context.scene.objects)
         )
 
@@ -4536,6 +4645,19 @@ class BlenderMCPServer:
         joints: List[str] = []
         llm_fix_commands: List[str] = []
         requirements: Dict[str, Any] = {}
+
+        missing = [name for name in requested if name not in snapshots]
+        if missing:
+            requirements["requested_meshes"] = {"passed": False, "missing": missing}
+            failures.extend({
+                "rule": "requested_meshes",
+                "object": name,
+                "expected": "evaluated mesh in the current scene",
+                "actual": None,
+                "tolerance": 0,
+                "method": "evaluated_mesh",
+                "severity": "critical",
+            } for name in missing)
 
         # 1. Collect dimensions from evaluated geometry.
         assembly_min = [float("inf")] * 3
@@ -4615,7 +4737,7 @@ class BlenderMCPServer:
                     f"UNAPPLIED_SCALE on '{obj.name}': scale is {entry['scale']}. "
                     "Must have absolute scale (1,1,1); negative values are mirrors."
                 )
-                command = f"repair_mesh_geometry(object_names=['{obj.name}'])"
+                command = f"repair_mesh_geometry(object_names=[{obj.name!r}])"
                 if command not in llm_fix_commands:
                     llm_fix_commands.append(command)
                 failures.append({
@@ -4637,7 +4759,7 @@ class BlenderMCPServer:
         # 4. Contact graph and collisions. AABB is broad-phase only; a
         # collision claim comes from BVH triangle intersection.
         contact_graph = GeometryService.contact_graph(
-            mesh_objects, tolerance=contact_tolerance
+            mesh_objects, tolerance=contact_tolerance, snapshots=list(snapshots.values())
         )
         collisions: List[Dict[str, Any]] = []
         floating: List[Dict[str, Any]] = []
@@ -4665,7 +4787,7 @@ class BlenderMCPServer:
                         "confidence": pair["confidence"],
                         "severity": "critical",
                     })
-                    command = f"auto_fix_model(object_names=['{pair['a']}', '{pair['b']}'])"
+                    command = f"auto_fix_model(object_names=[{pair['a']!r}, {pair['b']!r}])"
                     if command not in llm_fix_commands:
                         llm_fix_commands.append(command)
                 continue
@@ -4699,7 +4821,7 @@ class BlenderMCPServer:
                 "method": pair["method"],
                 "severity": "critical",
             })
-            command = f"attach_and_align(part_name='{child}', target_name='{parent}', relation='ON_TOP')"
+            command = f"attach_and_align(part_name={child!r}, target_name={parent!r}, relation='ON_TOP')"
             if command not in llm_fix_commands:
                 llm_fix_commands.append(command)
 
@@ -4718,12 +4840,6 @@ class BlenderMCPServer:
 
         # 5. Topology metrics. Report by default; strict mode makes defects
         # blocking.
-        if topology_policy not in ("report", "strict"):
-            warnings.append(
-                f"UNKNOWN_TOPOLOGY_POLICY '{topology_policy}': using 'report'."
-            )
-            topology_policy = "report"
-
         topology: Dict[str, Any] = {}
         topology_issues: List[Dict[str, Any]] = []
         for obj in mesh_objects:
@@ -4733,6 +4849,8 @@ class BlenderMCPServer:
                 )
             except Exception as exc:
                 warnings.append(f"TOPOLOGY_ERROR on '{obj.name}': {exc}")
+                if topology_policy == "strict" or check_self_intersections:
+                    requirements["topology_evaluation"] = {"passed": False}
                 continue
             topology[obj.name] = metrics
 
@@ -4803,12 +4921,14 @@ class BlenderMCPServer:
                     })
             except Exception as exc:
                 warnings.append(f"SYMMETRY_ERROR: {exc}")
+                requirements["symmetry"] = {"passed": False, "error": str(exc)}
 
         # 7. Blueprint dimensions. This runs before `passed` is computed.
         blueprint_report = None
         if blueprint_name:
             blueprint = MODELING_BLUEPRINTS.get(str(blueprint_name).lower().strip())
             if blueprint is None:
+                requirements["blueprint_dimensions"] = {"passed": False, "unknown": blueprint_name}
                 warnings.append(
                     f"UNKNOWN_BLUEPRINT '{blueprint_name}': no proportion reference applied."
                 )
@@ -4864,7 +4984,7 @@ class BlenderMCPServer:
                         })
                         if len(mesh_objects) == 1:
                             command = (
-                                f"transform_object(name='{mesh_objects[0].name}', "
+                                f"transform_object(name={mesh_objects[0].name!r}, "
                                 f"dimensions=[{expected[0]}, {expected[1]}, {expected[2]}])"
                             )
                             if command not in llm_fix_commands:
@@ -6110,7 +6230,7 @@ class BlenderMCPServer:
 
     def _confirm_or_dry_run(self, operation: str, confirm: bool, details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Return a dry-run payload unless the caller confirmed the operation."""
-        if confirm or os.environ.get(ALLOW_UNSAFE_OPS_ENV_VAR) == "1":
+        if confirm is True or os.environ.get(ALLOW_UNSAFE_OPS_ENV_VAR) == "1":
             return None
         return {
             "success": False,

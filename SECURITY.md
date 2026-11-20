@@ -6,12 +6,11 @@ The `v3.0.0-baseline` tag is a **development baseline, not a hardened
 release**. This document describes the threat model and the mitigations that
 v4 must implement. It does not certify the current code as safe.
 
-The tagged `v3.0.0-baseline` had optional authentication. This branch closes
-that gap: the add-on creates a per-install token file (0600) on first start and
-the bridge reads it. The remaining open P0s are `execute_code` (still
-unrestricted), unsafe ZIP extraction, unvalidated download URLs and the
-AABB-only collision decision. See the audit in the repository history and the
-migration plan.
+Pro v4 requires a local token by default, gates arbitrary Python execution,
+bounds asset downloads and confines export paths. The compatibility opt-ins
+grant broader access. Tool output can contain untrusted text from scene data
+and asset metadata. Clients should review repair suggestions and use structured
+tool arguments.
 
 ## Trust boundaries
 
@@ -60,9 +59,11 @@ remote-download hardening. The rest are planned.
 - Output paths are confined to `BLENDER_MCP_OUTPUT_DIR`.
 - Downloads are HTTPS-only, host-allowlisted, size-capped, and extracted with
   a safe ZIP routine.
-- The bridge binds to loopback and refuses non-loopback hosts by default.
-- Every privileged call is logged with a request ID and a redacted argument
-  summary.
+- The add-on panel starts a loopback listener. The stdio bridge connects to
+  loopback by default. `BLENDER_HOST` can override the destination and the TCP
+  connection carries the token in plaintext.
+- The request ID correlates calls and responses. A durable per-call audit log
+  is still planned.
 
 ## Token file
 
@@ -71,9 +72,11 @@ remote-download hardening. The rest are planned.
   `~/.config`.
 - Override the path with `BLENDER_MCP_TOKEN_FILE` on both sides.
 - Override the value with `BLENDER_AUTH_TOKEN` on both sides.
-- The add-on creates the file with mode 0600 and the directory with 0700.
-- Rotate by deleting the file and restarting Blender. The bridge rereads the
-  file when its cached token is empty; restart the bridge to pick up a rotation.
+- The add-on creates the file with mode 0600 and creates a missing directory
+  with mode 0700 on POSIX. A pre-existing override directory retains its mode.
+- Rotate the file with Blender stopped, then start Blender again. The bridge
+  reads the configured token for every request. An environment token takes
+  precedence over the file.
 - `BLENDER_MCP_ALLOW_NO_AUTH=1` disables authentication on both sides. Use it
   only for a trusted local process that cannot read the token file.
 

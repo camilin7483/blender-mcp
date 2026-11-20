@@ -32,7 +32,7 @@ echo "Using Blender: $BLENDER_BIN"
 "$BLENDER_BIN" --version | head -1
 
 echo "--- headless import and evaluated geometry ---"
-"$BLENDER_BIN" -b --factory-startup --python "$ROOT/tests/blender/import_headless.py"
+"$BLENDER_BIN" -b --factory-startup --python-exit-code 1 --python "$ROOT/tests/blender/import_headless.py"
 
 echo "--- GUI socket round-trip ---"
 GUI_LOG="$(mktemp)"
@@ -43,9 +43,9 @@ if [[ -z "${DISPLAY:-}" ]]; then
     echo "ERROR: the GUI test needs DISPLAY or xvfb-run." >&2
     exit 1
   fi
-  xvfb-run -a "$BLENDER_BIN" --factory-startup --python "$ROOT/tests/blender/smoke_gui.py" | tee "$GUI_LOG"
+  xvfb-run -a "$BLENDER_BIN" --factory-startup --python-exit-code 1 --python "$ROOT/tests/blender/smoke_gui.py" | tee "$GUI_LOG"
 else
-  "$BLENDER_BIN" --factory-startup --python "$ROOT/tests/blender/smoke_gui.py" | tee "$GUI_LOG"
+  "$BLENDER_BIN" --factory-startup --python-exit-code 1 --python "$ROOT/tests/blender/smoke_gui.py" | tee "$GUI_LOG"
 fi
 
 if ! grep -q "BLENDER_GUI_TEST_OK" "$GUI_LOG"; then

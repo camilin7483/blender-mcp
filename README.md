@@ -38,7 +38,6 @@ See [`SECURITY.md`](SECURITY.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Socket Server** — Runs a local server inside Blender (port 9876) that listens for JSON commands
 - **Full Blender API Access** — Create objects, materials, cameras, lights, animations, and more
 - **Poly Haven Integration** — Download free HDRI, texture, and 3D model assets directly into your scene
-- **AI-Powered Generation** — Text-to-3D via Rodin API, texture generation via Replicate
 - **Deterministic inspection** — Orthographic FRONT/RIGHT/TOP plus ISO,
   silhouette, wireframe, normals and UV checker modes, with camera metadata
   and a reproducible output hash.
@@ -107,8 +106,8 @@ the installed `blender-mcp` console script. The legacy v3 add-on remains at
 ### Starting the Server
 
 1. Open Blender
-2. Go to **View3D > Sidebar > BlenderMCP**
-3. Click **Start Server** (or **Connect**)
+2. Go to **View3D > Sidebar > MCP Pro**
+3. Click **Start Server**
 4. The server will start listening on `localhost:9876`
 
 ### Example Commands
@@ -132,42 +131,17 @@ The core of the add-on is the `BlenderMCPServer` class which:
 3. Routes each command to the appropriate **handler function**
 4. Returns **JSON responses** with results or error messages
 
-### Available Endpoints
+### Available tools
 
-| Category | Commands |
-|----------|----------|
-| **Objects** | create_object, select_object, delete_object, duplicate_object, transform_object, rename_object, get_object_info, list_objects |
-| **Materials** | create_material, assign_material, set_material_property, get_material_info, list_materials |
-| **Scene** | get_scene_info, set_scene_property, render_scene, clear_scene |
-| **Camera** | add_camera, set_active_camera, frame_object |
-| **Lights** | add_light, set_light_property, list_lights |
-| **Animation** | set_keyframe, add_rotation_animation, add_movement_animation, add_scale_animation |
-| **Poly Haven** | search_polyhaven, download_asset, import_asset |
-| **AI** | generate_3d_text (Rodin API), generate_texture (Replicate API) |
-| **System** | exec_code (raw bpy execution), get_addon_info, export_scene |
+The MCP client discovers the active tools and argument schemas through
+`tools/list`. Use `create_parametric_part` for geometry, `create_material`
+and `assign_material` for materials, `setup_studio_lighting` for studio
+lighting, and `render_multiview_inspection` for image output.
 
-## Poly Haven Integration
-
-The add-on can search and download free assets from [Poly Haven](https://polyhaven.com/):
-
-- **HDRI** environments for realistic lighting
-- **Textures** (albedo, roughness, normal maps, etc.)
-- **3D Models** (HDRIs, textures, and models)
-
-Use the `search_polyhaven` command with parameters like `type: hdri`, `type: texture`, or `type: model`.
-
-## AI Features
-
-### Rodin Text-to-3D (Free Trial)
-
-- Uses the Rodin API with free trial key
-- Generate 3D models from text descriptions
-- Imports generated models directly into the scene
-
-### Replicate Texture Generation
-
-- Generate textures using AI models via Replicate API
-- Requires a Replicate API token configured in preferences
+The Pro bridge exposes `search_polyhaven_assets` and
+`download_polyhaven_asset` for Poly Haven assets. Sketchfab search and
+download use `search_sketchfab_models` and `download_sketchfab_model`.
+Downloads from Sketchfab require `SKETCHFAB_API_TOKEN` in Blender's environment.
 
 ## Development
 

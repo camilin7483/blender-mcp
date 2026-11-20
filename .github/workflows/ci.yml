@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-dev.txt -r pro/requirements.txt
-      - run: python -m pytest tests/contracts tests/unit -q
+      - run: python -m pytest tests/contracts tests/unit tests/integration -q
       - run: python -m ruff check tests scripts bench
 
   blender-cross-platform:
@@ -52,7 +52,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & "$env:RUNNER_TEMP\blender-5.2.4-windows-x64\blender.exe" -b --factory-startup --python tests/blender/import_headless.py
+          & "$env:RUNNER_TEMP\blender-5.2.4-windows-x64\blender.exe" -b --factory-startup --python-exit-code 1 --python tests/blender/import_headless.py
       - name: Download and verify Blender (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -63,7 +63,7 @@ jobs:
       - name: Run Blender headless (macOS)
         if: runner.os == 'macOS'
         run: |
-          "$RUNNER_TEMP/blender-mount/Blender.app/Contents/MacOS/Blender" -b --factory-startup --python tests/blender/import_headless.py
+          "$RUNNER_TEMP/blender-mount/Blender.app/Contents/MacOS/Blender" -b --factory-startup --python-exit-code 1 --python tests/blender/import_headless.py
       - name: Detach Blender (macOS)
         if: runner.os == 'macOS'
         run: hdiutil detach "$RUNNER_TEMP/blender-mount"

@@ -43,12 +43,11 @@ def _load_auth_token() -> str:
         return ""
 
 
-BLENDER_AUTH_TOKEN = _load_auth_token()
-
-
 def _current_auth_token() -> str:
-    """Re-read the token file if the bridge started before Blender."""
-    return BLENDER_AUTH_TOKEN or _load_auth_token()
+    """Read the current token, including rotations while the bridge runs."""
+    if os.getenv(ALLOW_NO_AUTH_ENV_VAR) == "1":
+        return ""
+    return _load_auth_token()
 
 
 def send_blender_command(
@@ -82,19 +81,25 @@ def send_blender_command(
         sock.sendall(json.dumps(payload).encode("utf-8") + b"\n")
 
         decoder = json.JSONDecoder()
-        buffer = b""
+        buffer = bytearray()
         while True:
             data = sock.recv(65536)
             if not data:
                 break
-            buffer += data
+            buffer.extend(data)
             if len(buffer) > MAX_RESPONSE_BYTES:
                 raise RuntimeError(
                     f"Response from Blender exceeds maximum size ({MAX_RESPONSE_BYTES} bytes)"
                 )
+            # El objeto JSON solo puede terminar después de una llave de cierre.
+            # Esto conserva respuestas antiguas sin salto de línea.
+            if not data.rstrip().endswith(b"}"):
+                continue
             try:
                 text = buffer.decode("utf-8").lstrip()
                 resp, _ = decoder.raw_decode(text)
+                if not isinstance(resp, dict):
+                    raise RuntimeError("Blender response must be a JSON object")
                 if resp.get("request_id") not in (None, request_id):
                     raise RuntimeError(
                         f"Response request_id mismatch for '{cmd_type}': "

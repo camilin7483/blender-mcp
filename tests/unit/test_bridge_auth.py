@@ -49,3 +49,17 @@ def test_send_refuses_without_token(monkeypatch) -> None:
     with pytest.raises(RuntimeError, match="No Blender auth token"):
         bridge_transport.send_blender_command("get_scene_info")
 
+
+def test_current_token_tracks_rotation(tmp_path, monkeypatch) -> None:
+    token_file = tmp_path / "token"
+    monkeypatch.setenv("BLENDER_MCP_TOKEN_FILE", str(token_file))
+    monkeypatch.delenv("BLENDER_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("BLENDER_MCP_ALLOW_NO_AUTH", raising=False)
+    token_file.write_text("first", encoding="utf-8")
+    assert bridge_transport._current_auth_token() == "first"
+
+    token_file.write_text("rotated", encoding="utf-8")
+    assert bridge_transport._current_auth_token() == "rotated"
+
+    monkeypatch.setenv("BLENDER_MCP_ALLOW_NO_AUTH", "1")
+    assert bridge_transport._current_auth_token() == ""
