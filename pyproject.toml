@@ -7,7 +7,7 @@ name = "blender-mcp"
 version = "4.0.0a4"
 description = "MCP bridge for the Blender MCP Pro add-on"
 requires-python = ">=3.10"
-dependencies = ["mcp==1.30.0"]
+dependencies = ["mcp==1.30.0", "PyJWT>=2.15.0,<3"]
 
 [project.scripts]
 blender-mcp = "blender_mcp.server:main"

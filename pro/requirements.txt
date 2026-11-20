@@ -1,3 +1,6 @@
 # Runtime dependency for the MCP bridge (pro/mcp_server.py).
 # Pin exactly: the bridge is tested against this version.
 mcp==1.30.0
+
+# Versión corregida para PYSEC-2026-4141 y PYSEC-2026-4183.
+PyJWT>=2.15.0,<3
