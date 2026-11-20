@@ -64,6 +64,26 @@ def _read_messages(sock: socket.socket, count: int, timeout: float = 10.0) -> li
 
 def client(port: int, token: str) -> None:
     try:
+        def mutation(request_id, queue_seconds, disconnect=False):
+            payload = json.loads(_request(request_id, "timeout_regression", token))
+            payload["queue_timeout_seconds"] = queue_seconds
+            payload["cancel_on_disconnect"] = disconnect
+            return (json.dumps(payload) + "\n").encode()
+
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall(mutation("expired", 0.025))
+            sock.shutdown(socket.SHUT_WR)  # Legacy half-close still receives a reply.
+            state["expired"] = _read_messages(sock, 1)[0]
+
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall(mutation("abandoned", 4.0, disconnect=True))
+
+        # Wait until the main thread has resumed dispatching.
+        time.sleep(0.5)
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall(mutation("started", 0.5))
+            state["started"] = _read_messages(sock, 1)[0]
+
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             sock.sendall((_request("smoke-bad", token="wrong-token") + "\n").encode("utf-8"))
             messages = _read_messages(sock, 1)
@@ -123,6 +143,13 @@ def finish() -> None:
 
     if threading.current_thread().name != "MainThread":
         checks.append(f"timer ran on {threading.current_thread().name!r}")
+
+    if (state.get("expired") or {}).get("code") != "request_expired":
+        checks.append(f"queued timeout did not expire: {state.get('expired')!r}")
+    if (state.get("started") or {}).get("code") != "operation_result_unknown":
+        checks.append(f"running timeout did not report uncertain result: {state.get('started')!r}")
+    if state.get("mutations") != 1:
+        checks.append(f"expected only the started mutation to execute: {state.get('mutations')!r}")
 
     server.stop()
 
@@ -184,8 +211,19 @@ def main() -> None:
         return
 
     port = server.server_socket.getsockname()[1]
+    dispatch = server._execute_command_internal
+    state["mutations"] = 0
+
+    def execute(command, params):
+        if command == "timeout_regression":
+            state["mutations"] += 1
+            time.sleep(0.75)
+            return {}
+        return dispatch(command, params)
+
+    server._execute_command_internal = execute
     threading.Thread(target=client, args=(port, server.auth_token), daemon=True).start()
-    time.sleep(0.1)
+    time.sleep(0.35)  # Keep both cancelled requests queued until their worker has responded.
     bpy.app.timers.register(finish, first_interval=5.0)
 
 

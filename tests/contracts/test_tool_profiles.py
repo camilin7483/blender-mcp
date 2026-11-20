@@ -45,8 +45,8 @@ def test_full_profile_has_every_tool() -> None:
     assert len(_tools("full")) == 61
 
 
-def test_unknown_profile_fails_open() -> None:
-    assert len(_tools("does-not-exist")) == 61
+def test_unknown_profile_uses_core() -> None:
+    assert _tools("does-not-exist") == _tools("core")
 
 
 def test_every_tool_belongs_to_a_profile() -> None:

@@ -704,7 +704,7 @@ def audit_3d_model(
     topology_policy: str = "report",
     check_self_intersections: bool = False,
 ) -> str:
-    """Audit evaluated geometry: dimensions, ground contact, normalized scale, BVH surface intersections, contact graph, topology, symmetry and optional blueprint dimensions. Returns passed, requirements, failures and the legacy critical_issues/warnings views. passed is computed after every requirement. topology_policy is 'report' or 'strict'. Names in suspended are excluded from ground/floating checks."""
+    """Audit evaluated geometry: dimensions, ground contact, normalized scale, BVH intersections and closed-solid overlap, contact graph, topology, symmetry and optional blueprint dimensions. Returns passed, requirements, failures and the legacy critical_issues/warnings views. passed is computed after every requirement. Use 'strict' to require clean topology and a contact path to the ground for every structural part. Names in suspended are excluded from ground/floating checks."""
     return json.dumps(send_blender_command("audit_3d_model", {
         "object_names": object_names, "blueprint_name": blueprint_name,
         "contact_tolerance": contact_tolerance, "suspended": suspended,
@@ -999,10 +999,10 @@ def _apply_tool_profile() -> str:
         return requested
     if requested not in TOOL_PROFILES:
         print(
-            f"[blender-mcp] Unknown BLENDER_MCP_PROFILE '{requested}'; using 'full'.",
+            f"[blender-mcp] Unknown BLENDER_MCP_PROFILE '{requested}'; using 'core'.",
             file=sys.stderr,
         )
-        return "full"
+        requested = "core"
     allowed = TOOL_PROFILES[requested]
     manager = getattr(mcp, "_tool_manager", None)
     if manager is None:

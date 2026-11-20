@@ -17,6 +17,7 @@ import time
 import math
 import hmac
 import hashlib
+import http.client
 import ipaddress
 import secrets
 import shutil
@@ -75,6 +76,7 @@ MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 MAIN_THREAD_TICK_SECONDS = 0.02
 MAX_REQUESTS_PER_TICK = 8
 MAX_CLIENTS = 5
+MAX_QUEUE_SECONDS = 175.0
 
 
 @dataclass
@@ -84,8 +86,39 @@ class PendingRequest:
     cmd_type: str
     params: Dict[str, Any]
     request_id: Any
+    deadline: float
     response: Optional[Dict[str, Any]] = None
     done: threading.Event = field(default_factory=threading.Event)
+
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    started: bool = False
+
+    def claim(self) -> bool:
+        with self.lock:
+            if self.done.is_set():
+                return False
+            if time.monotonic() >= self.deadline:
+                self.response = self.timeout_response()
+                self.done.set()
+                return False
+            self.started = True
+            return True
+
+    def cancel_if_queued(self, response: Dict[str, Any]):
+        with self.lock:
+            if not self.started and not self.done.is_set():
+                self.response = response
+                self.done.set()
+
+    def timeout_response(self) -> Dict[str, Any]:
+        return {
+            "status": "error",
+            "code": "operation_result_unknown" if self.started else "request_expired",
+            "message": (
+                "Blender operation already started; its result is unknown. Check scene state before retrying."
+                if self.started else "Blender request expired before execution"
+            ),
+        }
 
 
 def default_token_path() -> str:
@@ -203,14 +236,50 @@ def _is_private_ip(value: str) -> bool:
         ip = ipaddress.ip_address(value.split("%", 1)[0])
     except ValueError:
         return True
-    return (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
+    return not ip.is_global or ip.is_multicast or ip.is_reserved
+
+
+def _public_download_addresses(host, port):
+    addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not addresses or any(_is_private_ip(address[4][0]) for address in addresses):
+        raise ValueError(f"Download host '{host}' resolves to a non-public address")
+    return addresses
+
+
+def _connect_public_download(address, timeout, source_address=None):
+    host, port = address
+    addresses = _public_download_addresses(host, port)
+    deadline = time.monotonic() + timeout
+    last_error = None
+    for family, socktype, protocol, _, sockaddr in addresses:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f"Timed out connecting to download host '{host}'")
+        sock = socket.socket(family, socktype, protocol)
+        try:
+            sock.settimeout(remaining)
+            if source_address is not None:
+                sock.bind(source_address)
+            sock.connect(sockaddr)
+            return sock
+        except OSError as exc:
+            sock.close()
+            last_error = exc
+    raise OSError(f"Cannot connect to download host '{host}'") from last_error
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Keep the logical host for SNI and certificate verification. Only the
+        # underlying TCP destination uses the validated numeric address.
+        self._create_connection = _connect_public_download
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_PinnedHTTPSConnection, req, context=self._context)
+
 
 
 def validate_download_url(url: str, resolve: bool = True) -> str:
@@ -237,20 +306,22 @@ def validate_download_url(url: str, resolve: bool = True) -> str:
 
     if resolve:
         try:
-            infos = socket.getaddrinfo(host, port or 443, type=socket.SOCK_STREAM)
+            _public_download_addresses(host, port or 443)
         except socket.gaierror as exc:
             raise ValueError(f"Cannot resolve download host '{host}': {exc}") from exc
-        for info in infos:
-            if _is_private_ip(info[4][0]):
-                raise ValueError(f"Download host '{host}' resolves to a non-public address")
     return str(url)
 
 
 class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         newurl = urllib.parse.urljoin(req.full_url, newurl)
-        validate_download_url(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        validate_download_url(newurl, resolve=False)
+        redirect = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirect is not None and urllib.parse.urlsplit(req.full_url).netloc != urllib.parse.urlsplit(newurl).netloc:
+            redirect.remove_header("Authorization")
+            redirect.remove_header("Proxy-Authorization")
+            redirect.remove_header("Cookie")
+        return redirect
 
 
 def _open_url(
@@ -259,12 +330,12 @@ def _open_url(
     max_bytes: int,
     headers: Optional[Dict[str, str]] = None,
 ):
-    validate_download_url(url)
+    validate_download_url(url, resolve=False)
     request_headers = {"User-Agent": "BlenderMCP-Pro/3.0"}
     if headers:
         request_headers.update(headers)
     request = urllib.request.Request(url, headers=request_headers)
-    opener = urllib.request.build_opener(_SafeRedirectHandler)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _PinnedHTTPSHandler, _SafeRedirectHandler)
     response = opener.open(request, timeout=timeout)
     length = response.headers.get("Content-Length")
     if length:
@@ -394,6 +465,8 @@ class GeometrySnapshot:
     face_areas: List[float]
     face_count: int
     bvh: BVHTree
+    solid: bool
+    component_points: List[Vector]
 
 
 class GeometryService:
@@ -414,17 +487,36 @@ class GeometryService:
 
             matrix = eval_obj.matrix_world.copy()
             bm = bmesh.new()
-            bm.from_mesh(mesh)
-            bm.verts.ensure_lookup_table()
-            bm.faces.ensure_lookup_table()
-            local_vertices = [v.co.copy() for v in bm.verts]
-            bm.transform(matrix)
-            vertices = [v.co.copy() for v in bm.verts]
-            face_centers = [f.calc_center_median() for f in bm.faces]
-            face_areas = [f.calc_area() for f in bm.faces]
-            face_count = len(bm.faces)
-            bvh = BVHTree.FromBMesh(bm, epsilon=1e-6)
-            bm.free()
+            try:
+                bm.from_mesh(mesh)
+                bm.verts.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
+                local_vertices = [v.co.copy() for v in bm.verts]
+                bm.transform(matrix)
+                vertices = [v.co.copy() for v in bm.verts]
+                face_centers = [f.calc_center_median() for f in bm.faces]
+                face_areas = [f.calc_area() for f in bm.faces]
+                face_count = len(bm.faces)
+                bvh = BVHTree.FromBMesh(bm, epsilon=1e-6)
+                solid = bool(face_count) and all(edge.is_manifold for edge in bm.edges) and all(
+                    vertex.is_manifold for vertex in bm.verts
+                )
+                component_points = []
+                if solid:
+                    remaining = set(bm.verts)
+                    while remaining:
+                        root = remaining.pop()
+                        component_points.append(root.co.copy())
+                        stack = [root]
+                        while stack:
+                            vertex = stack.pop()
+                            for edge in vertex.link_edges:
+                                neighbor = edge.other_vert(vertex)
+                                if neighbor in remaining:
+                                    remaining.remove(neighbor)
+                                    stack.append(neighbor)
+            finally:
+                bm.free()
 
             world_min = Vector((
                 min(v.x for v in vertices),
@@ -457,9 +549,91 @@ class GeometryService:
                 face_areas=face_areas,
                 face_count=face_count,
                 bvh=bvh,
+                solid=solid,
+                component_points=component_points,
             )
         finally:
             eval_obj.to_mesh_clear()
+
+    @staticmethod
+    def point_in_solid(snapshot: GeometrySnapshot, point: Vector) -> bool:
+        """Even/odd classification handles shells, cavities and mirrored normals."""
+        if any(
+            point[axis] < snapshot.world_aabb[0][axis] - 1e-6
+            or point[axis] > snapshot.world_aabb[1][axis] + 1e-6
+            for axis in range(3)
+        ):
+            return False
+        votes = 0
+        for direction in (
+            Vector((1.0, 0.371, 0.173)).normalized(),
+            Vector((0.219, 1.0, 0.517)).normalized(),
+            Vector((0.473, 0.311, 1.0)).normalized(),
+        ):
+            origin = point
+            hits = 0
+            while True:
+                location, _, _, distance = snapshot.bvh.ray_cast(origin, direction)
+                if location is None:
+                    break
+                hits += 1
+                advance = max(4e-6, 4e-7 * max(abs(c) for c in location))
+                next_origin = location + direction * advance
+                if next_origin == origin or distance < 0:
+                    break
+                origin = next_origin
+            votes += hits % 2
+        return votes >= 2
+
+    @classmethod
+    def enclosed_overlap(cls, a: GeometrySnapshot, b: GeometrySnapshot) -> bool:
+        """Find interpenetration when closed boundaries do not cross."""
+        return a.solid and b.solid and any(
+            cls.point_in_solid(outer, point)
+            for inner, outer in ((a, b), (b, a))
+            for point in inner.component_points
+        )
+
+    @classmethod
+    def containment(cls, inner: GeometrySnapshot, outer: GeometrySnapshot, tolerance: float):
+        outside = 0
+        excess = 0.0
+        if not outer.solid:
+            return False, outside, excess, "outer_mesh_is_not_closed"
+        for point in inner.vertices_world:
+            _, _, _, distance = outer.bvh.find_nearest(point)
+            if distance > tolerance and not cls.point_in_solid(outer, point):
+                outside += 1
+                excess = max(excess, distance)
+        if outside:
+            return False, outside, excess, "vertices_outside"
+        # Separate boundaries cannot cross between vertices. Also reject an outer
+        # boundary enclosed by the inner solid (for example a cavity).
+        if not inner.bvh.overlap(outer.bvh):
+            encloses_boundary = inner.solid and any(
+                cls.point_in_solid(inner, point) for point in outer.component_points
+            )
+            return not encloses_boundary, outside, excess, (
+                "outer_boundary_enclosed" if encloses_boundary else None
+            )
+        # A convex outer mesh can certify containment at a touching boundary.
+        # Require every vertex to lie within every supporting plane.
+        for center in outer.face_centers_world:
+            nearest, normal, _, _ = outer.bvh.find_nearest(center)
+            if nearest is None or (nearest - center).length > 1e-6:
+                break
+            offsets = [(point - center).dot(normal) for point in outer.vertices_world]
+            if max(offsets) <= 1e-6:
+                sign = 1
+            elif min(offsets) >= -1e-6:
+                sign = -1
+            else:
+                break
+            if any((point - center).dot(normal) * sign > tolerance for point in inner.vertices_world):
+                break
+        else:
+            return True, outside, excess, None
+        return False, outside, excess, "boundary_contact_cannot_certify_containment"
 
     @staticmethod
     def aabb_gap(a: GeometrySnapshot, b: GeometrySnapshot) -> float:
@@ -524,6 +698,7 @@ class GeometryService:
                         "min_distance": round(gap, 6),
                         "contact": False,
                         "surface_intersection": False,
+                        "enclosed_volume_overlap": False,
                         "overlap_face_pairs": 0,
                         "estimated_contact_area": None,
                         "method": "aabb_broad_phase",
@@ -550,6 +725,7 @@ class GeometryService:
                         "min_distance": 0.0,
                         "contact": True,
                         "surface_intersection": True,
+                        "enclosed_volume_overlap": False,
                         "overlap_face_pairs": len(overlap_pairs),
                         "estimated_contact_area": round(min(area_a, area_b), 6),
                         "method": "bvh_overlap",
@@ -558,12 +734,16 @@ class GeometryService:
                     })
                     continue
 
+                enclosed = gap == 0 and cls.enclosed_overlap(a, b)
                 distance, approximate, method, _ = cls.nearest_distance(a, b)
+                if enclosed:
+                    method = "bvh_solid_containment"
                 pairs_out.append({
                     "a": a.name,
                     "b": b.name,
                     "min_distance": round(distance, 6),
-                    "contact": distance <= tolerance,
+                    "contact": not enclosed and distance <= tolerance,
+                    "enclosed_volume_overlap": enclosed,
                     "surface_intersection": False,
                     "overlap_face_pairs": 0,
                     "estimated_contact_area": None,
@@ -1514,7 +1694,7 @@ class BlenderMCPServer:
             except queue.Empty:
                 break
             processed += 1
-            if pending.done.is_set():
+            if not pending.claim():
                 continue
             try:
                 result = self._execute_command_internal(pending.cmd_type, pending.params)
@@ -1533,9 +1713,7 @@ class BlenderMCPServer:
                 pending = self.request_queue.get_nowait()
             except queue.Empty:
                 break
-            if not pending.done.is_set():
-                pending.response = {"status": "error", "message": message}
-                pending.done.set()
+            pending.cancel_if_queued({"status": "error", "message": message})
 
     def _server_loop(self):
         while self.running:
@@ -1671,15 +1849,36 @@ class BlenderMCPServer:
                         send_response({"status": "error", "message": "Server is stopping"}, request_id)
                         return
 
-                    pending = PendingRequest(cmd_type=cmd_type, params=params, request_id=request_id)
+                    queue_seconds = msg.get("queue_timeout_seconds", MAX_QUEUE_SECONDS)
+                    if (
+                        type(queue_seconds) not in (int, float)
+                        or not 0 < queue_seconds <= MAX_QUEUE_SECONDS
+                    ):
+                        send_response({"status": "error", "message": "Invalid queue timeout"}, request_id)
+                        continue
+                    pending = PendingRequest(
+                        cmd_type, params, request_id, time.monotonic() + queue_seconds
+                    )
                     self.request_queue.put(pending)
-                    if not self.accepting_requests and not pending.done.is_set():
-                        pending.response = {"status": "error", "message": "Server is stopping"}
-                        pending.done.set()
-                    pending.done.wait(timeout=175.0)
+                    if not self.accepting_requests:
+                        pending.cancel_if_queued({"status": "error", "message": "Server is stopping"})
 
-                    resp = pending.response or {"status": "error", "message": "Operation timed out in Blender"}
-                    send_response(resp, request_id)
+                    while not pending.done.wait(timeout=max(0, min(0.05, pending.deadline - time.monotonic()))):
+                        if time.monotonic() >= pending.deadline:
+                            pending.cancel_if_queued(pending.timeout_response())
+                            break
+                        if msg.get("cancel_on_disconnect") is not True:
+                            continue
+                        try:
+                            readable, _, _ = select.select([client], [], [], 0)
+                            if readable and not client.recv(1, socket.MSG_PEEK):
+                                pending.cancel_if_queued({"status": "error", "message": "Client disconnected"})
+                                return
+                        except OSError:
+                            pending.cancel_if_queued({"status": "error", "message": "Client disconnected"})
+                            return
+
+                    send_response(pending.response or pending.timeout_response(), request_id)
 
         except Exception as ex:
             print(f"[BlenderMCP-Pro] Client handler exception: {ex}")
@@ -3015,13 +3214,13 @@ class BlenderMCPServer:
             snapshots = {
                 obj.name: GeometryService.snapshot(obj) for obj in objects
             }
-            graph = GeometryService.contact_graph(objects, tolerance)
+            graph = GeometryService.contact_graph(objects, tolerance, list(snapshots.values()))
             if ctype == "no_intersection":
                 violations = []
                 for pair in graph["pairs"]:
-                    if not pair["surface_intersection"]:
-                        continue
-                    if not self._is_face_contact(
+                    if pair.get("enclosed_volume_overlap"):
+                        violations.append(pair)
+                    elif pair["surface_intersection"] and not self._is_face_contact(
                         snapshots[pair["a"]].world_aabb,
                         snapshots[pair["b"]].world_aabb,
                     ):
@@ -3030,7 +3229,7 @@ class BlenderMCPServer:
                     not violations,
                     "no interpenetration",
                     {"violations": len(violations)},
-                    "bvh_overlap_face_contact",
+                    "bvh_overlap_or_solid_containment",
                     [obj.name for obj in objects],
                     {"details": {"collisions": violations}},
                 )
@@ -3045,6 +3244,9 @@ class BlenderMCPServer:
             if pair is None:
                 passed = False
                 actual = {"min_distance": None}
+            elif pair.get("enclosed_volume_overlap"):
+                passed = False
+                actual = pair
             elif pair["surface_intersection"]:
                 passed = self._is_face_contact(
                     snapshots[pair["a"]].world_aabb,
@@ -3068,26 +3270,18 @@ class BlenderMCPServer:
             outer = get_object(constraint.get("outer") or constraint.get("b"))
             inner_snapshot = GeometryService.snapshot(inner)
             outer_snapshot = GeometryService.snapshot(outer)
-            outside_vertices = 0
-            maximum_excess = 0.0
-            for vertex in inner_snapshot.vertices_world:
-                for axis in range(3):
-                    low = outer_snapshot.world_aabb[0][axis] - tolerance
-                    high = outer_snapshot.world_aabb[1][axis] + tolerance
-                    if vertex[axis] < low:
-                        outside_vertices += 1
-                        maximum_excess = max(maximum_excess, low - vertex[axis])
-                    elif vertex[axis] > high:
-                        outside_vertices += 1
-                        maximum_excess = max(maximum_excess, vertex[axis] - high)
+            passed, outside_vertices, maximum_excess, reason = GeometryService.containment(
+                inner_snapshot, outer_snapshot, tolerance
+            )
             return result(
-                outside_vertices == 0,
-                "all vertices inside the outer AABB",
+                passed,
+                "evaluated inner mesh inside the closed outer volume",
                 {
                     "outside_vertices": outside_vertices,
                     "max_excess": round(float(maximum_excess), 6),
+                    "reason": reason,
                 },
-                "evaluated_aabb_containment",
+                "evaluated_solid_containment",
                 [inner.name, outer.name],
             )
 
@@ -4756,8 +4950,7 @@ class BlenderMCPServer:
             "method": "object_scale",
         }
 
-        # 4. Contact graph and collisions. AABB is broad-phase only; a
-        # collision claim comes from BVH triangle intersection.
+        # 4. Contact graph and collisions from evaluated surfaces and solids.
         contact_graph = GeometryService.contact_graph(
             mesh_objects, tolerance=contact_tolerance, snapshots=list(snapshots.values())
         )
@@ -4765,10 +4958,10 @@ class BlenderMCPServer:
         floating: List[Dict[str, Any]] = []
 
         for pair in contact_graph["pairs"]:
-            if pair["surface_intersection"]:
+            if pair["surface_intersection"] or pair.get("enclosed_volume_overlap"):
                 aabb_a = snapshots[pair["a"]].world_aabb
                 aabb_b = snapshots[pair["b"]].world_aabb
-                if self._is_face_contact(aabb_a, aabb_b):
+                if not pair.get("enclosed_volume_overlap") and self._is_face_contact(aabb_a, aabb_b):
                     joints.append(
                         f"CONTACT_JOINT between '{pair['a']}' and '{pair['b']}': "
                         f"surfaces touch ({pair['overlap_face_pairs']} face pairs, "
@@ -4780,8 +4973,9 @@ class BlenderMCPServer:
                     failures.append({
                         "rule": "no_surface_intersection",
                         "object": f"{pair['a']} <-> {pair['b']}",
-                        "expected": "no surface intersection",
-                        "actual": f"{pair['overlap_face_pairs']} overlapping face pairs",
+                        "expected": "no interpenetration",
+                        "actual": ("enclosed solid" if pair.get("enclosed_volume_overlap")
+                                   else f"{pair['overlap_face_pairs']} overlapping face pairs"),
                         "tolerance": float(contact_tolerance),
                         "method": pair["method"],
                         "confidence": pair["confidence"],
@@ -4829,7 +5023,7 @@ class BlenderMCPServer:
             "passed": not collisions,
             "tolerance": float(contact_tolerance),
             "collision_pairs": len(collisions),
-            "method": "bvh_overlap",
+            "method": "bvh_overlap_or_solid_containment",
         }
         requirements["parent_child_contact"] = {
             "passed": not floating,
@@ -4837,6 +5031,45 @@ class BlenderMCPServer:
             "floating": floating,
             "method": "contact_graph",
         }
+
+        if topology_policy == "strict":
+            neighbors = {snapshot.name: set() for snapshot in structural_snapshots}
+            for pair in contact_graph["pairs"]:
+                a, b = pair["a"], pair["b"]
+                if a not in neighbors or b not in neighbors or not pair["contact"]:
+                    continue
+                if pair["surface_intersection"] and not self._is_face_contact(
+                    snapshots[a].world_aabb, snapshots[b].world_aabb
+                ):
+                    continue
+                neighbors[a].add(b)
+                neighbors[b].add(a)
+            supported = {
+                snapshot.name for snapshot in structural_snapshots
+                if abs(snapshot.world_aabb[0][2]) <= ground_tolerance
+            }
+            stack = list(supported)
+            while stack:
+                for neighbor in neighbors[stack.pop()] - supported:
+                    supported.add(neighbor)
+                    stack.append(neighbor)
+            unsupported = sorted(neighbors.keys() - supported)
+            requirements["ground_support"] = {
+                "passed": not unsupported,
+                "objects": unsupported,
+                "method": "contact_graph",
+                "tolerance": float(contact_tolerance),
+            }
+            for name in unsupported:
+                failures.append({
+                    "rule": "ground_support",
+                    "object": name,
+                    "expected": "contact path to ground or explicitly suspended",
+                    "actual": "no contact path to ground",
+                    "tolerance": float(contact_tolerance),
+                    "method": "contact_graph",
+                    "severity": "critical",
+                })
 
         # 5. Topology metrics. Report by default; strict mode makes defects
         # blocking.

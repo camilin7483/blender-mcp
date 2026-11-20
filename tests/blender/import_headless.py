@@ -15,6 +15,7 @@ import sys
 import tempfile
 import traceback
 import zipfile
+from unittest.mock import Mock, patch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "pro"))
@@ -127,6 +128,31 @@ def main() -> None:
             fail("_is_private_ip missed a private address")
         if bm._is_private_ip("8.8.8.8"):
             fail("_is_private_ip rejected a public address")
+        public_address = (bm.socket.AF_INET, bm.socket.SOCK_STREAM, 6, "", ("8.8.8.8", 443))
+        private_address = (bm.socket.AF_INET, bm.socket.SOCK_STREAM, 6, "", ("127.0.0.1", 443))
+        with patch.object(bm.socket, "getaddrinfo", return_value=[public_address]) as resolve:
+            connection = Mock()
+            with patch.object(bm.socket, "socket", return_value=connection):
+                assert bm._connect_public_download(("api.polyhaven.com", 443), 5.0) is connection
+            resolve.assert_called_once_with("api.polyhaven.com", 443, type=bm.socket.SOCK_STREAM)
+            connection.connect.assert_called_once_with(("8.8.8.8", 443))
+        with patch.object(bm.socket, "getaddrinfo", return_value=[public_address, private_address]):
+            with patch.object(bm.socket, "socket") as connect:
+                try:
+                    bm._connect_public_download(("api.polyhaven.com", 443), 5.0)
+                except ValueError:
+                    pass
+                else:
+                    fail("download accepted a non-public DNS answer")
+                connect.assert_not_called()
+        redirect_handler = bm._SafeRedirectHandler()
+        original = bm.urllib.request.Request(
+            "https://api.sketchfab.com/v3/models", headers={"Authorization": "test-token"}
+        )
+        redirect = redirect_handler.redirect_request(
+            original, None, 302, "", {}, "https://api.polyhaven.com/assets"
+        )
+        assert not redirect.has_header("Authorization")
         if "/" in bm.sanitize_asset_id("../../etc/passwd"):
             fail("sanitize_asset_id kept a path separator")
         try:
@@ -449,6 +475,52 @@ def main() -> None:
         audit = server.audit_3d_model(object_names=["AuditRing", "AuditHole"])
         if audit["passed"] or not audit["collisions"]:
             fail("audit missed a true interpenetration")
+
+        # Solid containment, empty cavities and strict support.
+        clear_scene()
+        outer = make_cube("SolidOuter", 2)
+        outer.location.z = 1
+        inner = make_cube("SolidInner", 0.25)
+        inner.location.z = 1
+        names = [outer.name, inner.name]
+        collision = server.audit_3d_model(object_names=names, topology_policy="strict")
+        assert not collision["passed"] and collision["collisions"][0]["enclosed_volume_overlap"], collision
+        assert not server.validate_constraints([{"type": "no_intersection", "objects": names}])["passed"]
+        inside = {"type": "inside", "inner": inner.name, "outer": outer.name}
+        assert server.validate_constraints([inside])["passed"]
+        inner.location.z = 1.875  # Face contact with a closed convex container.
+        assert server.validate_constraints([inside])["passed"]
+        inner.location = (0, 0, 3)
+        audit = server.audit_3d_model(object_names=names, topology_policy="strict")
+        assert audit["requirements"]["ground_support"]["objects"] == [inner.name]
+        assert server.audit_3d_model(object_names=names, topology_policy="report")["passed"]
+        assert server.audit_3d_model(object_names=names, suspended=[inner.name], topology_policy="strict")["passed"]
+        inner.location.z = 2.125
+        third = make_cube("IndirectSupport", 0.25)
+        third.location.z = 2.375
+        assert server.audit_3d_model(object_names=[*names, third.name], topology_policy="strict")["passed"]
+
+        clear_scene()
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=1, location=(0, 0, 1))
+        sphere = bpy.context.object
+        corner = make_cube("OutsideSphere", 0.1)
+        corner.location = (0.82, 0.82, 1.0)
+        constraint = {"type": "inside", "inner": corner.name, "outer": sphere.name}
+        assert not server.validate_constraints([constraint])["passed"]
+
+        clear_scene()
+        shell = make_cube("ClosedShell", 2)
+        cavity = make_cube("CavityBoundary", 0.5)
+        bpy.ops.object.select_all(action="DESELECT")
+        shell.select_set(True)
+        cavity.select_set(True)
+        bpy.context.view_layer.objects.active = shell
+        bpy.ops.object.join()
+        probe = make_cube("CavityProbe", 0.1)
+        assert server.validate_constraints([{"type": "no_intersection", "objects": [shell.name, probe.name]}])["passed"]
+        assert not server.validate_constraints([{"type": "inside", "inner": probe.name, "outer": shell.name}])["passed"]
+        probe = make_cube("EnclosesCavity", 1.0)
+        assert not server.validate_constraints([{"type": "inside", "inner": probe.name, "outer": shell.name}])["passed"]
 
         clear_scene()
         gn_mesh = bpy.data.meshes.new("GNBase")

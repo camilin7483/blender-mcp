@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import time
 import uuid
 from typing import Any, Dict, Optional
 
@@ -75,15 +76,32 @@ def send_blender_command(
         180.0 if cmd_type in HEAVY_TIMEOUT_COMMANDS else 60.0
     )
 
+    deadline = time.monotonic() + eff_timeout
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(eff_timeout)
         sock.connect((BLENDER_HOST, BLENDER_PORT))
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f"Timed out connecting to Blender for '{cmd_type}'")
+        payload["queue_timeout_seconds"] = min(175.0, remaining * 0.95)
+        payload["cancel_on_disconnect"] = True
+        sock.settimeout(remaining)
         sock.sendall(json.dumps(payload).encode("utf-8") + b"\n")
 
         decoder = json.JSONDecoder()
         buffer = bytearray()
         while True:
-            data = sock.recv(65536)
+            remaining = deadline - time.monotonic()
+            try:
+                if remaining <= 0:
+                    raise TimeoutError
+                sock.settimeout(remaining)
+                data = sock.recv(65536)
+            except TimeoutError as exc:
+                raise TimeoutError(
+                    f"Timed out waiting for Blender '{cmd_type}'; its result is unknown. "
+                    "Check scene state before retrying."
+                ) from exc
             if not data:
                 break
             buffer.extend(data)
