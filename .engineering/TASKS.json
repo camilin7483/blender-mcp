@@ -135,6 +135,18 @@
       "title": "Release v4.3.0-alpha.1",
       "status": "completed",
       "evidence": "tag and extension 4.3.0"
+    },
+    {
+      "id": "T16",
+      "title": "Pipeline, render QA, rigging and texture packs",
+      "status": "completed",
+      "evidence": "32 tools, 30/30 bench, Blender 4.5/5.2"
+    },
+    {
+      "id": "T17",
+      "title": "Release v4.4.0-alpha.1",
+      "status": "completed",
+      "evidence": "tag and extension 4.4.0"
     }
   ]
 }

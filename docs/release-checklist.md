@@ -7,7 +7,7 @@ environment.
 ## Required gate
 
 - [x] Every FastMCP tool has a matching add-on handler.
-- [x] Required parameters match 1:1 (139 tools; `tests/contracts/test_tool_parity.py`).
+- [x] Required parameters match 1:1 (171 tools; `tests/contracts/test_tool_parity.py`).
 - [x] Every tool has a docstring and a profile assignment.
 - [x] `bpy` command execution runs on Blender's main thread; background start
       fails fast.
@@ -34,7 +34,7 @@ environment.
 - [~] Windows/macOS Blender headless jobs are experimental and not a required
       gate.
 - [ ] External benchmark comparison against another server.
-- [x] 11-category benchmark suite (26 tasks; 3 local runs at 26/26).
+- [x] 11-category benchmark suite (30 tasks; 3 local runs at 30/30).
 - [ ] Behavioral tests for every legacy tool (schema parity is covered;
       behavior is targeted).
 - [ ] Stable release approval after the open items close.
@@ -43,7 +43,7 @@ environment.
 
 | Tag | Meaning |
 |---|---|
-| `v4.3.0-alpha.1` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
+| `v4.4.0-alpha.1` | Current pre-release: security defaults, geometry/audit, anchors, constraints, assemblies, profiles, export, bench. |
 | `v4.0.0-beta` | After CI runs green on Linux 4.5/5.2 and cross-platform Blender is validated. |
 | `v4.0.0-rc` | After the external benchmark protocol is published and no critical defect remains. |
 | `v4.0.0` | Only when every required item above is checked. |

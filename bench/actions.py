@@ -500,3 +500,79 @@ def animation_path(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "camera": bpy.data.objects.get("BenchCamRig_Camera") is not None,
         "rig": rig["success"],
     }
+
+
+def pipeline_export_lod(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.data.objects["BenchCube"].select_set(True)
+    bpy.context.view_layer.objects.active = bpy.data.objects["BenchCube"]
+    exported = server.export_selected("exports/bench_cube.glb", "GLB")
+    batch = server.batch_export(["BenchCube"], "batch", "GLB")
+    lod = server.create_lod_chain("BenchCube", [1.0, 0.5, 0.25])
+    manifest = server.generate_asset_manifest(
+        ["BenchCube"], "bench_manifest.json"
+    )
+    return {
+        "exported": exported["success"],
+        "export_size": exported["file_size_bytes"],
+        "batch_count": batch["count"],
+        "lod_count": len(lod["lod_names"]),
+        "manifest": manifest["success"],
+    }
+
+
+def render_turntable(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_studio_backdrop("BenchBackdrop")
+    server.configure_render("BLENDER_EEVEE_NEXT", 2, 64, 64, False, 24)
+    result = server.render_turntable(
+        "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
+    )
+    filepath = result["files"][0]
+    valid = server.validate_render(filepath, 64, 64)
+    return {
+        "frames": len(result["files"]),
+        "valid": valid["valid"],
+        "width": valid["width"],
+    }
+
+
+def rigging_ik(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_armature("BenchRig", [
+        {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+    ])
+    server.create_bone(
+        "BenchRig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+    )
+    ik = server.create_ik_chain("BenchRig", "Tip", "BenchCube", 2)
+    copy_rotation = server.add_copy_rotation_constraint(
+        "BenchRig", "Tip", "BenchCube", 0.5
+    )
+    limit_rotation = server.add_limit_rotation_constraint(
+        "BenchRig", "Tip", ["X", "Y", "Z"], [-45.0, 45.0]
+    )
+    skinned = server.skin_mesh_to_armature("BenchCube", "BenchRig", True)
+    return {
+        "bone_count": len(server.list_bones("BenchRig")["bones"]),
+        "ik": ik["success"],
+        "copy_rotation": copy_rotation["success"],
+        "limit_rotation": limit_rotation["success"],
+        "vertex_groups": skinned["vertex_group_count"],
+    }
+
+
+def textures_material(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    _make_cube(server)
+    server.create_checker_texture("BenchChecker", 64, 64, cells=8)
+    material = server.image_to_material("BenchChecker", "BenchCheckMat", 0.4)
+    node = server.add_image_texture_node("BenchCheckMat", "BenchChecker")
+    resized = server.resize_image("BenchChecker", 32, 32)
+    saved = server.save_image("BenchChecker", "textures/checker.png", "PNG")
+    return {
+        "material": material["success"],
+        "node": node["success"],
+        "width": resized["width"],
+        "file_exists": os.path.exists(saved["filepath"]),
+    }

@@ -1,0 +1,22 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "render",
+  "duration_ms": 466.418,
+  "error": null,
+  "expected": {
+    "frames": 1,
+    "valid": true,
+    "width": 64
+  },
+  "failures": [],
+  "observed": {
+    "frames": 1,
+    "valid": true,
+    "width": 64
+  },
+  "passed": true,
+  "run": 2,
+  "task": "render_turntable"
+}

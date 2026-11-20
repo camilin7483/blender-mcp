@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "textures",
+  "duration_ms": 3.296,
+  "error": null,
+  "expected": {
+    "file_exists": true,
+    "material": true,
+    "node": true,
+    "width": 32
+  },
+  "failures": [],
+  "observed": {
+    "file_exists": true,
+    "material": true,
+    "node": true,
+    "width": 32
+  },
+  "passed": true,
+  "run": 3,
+  "task": "textures_material"
+}

@@ -1,0 +1,5 @@
+{
+  "category": "rigging",
+  "runner": "rigging_ik",
+  "description": "Create an IK chain, rotation constraints and skin a mesh."
+}

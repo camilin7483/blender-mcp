@@ -46,6 +46,26 @@ EXPECTED = {
         "create_camera_rig", "add_follow_path_constraint",
         "set_keyframe_interpolation", "create_action", "clear_animation",
     },
+    "pipeline": {
+        "import_model", "export_selected", "batch_export", "create_lod_chain",
+        "validate_lod_chain", "pack_images", "save_images",
+        "generate_asset_manifest",
+    },
+    "render_qa": {
+        "configure_render", "enable_render_pass", "render_turntable",
+        "render_contact_sheet", "create_studio_backdrop",
+        "setup_compositor_glare", "validate_render", "compare_renders",
+    },
+    "rigging": {
+        "list_bones", "create_bone", "create_ik_chain",
+        "add_copy_rotation_constraint", "add_limit_rotation_constraint",
+        "set_bone_rotation", "set_bone_location", "skin_mesh_to_armature",
+    },
+    "textures": {
+        "create_image", "create_checker_texture", "add_image_texture_node",
+        "resize_image", "set_image_colorspace", "pack_image", "save_image",
+        "image_to_material",
+    },
 }
 
 

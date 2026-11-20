@@ -1008,6 +1008,38 @@ TOOL_METADATA = {
     "set_keyframe_interpolation": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
     "create_action": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
     "clear_animation": {"category": "animation", "safety": "write", "cost": "low", "units": ""},
+    "import_model": {"category": "pipeline", "safety": "read", "cost": "medium", "units": ""},
+    "export_selected": {"category": "pipeline", "safety": "write", "cost": "medium", "units": ""},
+    "batch_export": {"category": "pipeline", "safety": "write", "cost": "high", "units": ""},
+    "create_lod_chain": {"category": "pipeline", "safety": "write", "cost": "high", "units": ""},
+    "validate_lod_chain": {"category": "pipeline", "safety": "read", "cost": "low", "units": ""},
+    "pack_images": {"category": "pipeline", "safety": "write", "cost": "medium", "units": ""},
+    "save_images": {"category": "pipeline", "safety": "write", "cost": "medium", "units": ""},
+    "generate_asset_manifest": {"category": "pipeline", "safety": "write", "cost": "low", "units": ""},
+    "configure_render": {"category": "render", "safety": "write", "cost": "low", "units": "pixels"},
+    "enable_render_pass": {"category": "render", "safety": "write", "cost": "low", "units": ""},
+    "render_turntable": {"category": "render", "safety": "write", "cost": "high", "units": "pixels"},
+    "render_contact_sheet": {"category": "render", "safety": "write", "cost": "medium", "units": "pixels"},
+    "create_studio_backdrop": {"category": "render", "safety": "write", "cost": "low", "units": "meters"},
+    "setup_compositor_glare": {"category": "render", "safety": "write", "cost": "low", "units": ""},
+    "validate_render": {"category": "render", "safety": "read", "cost": "low", "units": "pixels"},
+    "compare_renders": {"category": "render", "safety": "read", "cost": "medium", "units": "pixels"},
+    "list_bones": {"category": "rigging", "safety": "read", "cost": "low", "units": ""},
+    "create_bone": {"category": "rigging", "safety": "write", "cost": "low", "units": "meters"},
+    "create_ik_chain": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "add_copy_rotation_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": ""},
+    "add_limit_rotation_constraint": {"category": "rigging", "safety": "write", "cost": "low", "units": "degrees"},
+    "set_bone_rotation": {"category": "rigging", "safety": "write", "cost": "low", "units": "degrees"},
+    "set_bone_location": {"category": "rigging", "safety": "write", "cost": "low", "units": "meters"},
+    "skin_mesh_to_armature": {"category": "rigging", "safety": "write", "cost": "medium", "units": ""},
+    "create_image": {"category": "textures", "safety": "write", "cost": "low", "units": "pixels"},
+    "create_checker_texture": {"category": "textures", "safety": "write", "cost": "low", "units": "pixels"},
+    "add_image_texture_node": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
+    "resize_image": {"category": "textures", "safety": "write", "cost": "low", "units": "pixels"},
+    "set_image_colorspace": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
+    "pack_image": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
+    "save_image": {"category": "textures", "safety": "write", "cost": "medium", "units": "pixels"},
+    "image_to_material": {"category": "textures", "safety": "write", "cost": "low", "units": ""},
 }
 
 
@@ -1538,6 +1570,167 @@ def clear_animation(object_name: str) -> str:
     return json.dumps(send_blender_command("clear_animation", {"clear_animation": object_name}), indent=2)
 
 
+@mcp.tool()
+def import_model(filepath: str, format: str = "AUTO") -> str:
+    """Import an FBX, OBJ, GLB or GLTF model into the scene."""
+    return json.dumps(send_blender_command("import_model", {"filepath": filepath, "format": format}), indent=2)
+
+@mcp.tool()
+def export_selected(filepath: str, format: str = "GLB") -> str:
+    """Export selected mesh objects to GLB, GLTF, FBX or OBJ."""
+    return json.dumps(send_blender_command("export_selected", {"filepath": filepath, "format": format}), indent=2)
+
+@mcp.tool()
+def batch_export(object_names: List[str], directory: str, format: str = "GLB") -> str:
+    """Export each named object separately into a directory."""
+    return json.dumps(send_blender_command("batch_export", {"object_names": object_names, "directory": directory, "format": format}), indent=2)
+
+@mcp.tool()
+def create_lod_chain(object_name: str, ratios: List[float] = [1.0, 0.5, 0.25], suffix: str = "_LOD") -> str:
+    """Duplicate an object into a decimated LOD chain."""
+    return json.dumps(send_blender_command("create_lod_chain", {"object_name": object_name, "ratios": ratios, "suffix": suffix}), indent=2)
+
+@mcp.tool()
+def validate_lod_chain(object_name: str, suffix: str = "_LOD") -> str:
+    """Validate that LOD siblings decrease polygons and keep dimensions."""
+    return json.dumps(send_blender_command("validate_lod_chain", {"object_name": object_name, "suffix": suffix}), indent=2)
+
+@mcp.tool()
+def pack_images() -> str:
+    """Pack every image with a filepath into the blend file."""
+    return json.dumps(send_blender_command("pack_images", {}), indent=2)
+
+@mcp.tool()
+def save_images(directory: str, format: str = "PNG") -> str:
+    """Save every image with pixels into the output directory."""
+    return json.dumps(send_blender_command("save_images", {"directory": directory, "format": format}), indent=2)
+
+@mcp.tool()
+def generate_asset_manifest(object_names: List[str], filepath: str) -> str:
+    """Write a JSON manifest of objects, dimensions, materials and modifiers."""
+    return json.dumps(send_blender_command("generate_asset_manifest", {"object_names": object_names, "filepath": filepath}), indent=2)
+
+@mcp.tool()
+def configure_render(engine: str = "BLENDER_EEVEE_NEXT", samples: int = 32, resolution_x: int = 960, resolution_y: int = 540, film_transparent: bool = False, fps: int = 24) -> str:
+    """Configure engine, resolution, samples, transparency and FPS."""
+    return json.dumps(send_blender_command("configure_render", {"engine": engine, "samples": samples, "resolution_x": resolution_x, "resolution_y": resolution_y, "film_transparent": film_transparent, "fps": fps}), indent=2)
+
+@mcp.tool()
+def enable_render_pass(pass_name: str = "AO", enabled: bool = True) -> str:
+    """Enable or disable AO, DEPTH, NORMAL, MIST or EMIT render passes."""
+    return json.dumps(send_blender_command("enable_render_pass", {"pass_name": pass_name, "enabled": enabled}), indent=2)
+
+@mcp.tool()
+def render_turntable(directory: str, frames: int = 12, resolution_x: int = 256, resolution_y: int = 256, samples: int = 8) -> str:
+    """Render a bounded 360 degree turntable into a directory."""
+    return json.dumps(send_blender_command("render_turntable", {"directory": directory, "frames": frames, "resolution_x": resolution_x, "resolution_y": resolution_y, "samples": samples}), indent=2)
+
+@mcp.tool()
+def render_contact_sheet(image_paths: List[str], filepath: str, columns: int = 4) -> str:
+    """Combine images into a contact sheet PNG."""
+    return json.dumps(send_blender_command("render_contact_sheet", {"image_paths": image_paths, "filepath": filepath, "columns": columns}), indent=2)
+
+@mcp.tool()
+def create_studio_backdrop(name: str = "Backdrop", width: float = 6.0, depth: float = 4.0, height: float = 3.0, color: List[float] = [0.5, 0.5, 0.5, 1.0]) -> str:
+    """Create a grounded studio cyclorama with a neutral material."""
+    return json.dumps(send_blender_command("create_studio_backdrop", {"name": name, "width": width, "depth": depth, "height": height, "color": color}), indent=2)
+
+@mcp.tool()
+def setup_compositor_glare(threshold: float = 1.0, size: int = 6, mix: float = 0.0) -> str:
+    """Enable compositor Glare with threshold, size and mix."""
+    return json.dumps(send_blender_command("setup_compositor_glare", {"threshold": threshold, "size": size, "mix": mix}), indent=2)
+
+@mcp.tool()
+def validate_render(filepath: str, min_width: int = 1, min_height: int = 1) -> str:
+    """Validate that a render exists and meets minimum dimensions."""
+    return json.dumps(send_blender_command("validate_render", {"filepath": filepath, "min_width": min_width, "min_height": min_height}), indent=2)
+
+@mcp.tool()
+def compare_renders(image_a: str, image_b: str) -> str:
+    """Compare two same-size images and report pixel differences."""
+    return json.dumps(send_blender_command("compare_renders", {"image_a": image_a, "image_b": image_b}), indent=2)
+
+@mcp.tool()
+def list_bones(armature_name: str) -> str:
+    """List bones, parents and armature-space endpoints."""
+    return json.dumps(send_blender_command("list_bones", {"armature_name": armature_name}), indent=2)
+
+@mcp.tool()
+def create_bone(armature_name: str, bone_name: str, head: List[float], tail: List[float], parent: Optional[str] = None, connected: bool = False) -> str:
+    """Create a bone in an armature with optional parent and connection."""
+    return json.dumps(send_blender_command("create_bone", {"armature_name": armature_name, "bone_name": bone_name, "head": head, "tail": tail, "parent": parent, "connected": connected}), indent=2)
+
+@mcp.tool()
+def create_ik_chain(armature_name: str, base_bone: str, target_name: str, chain_count: int = 2, pole_target: Optional[str] = None) -> str:
+    """Add an IK constraint to a pose bone with chain count and pole target."""
+    return json.dumps(send_blender_command("create_ik_chain", {"armature_name": armature_name, "base_bone": base_bone, "target_name": target_name, "chain_count": chain_count, "pole_target": pole_target}), indent=2)
+
+@mcp.tool()
+def add_copy_rotation_constraint(armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> str:
+    """Add a copy-rotation pose constraint to a bone."""
+    return json.dumps(send_blender_command("add_copy_rotation_constraint", {"armature_name": armature_name, "bone_name": bone_name, "target_name": target_name, "influence": influence}), indent=2)
+
+@mcp.tool()
+def add_limit_rotation_constraint(armature_name: str, bone_name: str, axes: List[str] = ["X", "Y", "Z"], limits: List[float] = [-90.0, 90.0]) -> str:
+    """Add a limit-rotation pose constraint in degrees."""
+    return json.dumps(send_blender_command("add_limit_rotation_constraint", {"armature_name": armature_name, "bone_name": bone_name, "axes": axes, "limits": limits}), indent=2)
+
+@mcp.tool()
+def set_bone_rotation(armature_name: str, bone_name: str, rotation_degrees: List[float]) -> str:
+    """Set a pose bone Euler rotation in degrees."""
+    return json.dumps(send_blender_command("set_bone_rotation", {"armature_name": armature_name, "bone_name": bone_name, "rotation_degrees": rotation_degrees}), indent=2)
+
+@mcp.tool()
+def set_bone_location(armature_name: str, bone_name: str, location: List[float]) -> str:
+    """Set a pose bone location in meters."""
+    return json.dumps(send_blender_command("set_bone_location", {"armature_name": armature_name, "bone_name": bone_name, "location": location}), indent=2)
+
+@mcp.tool()
+def skin_mesh_to_armature(mesh_name: str, armature_name: str, automatic: bool = True) -> str:
+    """Parent a mesh to an armature with automatic or empty weights."""
+    return json.dumps(send_blender_command("skin_mesh_to_armature", {"mesh_name": mesh_name, "armature_name": armature_name, "automatic": automatic}), indent=2)
+
+@mcp.tool()
+def create_image(name: str = "Texture", width: int = 256, height: int = 256, color: List[float] = [0.0, 0.0, 0.0, 1.0], checker: bool = False) -> str:
+    """Create a generated image with a solid color or checker."""
+    return json.dumps(send_blender_command("create_image", {"name": name, "width": width, "height": height, "color": color, "checker": checker}), indent=2)
+
+@mcp.tool()
+def create_checker_texture(name: str = "Checker", width: int = 256, height: int = 256, color_a: List[float] = [0.1, 0.1, 0.1, 1.0], color_b: List[float] = [0.9, 0.9, 0.9, 1.0], cells: int = 8) -> str:
+    """Create a deterministic two-color checker image."""
+    return json.dumps(send_blender_command("create_checker_texture", {"name": name, "width": width, "height": height, "color_a": color_a, "color_b": color_b, "cells": cells}), indent=2)
+
+@mcp.tool()
+def add_image_texture_node(material_name: str, image_name: str, mapping: str = "UV", scale: float = 1.0) -> str:
+    """Add an image texture node to a material and link base color."""
+    return json.dumps(send_blender_command("add_image_texture_node", {"material_name": material_name, "image_name": image_name, "mapping": mapping, "scale": scale}), indent=2)
+
+@mcp.tool()
+def resize_image(image_name: str, width: int, height: int) -> str:
+    """Resize an image to explicit width and height."""
+    return json.dumps(send_blender_command("resize_image", {"image_name": image_name, "width": width, "height": height}), indent=2)
+
+@mcp.tool()
+def set_image_colorspace(image_name: str, colorspace: str = "sRGB") -> str:
+    """Set an image colorspace such as sRGB or Non-Color."""
+    return json.dumps(send_blender_command("set_image_colorspace", {"image_name": image_name, "colorspace": colorspace}), indent=2)
+
+@mcp.tool()
+def pack_image(image_name: str) -> str:
+    """Pack one image into the blend file."""
+    return json.dumps(send_blender_command("pack_image", {"image_name": image_name}), indent=2)
+
+@mcp.tool()
+def save_image(image_name: str, filepath: str, format: str = "PNG") -> str:
+    """Save an image to the output sandbox."""
+    return json.dumps(send_blender_command("save_image", {"image_name": image_name, "filepath": filepath, "format": format}), indent=2)
+
+@mcp.tool()
+def image_to_material(image_name: str, material_name: str, roughness: float = 0.5) -> str:
+    """Create a material driven by an image texture."""
+    return json.dumps(send_blender_command("image_to_material", {"image_name": image_name, "material_name": material_name, "roughness": roughness}), indent=2)
+
+
 CORE_TOOLS = {
     "get_scene_info",
     "get_object_info",
@@ -1572,6 +1765,21 @@ PROFILE_EXTRAS = {
         "create_staircase", "create_building_shell", "array_grid_on_surface",
         "auto_fix_model", "build_3d_network_datacenter_from_pt",
         "validate_constraints", "apply_constraints",
+    },
+    "pipeline": {
+        "import_model", "export_selected", "batch_export", "create_lod_chain",
+        "validate_lod_chain", "pack_images", "save_images",
+        "generate_asset_manifest",
+    },
+    "render_qa": {
+        "configure_render", "enable_render_pass", "render_turntable",
+        "render_contact_sheet", "create_studio_backdrop",
+        "setup_compositor_glare", "validate_render", "compare_renders",
+    },
+    "textures": {
+        "create_image", "create_checker_texture", "add_image_texture_node",
+        "resize_image", "set_image_colorspace", "pack_image", "save_image",
+        "image_to_material",
     },
     "environment": {
         "create_sky_lighting", "create_fog_volume", "create_cloud_layer",
@@ -1633,7 +1841,9 @@ PROFILE_EXTRAS = {
     "rigging": {
         "fuse_organic_parts", "create_skeleton_skin_mesh",
         "auto_rig_humanoid", "create_articulation_joint",
-        "create_armature",
+        "create_armature", "list_bones", "create_bone", "create_ik_chain",
+        "add_copy_rotation_constraint", "add_limit_rotation_constraint",
+        "set_bone_rotation", "set_bone_location", "skin_mesh_to_armature",
     },
     "geometry_nodes": {
         "deform_object", "create_loft_surface", "array_grid_on_surface",
@@ -1672,7 +1882,8 @@ TOOL_PROFILES["guided"] = TOOL_PROFILES["nano"] | {
     "place_on_surface_raycast", "create_terrain", "create_tree",
     "create_water_plane", "create_light", "create_camera",
     "create_sky_lighting", "create_ground", "create_humanoid_blockout",
-    "create_camera_rig",
+    "create_camera_rig", "create_lod_chain", "configure_render",
+    "render_turntable", "validate_render",
 }
 TOOL_PROFILES["full"] = None
 

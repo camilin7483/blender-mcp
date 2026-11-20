@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **26/26 tasks passed** in every run.
+- **30/30 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another
@@ -38,6 +38,10 @@ same scenarios.
 | character | humanoid + eyes + teeth + hair | blockout metrics |
 | PBR | metal, wood, glass, skin | nodes and assignment |
 | animation | path + turntable + camera rig | keyframes and camera |
+| pipeline | export + batch + LOD + manifest | files and LOD count |
+| render QA | turntable + validate | 64 px image |
+| rigging | IK + constraints + skin | bones and vertex groups |
+| textures | checker + material + save | nodes and file |
 | materials | Principled metal | assigned, metallic 0.8, roughness 0.2 |
 | geometry_nodes | GN-only cube | 1000 ± 1 mm, one audited object |
 | repair | non-uniform scale | normalized scale |

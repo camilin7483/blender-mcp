@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 3, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 4, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1148,6 +1148,112 @@ def main() -> None:
         assert action["success"] and action["action"] == "V43Action", action
         cleared = server.clear_animation("V43Human")
         assert cleared["success"], cleared
+
+        # --- v4.4 pipeline, render QA, rigging and texture packs ---
+        clear_scene()
+        v44_dir = tempfile.mkdtemp(prefix="blendermcp_v44_")
+        os.environ["BLENDER_MCP_OUTPUT_DIR"] = v44_dir
+        try:
+            server.create_parametric_part(
+                "V44Cube", shape="BOX", dimensions=[1.0, 1.0, 1.0],
+                location=[0.0, 0.0, 0.5],
+            )
+            bpy.ops.object.select_all(action="DESELECT")
+            bpy.data.objects["V44Cube"].select_set(True)
+            bpy.context.view_layer.objects.active = bpy.data.objects["V44Cube"]
+            exported = server.export_selected("exports/v44_cube.glb", "GLB")
+            assert exported["success"] and os.path.exists(exported["filepath"]), exported
+            imported = server.import_model(exported["filepath"], "AUTO")
+            assert imported["success"] and imported["object_count"] >= 1, imported
+            batch = server.batch_export(["V44Cube"], "batch", "GLB")
+            assert batch["success"] and batch["count"] == 1, batch
+            lod = server.create_lod_chain("V44Cube", [1.0, 0.5, 0.25])
+            assert lod["success"] and len(lod["lod_names"]) == 3, lod
+            lod_check = server.validate_lod_chain("V44Cube")
+            assert lod_check["success"] and isinstance(lod_check["passed"], bool), lod_check
+            manifest = server.generate_asset_manifest(
+                ["V44Cube"], "v44_manifest.json"
+            )
+            assert manifest["success"] and os.path.exists(manifest["filepath"]), manifest
+
+            image = server.create_image(
+                "V44Solid", 64, 64, [0.8, 0.2, 0.2, 1.0], False
+            )
+            assert image["success"], image
+            checker = server.create_checker_texture("V44Checker", 64, 64, cells=8)
+            assert checker["success"], checker
+            material = server.image_to_material("V44Checker", "V44CheckMat", 0.4)
+            assert material["success"], material
+            image_node = server.add_image_texture_node("V44CheckMat", "V44Checker")
+            assert image_node["success"], image_node
+            resized = server.resize_image("V44Solid", 32, 32)
+            assert resized["success"], resized
+            colorspace = server.set_image_colorspace("V44Solid", "sRGB")
+            assert colorspace["success"], colorspace
+            packed = server.pack_image("V44Solid")
+            assert packed["success"], packed
+            saved_image = server.save_image(
+                "V44Checker", "textures/v44_checker.png", "PNG"
+            )
+            assert saved_image["success"] and os.path.exists(saved_image["filepath"]), saved_image
+            packed_all = server.pack_images()
+            assert packed_all["success"], packed_all
+            saved_all = server.save_images("textures/all", "PNG")
+            assert saved_all["success"], saved_all
+
+            backdrop = server.create_studio_backdrop("V44Backdrop")
+            assert backdrop["success"], backdrop
+            configured = server.configure_render(
+                "BLENDER_EEVEE_NEXT", 2, 64, 64, False, 24
+            )
+            assert configured["success"], configured
+            render_pass = server.enable_render_pass("AO", True)
+            assert render_pass["success"], render_pass
+            glare = server.setup_compositor_glare(1.0, 6, 0.0)
+            assert glare["success"], glare
+            turntable = server.render_turntable(
+                "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
+            )
+            assert turntable["success"] and len(turntable["files"]) == 1, turntable
+            turntable_file = turntable["files"][0]
+            sheet = server.render_contact_sheet(
+                [turntable_file, turntable_file], "v44_contact.png", 2
+            )
+            assert sheet["success"] and os.path.exists(sheet["filepath"]), sheet
+            render_valid = server.validate_render("v44_contact.png", 64, 64)
+            assert render_valid["success"] and render_valid["valid"], render_valid
+            compared = server.compare_renders(turntable_file, turntable_file)
+            assert compared["success"] and compared["identical"], compared
+
+            rig = server.create_armature("V44Rig", [
+                {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
+            ])
+            assert rig["success"], rig
+            bone = server.create_bone(
+                "V44Rig", "Tip", [0.0, 0.0, 0.8], [0.0, 0.0, 1.0], "Root", False
+            )
+            assert bone["success"], bone
+            bones = server.list_bones("V44Rig")
+            assert bones["success"] and bones["bone_count"] == 2, bones
+            ik = server.create_ik_chain("V44Rig", "Tip", "V44Cube", 2)
+            assert ik["success"], ik
+            copy_rotation = server.add_copy_rotation_constraint(
+                "V44Rig", "Tip", "V44Cube", 0.5
+            )
+            assert copy_rotation["success"], copy_rotation
+            limit_rotation = server.add_limit_rotation_constraint(
+                "V44Rig", "Tip", ["X", "Y", "Z"], [-45.0, 45.0]
+            )
+            assert limit_rotation["success"], limit_rotation
+            bone_rotation = server.set_bone_rotation("V44Rig", "Tip", [10.0, 0.0, 0.0])
+            assert bone_rotation["success"], bone_rotation
+            bone_location = server.set_bone_location("V44Rig", "Tip", [0.1, 0.0, 0.0])
+            assert bone_location["success"], bone_location
+            skinned = server.skin_mesh_to_armature("V44Cube", "V44Rig", True)
+            assert skinned["success"] and skinned["vertex_group_count"] > 0, skinned
+        finally:
+            os.environ.pop("BLENDER_MCP_OUTPUT_DIR", None)
+            shutil.rmtree(v44_dir, ignore_errors=True)
 
         # --- animation and rigging primitives ---
         clear_scene()

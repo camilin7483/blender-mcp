@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.3.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.4.0-alpha.1 - 2026-11-19 (unreleased)
 
 ### Added
 
@@ -27,7 +27,15 @@ All notable changes to this repository are documented here.
   per-face material assignment.
 - Animation pack: frame range, path keyframes, turntable, camera rig,
   follow-path constraint, interpolation, actions and animation clearing.
-- `nano` (13 tools) and `guided` (30 tools) profiles for small models.
+- Pipeline pack: model import, selected export, batch export, LOD chains,
+  LOD validation, image packing, image saving and asset manifests.
+- Render QA pack: render configuration, passes, turntables, contact sheets,
+  studio backdrop, compositor glare, render validation and image comparison.
+- Rigging utilities: bone listing, bone creation, IK, copy/limit rotation,
+  pose transforms and automatic skinning.
+- Texture utilities: generated images, checker textures, image material nodes,
+  resize, colorspace, packing, saving and image-to-material.
+- `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
   relative tolerance model.
@@ -52,7 +60,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 26 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 30 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

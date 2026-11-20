@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 3, 0),
+    "version": (4, 4, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -204,6 +204,14 @@ def load_or_create_auth_token() -> str:
 
 def default_output_dir() -> str:
     return os.path.expanduser(os.environ.get(OUTPUT_DIR_ENV_VAR, "~/BlenderMCP/output"))
+
+
+def resolve_output_directory(directory: str) -> str:
+    """Resolve a directory inside the configured output sandbox."""
+    if not str(directory).strip():
+        raise ValueError("directory must not be empty")
+    marker = resolve_output_path(os.path.join(str(directory), "_dircheck.tmp"), {".tmp"})
+    return os.path.dirname(marker)
 
 
 def resolve_output_path(filepath: str, allowed_extensions: set) -> str:
@@ -2270,6 +2278,38 @@ class BlenderMCPServer:
             "set_keyframe_interpolation": lambda p: self.set_keyframe_interpolation(**p),
             "create_action": lambda p: self.create_action(**p),
             "clear_animation": lambda p: self.clear_animation(**p),
+            "import_model": lambda p: self.import_model(**p),
+            "export_selected": lambda p: self.export_selected(**p),
+            "batch_export": lambda p: self.batch_export(**p),
+            "create_lod_chain": lambda p: self.create_lod_chain(**p),
+            "validate_lod_chain": lambda p: self.validate_lod_chain(**p),
+            "pack_images": lambda p: self.pack_images(**p),
+            "save_images": lambda p: self.save_images(**p),
+            "generate_asset_manifest": lambda p: self.generate_asset_manifest(**p),
+            "configure_render": lambda p: self.configure_render(**p),
+            "enable_render_pass": lambda p: self.enable_render_pass(**p),
+            "render_turntable": lambda p: self.render_turntable(**p),
+            "render_contact_sheet": lambda p: self.render_contact_sheet(**p),
+            "create_studio_backdrop": lambda p: self.create_studio_backdrop(**p),
+            "setup_compositor_glare": lambda p: self.setup_compositor_glare(**p),
+            "validate_render": lambda p: self.validate_render(**p),
+            "compare_renders": lambda p: self.compare_renders(**p),
+            "list_bones": lambda p: self.list_bones(**p),
+            "create_bone": lambda p: self.create_bone(**p),
+            "create_ik_chain": lambda p: self.create_ik_chain(**p),
+            "add_copy_rotation_constraint": lambda p: self.add_copy_rotation_constraint(**p),
+            "add_limit_rotation_constraint": lambda p: self.add_limit_rotation_constraint(**p),
+            "set_bone_rotation": lambda p: self.set_bone_rotation(**p),
+            "set_bone_location": lambda p: self.set_bone_location(**p),
+            "skin_mesh_to_armature": lambda p: self.skin_mesh_to_armature(**p),
+            "create_image": lambda p: self.create_image(**p),
+            "create_checker_texture": lambda p: self.create_checker_texture(**p),
+            "add_image_texture_node": lambda p: self.add_image_texture_node(**p),
+            "resize_image": lambda p: self.resize_image(**p),
+            "set_image_colorspace": lambda p: self.set_image_colorspace(**p),
+            "pack_image": lambda p: self.pack_image(**p),
+            "save_image": lambda p: self.save_image(**p),
+            "image_to_material": lambda p: self.image_to_material(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -2704,6 +2744,113 @@ class BlenderMCPServer:
         """Remove animation data from an object while preserving constraints."""
         return self._domain_call("animation", "clear_animation", {k: v for k, v in locals().items() if k != "self"})
 
+    def import_model(self, filepath: str, format: str = "AUTO") -> Dict[str, Any]:
+        """Import an FBX, OBJ, GLB or GLTF model into the scene."""
+        return self._domain_call("pipeline", "import_model", {k: v for k, v in locals().items() if k != "self"})
+    def export_selected(self, filepath: str, format: str = "GLB") -> Dict[str, Any]:
+        """Export selected mesh objects to GLB, GLTF, FBX or OBJ."""
+        resolved = resolve_output_path(filepath, {".glb", ".gltf", ".fbx", ".obj"})
+        return self._domain_call("pipeline", "export_selected", {"filepath": resolved, "format": format})
+    def batch_export(self, object_names: List[str], directory: str, format: str = "GLB") -> Dict[str, Any]:
+        """Export each named object separately into a directory."""
+        resolved = resolve_output_directory(directory)
+        return self._domain_call("pipeline", "batch_export", {"object_names": object_names, "directory": resolved, "format": format})
+    def create_lod_chain(self, object_name: str, ratios: List[float] = [1.0, 0.5, 0.25], suffix: str = "_LOD") -> Dict[str, Any]:
+        """Duplicate an object into a decimated LOD chain."""
+        return self._domain_call("pipeline", "create_lod_chain", {k: v for k, v in locals().items() if k != "self"})
+    def validate_lod_chain(self, object_name: str, suffix: str = "_LOD") -> Dict[str, Any]:
+        """Validate that LOD siblings decrease polygons and keep dimensions."""
+        return self._domain_call("pipeline", "validate_lod_chain", {k: v for k, v in locals().items() if k != "self"})
+    def pack_images(self, ) -> Dict[str, Any]:
+        """Pack every image with a filepath into the blend file."""
+        return self._domain_call("pipeline", "pack_images", {k: v for k, v in locals().items() if k != "self"})
+    def save_images(self, directory: str, format: str = "PNG") -> Dict[str, Any]:
+        """Save every image with pixels into the output directory."""
+        resolved = resolve_output_directory(directory)
+        return self._domain_call("pipeline", "save_images", {"directory": resolved, "format": format})
+    def generate_asset_manifest(self, object_names: List[str], filepath: str) -> Dict[str, Any]:
+        """Write a JSON manifest of objects, dimensions, materials and modifiers."""
+        resolved = resolve_output_path(filepath, {".json"})
+        return self._domain_call("pipeline", "generate_asset_manifest", {"object_names": object_names, "filepath": resolved})
+    def configure_render(self, engine: str = "BLENDER_EEVEE_NEXT", samples: int = 32, resolution_x: int = 960, resolution_y: int = 540, film_transparent: bool = False, fps: int = 24) -> Dict[str, Any]:
+        """Configure engine, resolution, samples, transparency and FPS."""
+        return self._domain_call("render_qa", "configure_render", {k: v for k, v in locals().items() if k != "self"})
+    def enable_render_pass(self, pass_name: str = "AO", enabled: bool = True) -> Dict[str, Any]:
+        """Enable or disable AO, DEPTH, NORMAL, MIST or EMIT render passes."""
+        return self._domain_call("render_qa", "enable_render_pass", {k: v for k, v in locals().items() if k != "self"})
+    def render_turntable(self, directory: str, frames: int = 12, resolution_x: int = 256, resolution_y: int = 256, samples: int = 8) -> Dict[str, Any]:
+        """Render a bounded 360 degree turntable into a directory."""
+        resolved = resolve_output_directory(directory)
+        return self._domain_call("render_qa", "render_turntable", {"directory": resolved, "frames": frames, "resolution_x": resolution_x, "resolution_y": resolution_y, "samples": samples})
+    def render_contact_sheet(self, image_paths: List[str], filepath: str, columns: int = 4) -> Dict[str, Any]:
+        """Combine images into a contact sheet PNG."""
+        resolved = resolve_output_path(filepath, {".png"})
+        return self._domain_call("render_qa", "render_contact_sheet", {"image_paths": image_paths, "filepath": resolved, "columns": columns})
+    def create_studio_backdrop(self, name: str = "Backdrop", width: float = 6.0, depth: float = 4.0, height: float = 3.0, color: List[float] = [0.5, 0.5, 0.5, 1.0]) -> Dict[str, Any]:
+        """Create a grounded studio cyclorama with a neutral material."""
+        return self._domain_call("render_qa", "create_studio_backdrop", {k: v for k, v in locals().items() if k != "self"})
+    def setup_compositor_glare(self, threshold: float = 1.0, size: int = 6, mix: float = 0.0) -> Dict[str, Any]:
+        """Enable compositor Glare with threshold, size and mix."""
+        return self._domain_call("render_qa", "setup_compositor_glare", {k: v for k, v in locals().items() if k != "self"})
+    def validate_render(self, filepath: str, min_width: int = 1, min_height: int = 1) -> Dict[str, Any]:
+        """Validate that a render exists and meets minimum dimensions."""
+        resolved = resolve_output_path(filepath, {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff"})
+        return self._domain_call("render_qa", "validate_render", {
+            "filepath": resolved, "min_width": min_width, "min_height": min_height,
+        })
+
+    def compare_renders(self, image_a: str, image_b: str) -> Dict[str, Any]:
+        """Compare two same-size images and report pixel differences."""
+        return self._domain_call("render_qa", "compare_renders", {k: v for k, v in locals().items() if k != "self"})
+    def list_bones(self, armature_name: str) -> Dict[str, Any]:
+        """List bones, parents and armature-space endpoints."""
+        return self._domain_call("rigging", "list_bones", {k: v for k, v in locals().items() if k != "self"})
+    def create_bone(self, armature_name: str, bone_name: str, head: List[float], tail: List[float], parent: Optional[str] = None, connected: bool = False) -> Dict[str, Any]:
+        """Create a bone in an armature with optional parent and connection."""
+        return self._domain_call("rigging", "create_bone", {k: v for k, v in locals().items() if k != "self"})
+    def create_ik_chain(self, armature_name: str, base_bone: str, target_name: str, chain_count: int = 2, pole_target: Optional[str] = None) -> Dict[str, Any]:
+        """Add an IK constraint to a pose bone with chain count and pole target."""
+        return self._domain_call("rigging", "create_ik_chain", {k: v for k, v in locals().items() if k != "self"})
+    def add_copy_rotation_constraint(self, armature_name: str, bone_name: str, target_name: str, influence: float = 1.0) -> Dict[str, Any]:
+        """Add a copy-rotation pose constraint to a bone."""
+        return self._domain_call("rigging", "add_copy_rotation_constraint", {k: v for k, v in locals().items() if k != "self"})
+    def add_limit_rotation_constraint(self, armature_name: str, bone_name: str, axes: List[str] = ["X", "Y", "Z"], limits: List[float] = [-90.0, 90.0]) -> Dict[str, Any]:
+        """Add a limit-rotation pose constraint in degrees."""
+        return self._domain_call("rigging", "add_limit_rotation_constraint", {k: v for k, v in locals().items() if k != "self"})
+    def set_bone_rotation(self, armature_name: str, bone_name: str, rotation_degrees: List[float]) -> Dict[str, Any]:
+        """Set a pose bone Euler rotation in degrees."""
+        return self._domain_call("rigging", "set_bone_rotation", {k: v for k, v in locals().items() if k != "self"})
+    def set_bone_location(self, armature_name: str, bone_name: str, location: List[float]) -> Dict[str, Any]:
+        """Set a pose bone location in meters."""
+        return self._domain_call("rigging", "set_bone_location", {k: v for k, v in locals().items() if k != "self"})
+    def skin_mesh_to_armature(self, mesh_name: str, armature_name: str, automatic: bool = True) -> Dict[str, Any]:
+        """Parent a mesh to an armature with automatic or empty weights."""
+        return self._domain_call("rigging", "skin_mesh_to_armature", {k: v for k, v in locals().items() if k != "self"})
+    def create_image(self, name: str = "Texture", width: int = 256, height: int = 256, color: List[float] = [0.0, 0.0, 0.0, 1.0], checker: bool = False) -> Dict[str, Any]:
+        """Create a generated image with a solid color or checker."""
+        return self._domain_call("textures", "create_image", {k: v for k, v in locals().items() if k != "self"})
+    def create_checker_texture(self, name: str = "Checker", width: int = 256, height: int = 256, color_a: List[float] = [0.1, 0.1, 0.1, 1.0], color_b: List[float] = [0.9, 0.9, 0.9, 1.0], cells: int = 8) -> Dict[str, Any]:
+        """Create a deterministic two-color checker image."""
+        return self._domain_call("textures", "create_checker_texture", {k: v for k, v in locals().items() if k != "self"})
+    def add_image_texture_node(self, material_name: str, image_name: str, mapping: str = "UV", scale: float = 1.0) -> Dict[str, Any]:
+        """Add an image texture node to a material and link base color."""
+        return self._domain_call("textures", "add_image_texture_node", {k: v for k, v in locals().items() if k != "self"})
+    def resize_image(self, image_name: str, width: int, height: int) -> Dict[str, Any]:
+        """Resize an image to explicit width and height."""
+        return self._domain_call("textures", "resize_image", {k: v for k, v in locals().items() if k != "self"})
+    def set_image_colorspace(self, image_name: str, colorspace: str = "sRGB") -> Dict[str, Any]:
+        """Set an image colorspace such as sRGB or Non-Color."""
+        return self._domain_call("textures", "set_image_colorspace", {k: v for k, v in locals().items() if k != "self"})
+    def pack_image(self, image_name: str) -> Dict[str, Any]:
+        """Pack one image into the blend file."""
+        return self._domain_call("textures", "pack_image", {k: v for k, v in locals().items() if k != "self"})
+    def save_image(self, image_name: str, filepath: str, format: str = "PNG") -> Dict[str, Any]:
+        """Save an image to the output sandbox."""
+        resolved = resolve_output_path(filepath, {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff"})
+        return self._domain_call("textures", "save_image", {"image_name": image_name, "filepath": resolved, "format": format})
+    def image_to_material(self, image_name: str, material_name: str, roughness: float = 0.5) -> Dict[str, Any]:
+        """Create a material driven by an image texture."""
+        return self._domain_call("textures", "image_to_material", {k: v for k, v in locals().items() if k != "self"})
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION
     # ==========================================================================

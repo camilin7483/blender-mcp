@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "blender_mcp_pro"
-version = "4.3.0"
+version = "4.4.0"
 name = "Blender MCP Pro"
 tagline = "Local MCP bridge for precision 3D modeling"
 maintainer = "Blender MCP contributors"
