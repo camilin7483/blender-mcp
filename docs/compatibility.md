@@ -10,7 +10,7 @@
 | Blender Python | Bundled with Blender 4.5 (3.11) | The add-on runs inside Blender, not in the host venv. |
 | `mcp` | `1.30.0` | Pinned in `pro/requirements.txt`. |
 | OS | Linux x64 | Baseline: Arch Linux, Blender 4.5.4, `xvfb-run` for GUI tests. |
-| OS | Windows / macOS | Python contract/unit tests run in the CI matrix. Blender 5.2 headless jobs are experimental (`continue-on-error`); not a required gate until validated. |
+| OS | Windows / macOS | Python contract/unit tests run in the CI matrix. Blender 5.2 headless jobs are experimental. The Windows hosted runner skips inspection rendering because its OpenGL context crashes Blender; Linux CI still tests rendering. |
 
 ## Execution modes
 
