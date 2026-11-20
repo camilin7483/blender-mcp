@@ -15,6 +15,7 @@ import sys
 import tempfile
 import traceback
 import zipfile
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -302,7 +303,11 @@ def main() -> None:
                     with open(target, "rb") as handle:
                         assert handle.read() == marker
 
-            with patch.object(bpy.ops.export_scene, "gltf", return_value={"CANCELLED"}):
+            operators = SimpleNamespace(export_scene=SimpleNamespace(gltf=lambda **kwargs: {"CANCELLED"}))
+            export_bpy = SimpleNamespace(ops=operators)
+            with patch.object(bm, "bpy", export_bpy), patch.object(server, "_validate_export", return_value={
+                "passed": True,
+            }):
                 cancelled = server.export_scene("noext.glb", "GLB")
             assert cancelled["success"] is False, cancelled
 
