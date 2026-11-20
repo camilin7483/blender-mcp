@@ -53,8 +53,11 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
    `open_mainfile`.
 6. `blender --background` lacks the timer event loop. The add-on rejects
    server startup in that mode. Headless geometry tests call handlers directly.
-7. A socket thread waits for the main thread to finish or for its response
-   timeout. A timeout does not cancel queued work or a running handler.
+7. The bridge sends a queue timeout within its end-to-end response budget.
+   The dispatcher atomically claims requests and skips expired work. The bridge
+   also opts into cancelling queued work on socket disconnect. Legacy clients
+   may omit both fields. When a handler has started, Blender reports an unknown
+   result on expiry. Callers must inspect the scene before retrying a mutation.
 
 ### Geometry authority
 
@@ -62,9 +65,9 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
   AABB, world vertices, face centers/areas and a world-space BVH.
 - `contact_graph()` uses AABB only as a broad-phase filter. Surface
   intersection comes from `BVHTree.overlap`; separation distance comes from
-  BVH nearest queries with a method and confidence label. This is a
-  surface test. Closed volumes can overlap by containment without their
-  boundaries intersecting.
+  BVH nearest queries with a method and confidence label. When closed meshes
+  have disjoint boundaries, a ray-parity test checks each connected boundary
+  component for solid overlap, including shells with empty cavities.
 - `topology_metrics()` reports non-manifold and boundary edges, loose
   vertices/edges, zero-area and degenerate faces, duplicate vertices,
   inverted normals, disconnected components and optional self-intersections.
@@ -72,7 +75,9 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 - `audit_3d_model()` collects all metrics, evaluates requirements, computes
   the score, and only then sets `passed`. Blueprint, ground, scale, collision
   and symmetry requirements block `passed`; topology is report-only unless
-  `topology_policy="strict"`.
+  `topology_policy="strict"`. Strict mode also requires every structural
+  part to have a contact path to the ground. The `suspended` list exempts
+  intentionally unsupported objects from that requirement.
 - AABB is never the sole proof of collision.
 - `AnchorService` exposes world position, normal, tangent, local frame,
   source, confidence and tolerance for center, face, surface, edge, corner,
@@ -81,6 +86,8 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 - `validate_constraints()` evaluates mate, align, flush, center, offset,
   distance, parallel, perpendicular, ground_contact, symmetry,
   no_intersection, inside and surface_contact without changing the scene.
+  `inside` requires a closed container. It rejects ambiguous contact on
+  nonconvex boundaries when containment cannot be certified.
 - `create_assembly()` builds a declarative assembly from a desk template or
   explicit components; `update_assembly()` deep-merges changes and rebuilds
   from the stored spec. Components are parented to a root empty.

@@ -63,8 +63,8 @@ Set `BLENDER_MCP_PROFILE` before starting the bridge to reduce the visible
 tool surface. Profiles are `core` (13 tools), `modeling`, `materials`,
 `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`
 and `full` (default, 61 tools). `execute_code` is full-only and remains
-disabled in the add-on by default. Unknown profile names fail open to
-`full`. Profiles filter bridge registration only; the add-on keeps every
+disabled in the add-on by default. Unknown profile names fall back to
+`core`. Profiles filter bridge registration only; the add-on keeps every
 handler.
 
 ## How It Works
