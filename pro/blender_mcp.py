@@ -7549,6 +7549,9 @@ class BlenderMCPServer:
 
         before_objects = set(bpy.data.objects)
         before_actions = set(bpy.data.actions)
+        before_meshes = set(bpy.data.meshes)
+        before_materials = set(bpy.data.materials)
+        before_selected = set(bpy.context.selected_objects)
         before_active = bpy.context.view_layer.objects.active
         source_aabb = None
         source_dimensions = None
@@ -7569,7 +7572,7 @@ class BlenderMCPServer:
 
             try:
                 if fmt in ("GLB", "GLTF"):
-                    bpy.ops.import_scene.gltf(filepath=path)
+                    bpy.ops.import_scene.gltf(filepath=path, disable_bone_shape=True)
                 else:
                     import_scale = 0.01 if profile == "unreal" else 1.0
                     bpy.ops.import_scene.fbx(filepath=path, global_scale=import_scale)
@@ -7653,10 +7656,14 @@ class BlenderMCPServer:
             for action in [item for item in bpy.data.actions if item not in before_actions]:
                 with suppress(Exception):
                     bpy.data.actions.remove(action)
-            for mesh in [item for item in bpy.data.meshes if item.users == 0]:
+            for mesh in [item for item in bpy.data.meshes if item not in before_meshes and item.users == 0]:
                 bpy.data.meshes.remove(mesh)
-            for material in [item for item in bpy.data.materials if item.users == 0]:
+            for material in [item for item in bpy.data.materials if item not in before_materials and item.users == 0]:
                 bpy.data.materials.remove(material)
+            bpy.context.view_layer.update()
+            for obj in bpy.context.view_layer.objects:
+                if obj is not None:
+                    obj.select_set(obj in before_selected)
             bpy.context.view_layer.objects.active = before_active
 
     def export_scene(

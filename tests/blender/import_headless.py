@@ -1658,6 +1658,21 @@ def main() -> None:
         assert any(not check["passed"] for check in unrelated["checks"] if check["check"] == "armature_bound")
 
 
+        clear_scene()
+        body = server.create_character_body_pro("V49ExportBody", subdivisions=1)
+        server.create_character_rig_pro(body["object"], "V49ExportRig")
+        unused = bpy.data.meshes.new("PreserveUnusedMesh")
+        unused_material = bpy.data.materials.new("PreserveUnusedMaterial")
+        selected_before = set(bpy.context.selected_objects)
+        with tempfile.TemporaryDirectory(prefix="blendermcp_character_export_") as output:
+            with patch.dict(os.environ, {"BLENDER_MCP_OUTPUT_DIR": output}):
+                exported = server.export_scene("body.glb", profile="godot")
+            assert exported["success"] and exported["reimport"]["passed"], exported
+            assert exported["reimport"]["meshes"] == exported["reimport"]["armatures"] == 1, exported
+        assert bpy.data.meshes.get(unused.name) == unused
+        assert bpy.data.materials.get(unused_material.name) == unused_material
+        assert set(bpy.context.selected_objects) == selected_before
+
         # --- animation and rigging primitives ---
         clear_scene()
         anim_cube = make_cube("AnimCube", 0.5)
