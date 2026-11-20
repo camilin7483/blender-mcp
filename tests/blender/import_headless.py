@@ -78,6 +78,7 @@ def make_ring(name: str, outer: float = 2.0, inner: float = 1.0, height: float =
 
 
 def main() -> None:
+    skip_render = os.environ.get("BLENDER_MCP_TEST_SKIP_RENDER") == "1"
     try:
         import blender_mcp as bm  # noqa: F401
 
@@ -1016,11 +1017,14 @@ def main() -> None:
             assert camera["success"] and camera["type"] == "PERSP", camera
             world = server.setup_world_background(color=[0.05, 0.05, 0.05])
             assert world["success"], world
-            render = server.render_still(
-                "domain.png", camera_name="DomainCamera",
-                resolution_x=64, resolution_y=64, samples=4,
-            )
-            assert render["success"] and os.path.exists(render["filepath"]), render
+            if skip_render:
+                print("BLENDER_HEADLESS_TEST_SKIP_RENDER: domain still")
+            else:
+                render = server.render_still(
+                    "domain.png", camera_name="DomainCamera",
+                    resolution_x=64, resolution_y=64, samples=4,
+                )
+                assert render["success"] and os.path.exists(render["filepath"]), render
 
             rigid = server.add_rigid_body("DomainCube", body_type="ACTIVE")
             assert rigid["success"], rigid
@@ -1241,19 +1245,22 @@ def main() -> None:
             assert render_pass["success"], render_pass
             glare = server.setup_compositor_glare(1.0, 6, 0.0)
             assert glare["success"], glare
-            turntable = server.render_turntable(
-                "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
-            )
-            assert turntable["success"] and len(turntable["files"]) == 1, turntable
-            turntable_file = turntable["files"][0]
-            sheet = server.render_contact_sheet(
-                [turntable_file, turntable_file], "v44_contact.png", 2
-            )
-            assert sheet["success"] and os.path.exists(sheet["filepath"]), sheet
-            render_valid = server.validate_render("v44_contact.png", 64, 64)
-            assert render_valid["success"] and render_valid["valid"], render_valid
-            compared = server.compare_renders(turntable_file, turntable_file)
-            assert compared["success"] and compared["identical"], compared
+            if skip_render:
+                print("BLENDER_HEADLESS_TEST_SKIP_RENDER: turntable and render QA")
+            else:
+                turntable = server.render_turntable(
+                    "turntable", frames=1, resolution_x=64, resolution_y=64, samples=2
+                )
+                assert turntable["success"] and len(turntable["files"]) == 1, turntable
+                turntable_file = turntable["files"][0]
+                sheet = server.render_contact_sheet(
+                    [turntable_file, turntable_file], "v44_contact.png", 2
+                )
+                assert sheet["success"] and os.path.exists(sheet["filepath"]), sheet
+                render_valid = server.validate_render("v44_contact.png", 64, 64)
+                assert render_valid["success"] and render_valid["valid"], render_valid
+                compared = server.compare_renders(turntable_file, turntable_file)
+                assert compared["success"] and compared["identical"], compared
 
             rig = server.create_armature("V44Rig", [
                 {"name": "Root", "head": [0.0, 0.0, 0.2], "tail": [0.0, 0.0, 0.8]}
@@ -1340,13 +1347,16 @@ def main() -> None:
         )
         server.create_material("V46BakeMat", [0.8, 0.3, 0.2, 1.0], 0.0, 0.5)
         server.assign_material("V46Bake", "V46BakeMat")
-        for _bake_name, bake_call in (
-            ("V46AO", lambda: server.bake_ambient_occlusion("V46Bake", 32, 1)),
-            ("V46Normal", lambda: server.bake_normal_map("V46Bake", 32)),
-            ("V46Diffuse", lambda: server.bake_diffuse("V46Bake", 32)),
-        ):
-            baked = bake_call()
-            assert baked["success"] and baked["baked"], baked
+        if skip_render:
+            print("BLENDER_HEADLESS_TEST_SKIP_RENDER: material bakes")
+        else:
+            for _bake_name, bake_call in (
+                ("V46AO", lambda: server.bake_ambient_occlusion("V46Bake", 32, 1)),
+                ("V46Normal", lambda: server.bake_normal_map("V46Bake", 32)),
+                ("V46Diffuse", lambda: server.bake_diffuse("V46Bake", 32)),
+            ):
+                baked = bake_call()
+                assert baked["success"] and baked["baked"], baked
         udim = server.create_udim_tiles("V46UDIM", [1001, 1002], 32)
         assert udim["success"] and udim["tile_count"] == 2, udim
         displacement = server.add_displacement("V46BakeMat", 0.1, 0.5)
@@ -1707,7 +1717,7 @@ def main() -> None:
         if armature.data.bones["Tip"].parent is None or armature.data.bones["Tip"].parent.name != "Root":
             fail("armature parent relationship is wrong")
 
-        if os.environ.get("BLENDER_MCP_TEST_SKIP_RENDER") == "1":
+        if skip_render:
             print("BLENDER_HEADLESS_TEST_SKIP_RENDER: no supported graphics context on this runner")
         else:
             # --- deterministic inspection renders ---
