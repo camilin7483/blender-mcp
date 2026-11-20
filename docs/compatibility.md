@@ -27,13 +27,23 @@
   names. Enable only one at a time.
 - `pro/sync_addon.sh` installs the add-on as both `blender_mcp_pro.py` and
   `blender_mcp.py`. Do not enable both copies. The extension package
-  (`build/blender_mcp_pro-4.6.0.zip`) is a third install path; enable only one.
+  (`build/blender_mcp_pro-4.9.0.zip`) is a third install path; enable only one.
 - The v4 add-on creates a token file on first start. The bridge and add-on must
   read the same path. See `SECURITY.md`.
 
+## Stable release coverage
+
+- Linux CI builds, runs the GUI socket and headless suite, benchmarks the
+  scene tasks and validates the extension on both pinned Blender versions.
+  Mirror downloads must match the same pinned SHA-256.
+- Windows and macOS run Python tests and a separate Blender 5.2 headless
+  job. The Windows job skips render checks. Interactive socket, render,
+  and installed-extension smoke tests on native Windows/macOS remain
+  part of the stable-release validation.
+
 ## Versioning
 
-- The repository follows SemVer. The current pre-release is `4.9.0-alpha.1`.
+- The repository follows SemVer. The current candidate is `4.9.0-alpha.2`.
 - v3 tools keep their names during the v4 migration. Breaking changes require
   a wrapper and a note in `docs/migration-v3-v4.md`.
 - A v4 stable release requires the acceptance criteria in the project plan,

@@ -5,6 +5,9 @@ on:
     branches: [main, chore/v4-baseline]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   python:
     name: Python (${{ matrix.os }})
@@ -97,9 +100,17 @@ jobs:
             libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libice6 libglu1-mesa
       - name: Download Blender ${{ matrix.version }}
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/blender.tar.xz" "https://download.blender.org/release/Blender${BLENDER_SERIES}/blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          echo "${BLENDER_SHA}  $RUNNER_TEMP/blender.tar.xz" | sha256sum -c -
-          tar -xJf "$RUNNER_TEMP/blender.tar.xz" -C "$RUNNER_TEMP"
+          archive="$RUNNER_TEMP/blender.tar.xz"
+          file="release/Blender${BLENDER_SERIES}/blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          for mirror in https://ftp.nluug.nl/graphics/blender https://mirror.clarkson.edu/blender https://download.blender.org; do
+            if curl -fsSL --retry 2 --connect-timeout 15 --max-time 180 -o "$archive" "$mirror/$file" &&
+               echo "${BLENDER_SHA}  $archive" | sha256sum -c -; then
+              tar -xJf "$archive" -C "$RUNNER_TEMP"
+              exit 0
+            fi
+          done
+          echo "No Blender mirror returned the expected archive checksum" >&2
+          exit 1
         env:
           BLENDER_VERSION: ${{ matrix.version }}
           BLENDER_SERIES: ${{ startsWith(matrix.version, '4.') && '4.5' || '5.2' }}
