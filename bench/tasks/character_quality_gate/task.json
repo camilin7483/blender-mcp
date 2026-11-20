@@ -1,0 +1,5 @@
+{
+  "category": "character",
+  "runner": "character_quality_gate",
+  "description": "Run the explicit structural/AAA character quality gate."
+}

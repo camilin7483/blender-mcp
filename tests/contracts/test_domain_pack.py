@@ -150,6 +150,16 @@ EXPECTED = {
         "create_spark_burst", "create_shockwave",
     },
     "utility": {"project_info", "health_check"},
+    "character_pro": {
+        "create_anatomical_head", "create_eye_assembly",
+        "create_skin_material_pro", "create_dental_arch",
+        "create_character_body_pro", "create_garment_shell_pro",
+    },
+    "character_groom": {
+        "create_hair_groom", "create_eyebrow_groom", "create_eyelash_groom",
+        "create_character_rig_pro", "create_character_studio",
+        "character_quality_report",
+    },
 }
 
 

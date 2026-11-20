@@ -775,3 +775,55 @@ def animation_fx(server: BlenderMCPServer, _artifact_dir: str) -> dict:
         "sparks": sparks["success"],
         "shockwave": shockwave["success"],
     }
+
+
+def character_head_layers(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    head = server.create_anatomical_head("BenchHeadPro")
+    eye = server.create_eye_assembly("BenchEyePro")
+    skin = server.create_skin_material_pro("BenchSkinPro")
+    dental = server.create_dental_arch("BenchDentalPro")
+    return {
+        "head_polygons": head["polygon_count"],
+        "eye_parts": len(eye["parts"]),
+        "skin_nodes": len(skin["nodes"]),
+        "teeth": dental["tooth_count"],
+    }
+
+
+def character_groom(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_anatomical_head("BenchGroomHead")
+    hair = server.create_hair_groom("BenchHairPro", "BenchGroomHead", 100, 0.15, 1)
+    brows = server.create_eyebrow_groom("BenchBrowsPro", "BenchGroomHead", 30, 1)
+    lashes = server.create_eyelash_groom("BenchLashesPro", "BenchGroomHead", 30)
+    return {
+        "hair_splines": hair["spline_count"],
+        "brow_splines": brows["spline_count"],
+        "lash_splines": lashes["spline_count"],
+    }
+
+
+def character_body_rig(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    body = server.create_character_body_pro("BenchBodyPro", 1.75, "average", 1)
+    garment = server.create_garment_shell_pro("BenchGarmentPro")
+    rig = server.create_character_rig_pro("BenchBodyPro", "BenchCharacterRig")
+    studio = server.create_character_studio("BenchCharacterStudio", [0.0, 0.0, 0.9])
+    return {
+        "height": body["actual_height"],
+        "garment": garment["success"],
+        "bones": rig["bone_count"],
+        "lights": len(studio["lights"]),
+    }
+
+
+def character_quality_gate(server: BlenderMCPServer, _artifact_dir: str) -> dict:
+    server.create_character_body_pro("BenchQualityBody", 1.75, "average", 1)
+    server.create_character_rig_pro("BenchQualityBody", "BenchQualityRig")
+    report = server.character_quality_report(
+        "BenchQualityBody", "BenchQualityRig"
+    )
+    return {
+        "tier": report["tier"],
+        "aaa_certified": report["aaa_certified"],
+        "production_scope": report["production_ready_scope"],
+        "passed": report["passed"],
+    }

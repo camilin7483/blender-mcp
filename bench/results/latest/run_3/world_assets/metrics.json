@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "world",
-  "duration_ms": 18.865,
+  "duration_ms": 19.272,
   "error": null,
   "expected": {
     "city_buildings": 4,

@@ -1,0 +1,22 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 80.65,
+  "error": null,
+  "expected": {
+    "brow_splines": 30,
+    "hair_splines": 100,
+    "lash_splines": 30
+  },
+  "failures": [],
+  "observed": {
+    "brow_splines": 30,
+    "hair_splines": 100,
+    "lash_splines": 30
+  },
+  "passed": true,
+  "run": 3,
+  "task": "character_groom"
+}

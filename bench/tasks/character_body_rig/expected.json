@@ -1,0 +1,11 @@
+{
+  "height": {
+    "target": 1.75,
+    "tolerance": 0.01
+  },
+  "garment": true,
+  "bones": {
+    "min": 39
+  },
+  "lights": 3
+}

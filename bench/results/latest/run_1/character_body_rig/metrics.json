@@ -1,0 +1,29 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 226.338,
+  "error": null,
+  "expected": {
+    "bones": {
+      "min": 39
+    },
+    "garment": true,
+    "height": {
+      "target": 1.75,
+      "tolerance": 0.01
+    },
+    "lights": 3
+  },
+  "failures": [],
+  "observed": {
+    "bones": 39,
+    "garment": true,
+    "height": 1.75,
+    "lights": 3
+  },
+  "passed": true,
+  "run": 1,
+  "task": "character_body_rig"
+}

@@ -1170,6 +1170,18 @@ TOOL_METADATA = {
     "create_shockwave": {"category": "animation", "safety": "write", "cost": "medium", "units": ""},
     "project_info": {"category": "core", "safety": "read", "cost": "low", "units": ""},
     "health_check": {"category": "core", "safety": "read", "cost": "low", "units": ""},
+    "create_anatomical_head": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_eye_assembly": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_skin_material_pro": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_dental_arch": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_character_body_pro": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_garment_shell_pro": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_hair_groom": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_eyebrow_groom": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_eyelash_groom": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_character_rig_pro": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "create_character_studio": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
+    "character_quality_report": {"category": "character", "safety": "read", "cost": "low", "units": ""},
     "create_hair_strands": {"category": "character", "safety": "write", "cost": "medium", "units": "meters"},
 }
 
@@ -2516,6 +2528,67 @@ def health_check() -> str:
     return json.dumps(send_blender_command("health_check", {}), indent=2)
 
 
+@mcp.tool()
+def create_anatomical_head(name: str = "HeadPro", height: float = 0.23, width: float = 0.15, depth: float = 0.19, subdivisions: int = 2) -> str:
+    """Create a high-detail procedural anatomical head base with landmarks."""
+    return json.dumps(send_blender_command("create_anatomical_head", {"name": name, "height": height, "width": width, "depth": depth, "subdivisions": subdivisions}), indent=2)
+
+@mcp.tool()
+def create_eye_assembly(name: str = "EyePro", radius: float = 0.012, iris_color: List[float] = [0.2, 0.4, 0.7, 1.0]) -> str:
+    """Create a layered eye with sclera, cornea, iris, pupil and highlight."""
+    return json.dumps(send_blender_command("create_eye_assembly", {"name": name, "radius": radius, "iris_color": iris_color}), indent=2)
+
+@mcp.tool()
+def create_skin_material_pro(name: str = "SkinPro", base_color: List[float] = [0.65, 0.45, 0.35, 1.0], subsurface: float = 0.15, roughness: float = 0.45, pore_scale: float = 80.0) -> str:
+    """Create a skin shader with subsurface, pores and microdetail."""
+    return json.dumps(send_blender_command("create_skin_material_pro", {"name": name, "base_color": base_color, "subsurface": subsurface, "roughness": roughness, "pore_scale": pore_scale}), indent=2)
+
+@mcp.tool()
+def create_dental_arch(name: str = "DentalArchPro", width: float = 0.05, depth: float = 0.04, tooth_count: int = 16) -> str:
+    """Create a typed upper and lower dental arch."""
+    return json.dumps(send_blender_command("create_dental_arch", {"name": name, "width": width, "depth": depth, "tooth_count": tooth_count}), indent=2)
+
+@mcp.tool()
+def create_character_body_pro(name: str = "BodyPro", height: float = 1.75, build: str = "average", subdivisions: int = 1) -> str:
+    """Create a unified anatomical body base with proportions."""
+    return json.dumps(send_blender_command("create_character_body_pro", {"name": name, "height": height, "build": build, "subdivisions": subdivisions}), indent=2)
+
+@mcp.tool()
+def create_garment_shell_pro(name: str = "GarmentPro", body_width: float = 0.40, body_depth: float = 0.22, torso_height: float = 0.55, garment_type: str = "shirt") -> str:
+    """Create a subdivided shirt, jacket or pants shell."""
+    return json.dumps(send_blender_command("create_garment_shell_pro", {"name": name, "body_width": body_width, "body_depth": body_depth, "torso_height": torso_height, "garment_type": garment_type}), indent=2)
+
+@mcp.tool()
+def create_hair_groom(name: str = "HairGroom", head_object: Optional[str] = None, strand_count: int = 500, length: float = 0.18, seed: int = 0) -> str:
+    """Create a curve-based hair groom with deterministic strands."""
+    return json.dumps(send_blender_command("create_hair_groom", {"name": name, "head_object": head_object, "strand_count": strand_count, "length": length, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_eyebrow_groom(name: str = "BrowsPro", head_object: Optional[str] = None, strand_count: int = 80, seed: int = 0) -> str:
+    """Create paired curve-based eyebrow grooms."""
+    return json.dumps(send_blender_command("create_eyebrow_groom", {"name": name, "head_object": head_object, "strand_count": strand_count, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_eyelash_groom(name: str = "LashesPro", head_object: Optional[str] = None, strand_count: int = 60, radius: float = 0.014, seed: int = 0) -> str:
+    """Create paired curve-based eyelash grooms."""
+    return json.dumps(send_blender_command("create_eyelash_groom", {"name": name, "head_object": head_object, "strand_count": strand_count, "radius": radius, "seed": seed}), indent=2)
+
+@mcp.tool()
+def create_character_rig_pro(mesh_name: str, armature_name: str = "CharacterRig") -> str:
+    """Create a 39-bone body rig and automatic skin weights."""
+    return json.dumps(send_blender_command("create_character_rig_pro", {"mesh_name": mesh_name, "armature_name": armature_name}), indent=2)
+
+@mcp.tool()
+def create_character_studio(name: str = "CharacterStudio", target: List[float] = [0.0, 0.0, 1.0]) -> str:
+    """Create a character studio backdrop, 3-point lights and camera."""
+    return json.dumps(send_blender_command("create_character_studio", {"name": name, "target": target}), indent=2)
+
+@mcp.tool()
+def character_quality_report(mesh_name: str, armature_name: Optional[str] = None, hair_objects: Optional[List[str]] = None) -> str:
+    """Report structural character quality and explicit AAA gaps; never certifies AAA."""
+    return json.dumps(send_blender_command("character_quality_report", {"mesh_name": mesh_name, "armature_name": armature_name, "hair_objects": hair_objects}), indent=2)
+
+
 CORE_TOOLS = {
     "get_scene_info", "project_info", "health_check",
     "get_object_info",
@@ -2604,6 +2677,12 @@ PROFILE_EXTRAS = {
         "create_face_proportions", "create_face_rig", "create_jaw_bone",
         "create_eyelid_bones", "create_finger_rig", "create_ik_leg_rig",
         "create_ik_arm_rig", "add_face_shape_keys", "validate_character_rig",
+        "create_anatomical_head", "create_eye_assembly",
+        "create_skin_material_pro", "create_dental_arch",
+        "create_character_body_pro", "create_garment_shell_pro",
+        "create_hair_groom", "create_eyebrow_groom", "create_eyelash_groom",
+        "create_character_rig_pro", "create_character_studio",
+        "character_quality_report",
     },
     "architecture": {
         "create_room_shell", "create_door", "create_window", "create_table",

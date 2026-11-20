@@ -1,0 +1,28 @@
+{
+  "artifacts": {
+    "scene": "scene.blend"
+  },
+  "category": "character",
+  "duration_ms": 274.599,
+  "error": null,
+  "expected": {
+    "eye_parts": 5,
+    "head_polygons": {
+      "min": 500
+    },
+    "skin_nodes": {
+      "min": 3
+    },
+    "teeth": 16
+  },
+  "failures": [],
+  "observed": {
+    "eye_parts": 5,
+    "head_polygons": 1572,
+    "skin_nodes": 8,
+    "teeth": 16
+  },
+  "passed": true,
+  "run": 2,
+  "task": "character_head_layers"
+}

@@ -24,7 +24,7 @@ environment and timeout limits. `legacy/blender_mcp.py` is the v3 add-on.
 
 | Component | File | Responsibility |
 |---|---|---|
-| MCP bridge | `src/blender_mcp/server.py` | Registers 301 FastMCP tools; serializes each call to a socket command; returns JSON text. |
+| MCP bridge | `src/blender_mcp/server.py` | Registers 313 FastMCP tools; serializes each call to a socket command; returns JSON text. |
 | Socket transport | `src/blender_mcp/transport.py` | Auth token loading, one connection per command, framing, request IDs and response limits. |
 | Bridge config | `src/blender_mcp/config.py` | Host, port, token paths, response limits and heavy-command timeouts. |
 | Legacy entry point | `pro/mcp_server.py` | Thin wrapper that imports the package and keeps old MCP configurations working. |

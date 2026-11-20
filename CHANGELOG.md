@@ -2,7 +2,7 @@
 
 All notable changes to this repository are documented here.
 
-## 4.8.0-alpha.1 - 2026-11-19 (unreleased)
+## 4.9.0-alpha.1 - 2026-11-20 (unreleased)
 
 ### Added
 
@@ -66,6 +66,12 @@ All notable changes to this repository are documented here.
   ceramic.
 - Animation FX: particle systems, trails, muzzle flashes, explosions, smoke,
   fire, sparks and shockwaves.
+- High-detail character base: anatomical head, layered eyes, skin SSS/pore
+  shader, typed dental arch, unified body and garment shell.
+- Curve grooming: hair, eyebrows and eyelashes with deterministic splines.
+- 39-bone body rig with automatic weights and a character studio.
+- Character quality gate: explicit `aaa_certified: false`, structural scope and
+  missing AAA requirements, never a false certification. Total: 313 tools.
 - Utility tools: project_info and health_check. Total: 301 tools.
 - `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
@@ -92,7 +98,7 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 42 deterministic tasks covering all 11 requested
+- BlenderMCP-Bench runner with 46 deterministic tasks covering all 11 requested
   categories plus terrain, water, vegetation, materials/UV, physics and
   lighting; published raw artifacts and 3 local runs at 20/20.
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper

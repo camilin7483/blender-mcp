@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Blender MCP Pro Engine",
     "author": "Blender MCP Team & Senior Graphics Architecture",
-    "version": (4, 8, 0),
+    "version": (4, 9, 0),
     "blender": (4, 5, 0),
     "location": "View3D > Sidebar > MCP Pro",
     "description": "Universal High-Precision 3D Modeling Engine with BVHTree Intelligence, Organic Rigging, and Architectural Generators",
@@ -2440,6 +2440,18 @@ class BlenderMCPServer:
             "create_shockwave": lambda p: self.create_shockwave(**p),
             "project_info": lambda p: self.project_info(**p),
             "health_check": lambda p: self.health_check(**p),
+            "create_anatomical_head": lambda p: self.create_anatomical_head(**p),
+            "create_eye_assembly": lambda p: self.create_eye_assembly(**p),
+            "create_skin_material_pro": lambda p: self.create_skin_material_pro(**p),
+            "create_dental_arch": lambda p: self.create_dental_arch(**p),
+            "create_character_body_pro": lambda p: self.create_character_body_pro(**p),
+            "create_garment_shell_pro": lambda p: self.create_garment_shell_pro(**p),
+            "create_hair_groom": lambda p: self.create_hair_groom(**p),
+            "create_eyebrow_groom": lambda p: self.create_eyebrow_groom(**p),
+            "create_eyelash_groom": lambda p: self.create_eyelash_groom(**p),
+            "create_character_rig_pro": lambda p: self.create_character_rig_pro(**p),
+            "create_character_studio": lambda p: self.create_character_studio(**p),
+            "character_quality_report": lambda p: self.character_quality_report(**p),
             "get_scene_info": lambda p: self.get_scene_info(**p),
             "get_object_info": lambda p: self.get_object_info(**p),
             "list_objects": lambda p: self.list_objects(**p),
@@ -3500,6 +3512,54 @@ class BlenderMCPServer:
     def health_check(self, ) -> Dict[str, Any]:
         """Run read-only context, scene, main-thread, add-on and memory checks."""
         return self._domain_call("utility", "health_check", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_anatomical_head(self, name: str = "HeadPro", height: float = 0.23, width: float = 0.15, depth: float = 0.19, subdivisions: int = 2) -> Dict[str, Any]:
+        """Create a high-detail procedural anatomical head base with landmarks."""
+        return self._domain_call("character_pro", "create_anatomical_head", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eye_assembly(self, name: str = "EyePro", radius: float = 0.012, iris_color: List[float] = [0.2, 0.4, 0.7, 1.0]) -> Dict[str, Any]:
+        """Create a layered eye with sclera, cornea, iris, pupil and highlight."""
+        return self._domain_call("character_pro", "create_eye_assembly", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_skin_material_pro(self, name: str = "SkinPro", base_color: List[float] = [0.65, 0.45, 0.35, 1.0], subsurface: float = 0.15, roughness: float = 0.45, pore_scale: float = 80.0) -> Dict[str, Any]:
+        """Create a skin shader with subsurface, pores and microdetail."""
+        return self._domain_call("character_pro", "create_skin_material_pro", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_dental_arch(self, name: str = "DentalArchPro", width: float = 0.05, depth: float = 0.04, tooth_count: int = 16) -> Dict[str, Any]:
+        """Create a typed upper and lower dental arch."""
+        return self._domain_call("character_pro", "create_dental_arch", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_character_body_pro(self, name: str = "BodyPro", height: float = 1.75, build: str = "average", subdivisions: int = 1) -> Dict[str, Any]:
+        """Create a unified anatomical body base with proportions."""
+        return self._domain_call("character_pro", "create_character_body_pro", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_garment_shell_pro(self, name: str = "GarmentPro", body_width: float = 0.40, body_depth: float = 0.22, torso_height: float = 0.55, garment_type: str = "shirt") -> Dict[str, Any]:
+        """Create a subdivided shirt, jacket or pants shell."""
+        return self._domain_call("character_pro", "create_garment_shell_pro", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_hair_groom(self, name: str = "HairGroom", head_object: Optional[str] = None, strand_count: int = 500, length: float = 0.18, seed: int = 0) -> Dict[str, Any]:
+        """Create a curve-based hair groom with deterministic strands."""
+        return self._domain_call("character_groom", "create_hair_groom", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eyebrow_groom(self, name: str = "BrowsPro", head_object: Optional[str] = None, strand_count: int = 80, seed: int = 0) -> Dict[str, Any]:
+        """Create paired curve-based eyebrow grooms."""
+        return self._domain_call("character_groom", "create_eyebrow_groom", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_eyelash_groom(self, name: str = "LashesPro", head_object: Optional[str] = None, strand_count: int = 60, radius: float = 0.014, seed: int = 0) -> Dict[str, Any]:
+        """Create paired curve-based eyelash grooms."""
+        return self._domain_call("character_groom", "create_eyelash_groom", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_character_rig_pro(self, mesh_name: str, armature_name: str = "CharacterRig") -> Dict[str, Any]:
+        """Create a 39-bone body rig and automatic skin weights."""
+        return self._domain_call("character_groom", "create_character_rig_pro", {k: v for k, v in locals().items() if k != "self"})
+
+    def create_character_studio(self, name: str = "CharacterStudio", target: List[float] = [0.0, 0.0, 1.0]) -> Dict[str, Any]:
+        """Create a character studio backdrop, 3-point lights and camera."""
+        return self._domain_call("character_groom", "create_character_studio", {k: v for k, v in locals().items() if k != "self"})
+
+    def character_quality_report(self, mesh_name: str, armature_name: Optional[str] = None, hair_objects: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Report structural character quality and explicit AAA gaps; never certifies AAA."""
+        return self._domain_call("character_groom", "character_quality_report", {k: v for k, v in locals().items() if k != "self"})
 
     # ==========================================================================
     # 1. SCENE & BLUEPRINT INSPECTION

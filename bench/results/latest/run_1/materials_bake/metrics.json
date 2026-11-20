@@ -3,7 +3,7 @@
     "scene": "scene.blend"
   },
   "category": "materials",
-  "duration_ms": 269.815,
+  "duration_ms": 264.608,
   "error": null,
   "expected": {
     "ao": true,

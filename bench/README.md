@@ -8,7 +8,7 @@ same scenarios.
 ## Current result
 
 - Blender **4.5.4 LTS**, Linux x64, 3 runs.
-- **42/42 tasks passed** in every run.
+- **46/46 tasks passed** in every run.
 - Raw data: `bench/results/latest/summary.json`, `trace.jsonl`, and per-task
   `metrics.json`.
 - This is a functional baseline, not evidence of superiority over another

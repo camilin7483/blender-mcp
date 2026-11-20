@@ -1,0 +1,53 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "name": "mcp",
+      "purl": "pkg:pypi/mcp",
+      "scope": "required",
+      "type": "library",
+      "version": "1.30.0"
+    },
+    {
+      "name": "PyJWT>=2.15.0,<3",
+      "purl": "pkg:pypi/pyjwt>=2.15.0,<3",
+      "scope": "required",
+      "type": "library",
+      "version": "unpinned"
+    },
+    {
+      "name": "pytest>=8.0",
+      "purl": "pkg:pypi/pytest>=8.0",
+      "scope": "optional",
+      "type": "library",
+      "version": "unpinned"
+    },
+    {
+      "name": "ruff>=0.6",
+      "purl": "pkg:pypi/ruff>=0.6",
+      "scope": "optional",
+      "type": "library",
+      "version": "unpinned"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "hashes": [
+        {
+          "alg": "SHA-1",
+          "content": "a1e8bfa84c559da2265a78935c6f85cf6770cde0"
+        }
+      ],
+      "name": "blender-mcp",
+      "type": "application",
+      "version": "4.9.0-alpha.1"
+    },
+    "tools": [
+      {
+        "name": "generate_sbom.py",
+        "version": "1"
+      }
+    ]
+  },
+  "specVersion": "1.5"
+}

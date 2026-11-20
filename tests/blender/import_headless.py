@@ -80,7 +80,7 @@ def main() -> None:
     try:
         import blender_mcp as bm  # noqa: F401
 
-        if tuple(bm.bl_info.get("version", ())) != (4, 8, 0):
+        if tuple(bm.bl_info.get("version", ())) != (4, 9, 0):
             fail(f"unexpected add-on version: {bm.bl_info.get('version')}")
 
         if not hasattr(bm, "BlenderMCPServer"):
@@ -1575,6 +1575,36 @@ def main() -> None:
         assert project["success"] and project["object_count"] > 0, project
         health = server.health_check()
         assert health["success"] and health["passed"], health
+
+        # --- v4.9 high-detail character base, grooming and quality gate ---
+        clear_scene()
+        head = server.create_anatomical_head("V49Head")
+        assert head["success"] and head["polygon_count"] > 500, head
+        eye = server.create_eye_assembly("V49Eye")
+        assert eye["success"] and len(eye["parts"]) == 5, eye
+        skin = server.create_skin_material_pro("V49Skin")
+        assert skin["success"] and "ShaderNodeBsdfPrincipled" in skin["nodes"].values(), skin
+        dental = server.create_dental_arch("V49Dental", tooth_count=16)
+        assert dental["success"] and dental["tooth_count"] == 16, dental
+        body = server.create_character_body_pro("V49Body", 1.75, "average", 1)
+        assert body["success"] and abs(body["actual_height"] - 1.75) < 0.001, body
+        garment = server.create_garment_shell_pro("V49Garment", 0.4, 0.22, 0.55)
+        assert garment["success"], garment
+        hair = server.create_hair_groom("V49Hair", "V49Head", 100, 0.15, 1)
+        assert hair["success"] and hair["spline_count"] == 100, hair
+        brows = server.create_eyebrow_groom("V49Brows", "V49Head", 30, 1)
+        assert brows["success"] and brows["spline_count"] == 30, brows
+        lashes = server.create_eyelash_groom("V49Lashes", "V49Head", 30, 0.014, 1)
+        assert lashes["success"] and lashes["spline_count"] == 30, lashes
+        rig = server.create_character_rig_pro("V49Body", "V49Rig")
+        assert rig["success"] and rig["bone_count"] >= 39, rig
+        studio = server.create_character_studio("V49Studio", [0.0, 0.0, 0.9])
+        assert studio["success"] and len(studio["lights"]) == 3, studio
+        quality = server.character_quality_report(
+            "V49Body", "V49Rig", ["V49Hair", "V49Brows", "V49Lashes"]
+        )
+        assert quality["success"] and quality["aaa_certified"] is False, quality
+        assert quality["tier"] == "procedural_high_detail", quality
 
         # --- animation and rigging primitives ---
         clear_scene()
