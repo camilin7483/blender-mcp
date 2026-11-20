@@ -89,7 +89,12 @@ def client(port: int, token: str) -> None:
         if not dispatch_ready.wait(timeout=15.0):
             raise TimeoutError("Blender's main-thread timer did not start")
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
-            sock.sendall(mutation("started", 2.0))
+            sock.sendall((_request("smoke-single", token=token) + "\n").encode("utf-8"))
+            messages = _read_messages(sock, 1)
+            state["single"] = messages[0] if len(messages) == 1 else {"missing": True}
+
+        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
+            sock.sendall(mutation("started", 6.0))
             state["started"] = _read_messages(sock, 1)[0]
         release_started.set()
 
@@ -97,11 +102,6 @@ def client(port: int, token: str) -> None:
             sock.sendall((_request("smoke-bad", token="wrong-token") + "\n").encode("utf-8"))
             messages = _read_messages(sock, 1)
             state["bad_auth"] = messages[0] if len(messages) == 1 else {"missing": True}
-
-        with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
-            sock.sendall((_request("smoke-single", token=token) + "\n").encode("utf-8"))
-            messages = _read_messages(sock, 1)
-            state["single"] = messages[0] if len(messages) == 1 else {"missing": True}
 
         with socket.create_connection(("127.0.0.1", port), timeout=15.0) as sock:
             batch = (
@@ -230,7 +230,7 @@ def main() -> None:
     def execute(command, params):
         if command == "timeout_regression":
             state["mutations"] += 1
-            if not release_started.wait(timeout=8.0):
+            if not release_started.wait(timeout=12.0):
                 raise TimeoutError("client did not observe the running request timeout")
             return {}
         return dispatch(command, params)
