@@ -7,12 +7,15 @@ All notable changes to this repository are documented here.
 - Add the editable PELAGOS 07 inspection vehicle and NEREID 07 humanoid
   showcase scenes, Cycles renders, and reproducible topology and pose checks.
 - Update installation instructions, version links and compatibility coverage.
+- Document all registered tools, their arguments and profiles. Generate the
+  Markdown and JSON references from the live registry and check them in CI.
+- Add MCP walkthroughs for inspection, character binding, and GLB export.
 - Verify checksum-pinned Blender downloads through mirrors, require both
   cross-platform headless jobs, and exercise the installed extension and
   saved showcase files in both Linux Blender jobs.
 - Use the current product name in the Blender sidebar panel.
 
-## 4.9.0-alpha.2 - 2026-11-20 (pre-release)
+## 4.9.0-alpha.2 - 2026-11-20
 
 - Write planar UVs in bulk and avoid repeated subdivision evaluation while
   Blender computes the same automatic skin weights.
@@ -98,7 +101,7 @@ All notable changes to this repository are documented here.
 - 39-bone body rig with automatic weights and a character studio.
 - Character quality gate: explicit `aaa_certified: false`, structural scope and
   missing AAA requirements, never a false certification. Total: 313 tools.
-- Utility tools: project_info and health_check. Total: 301 tools.
+- Utility tools: `project_info` and `health_check`.
 - `nano` (13 tools) and `guided` (34 tools) profiles for small models.
 - Evaluated `GeometryService`: local/world AABB, world-space BVH, contact
   graph, topology metrics, symmetry error, ground contact and absolute/
@@ -124,9 +127,8 @@ All notable changes to this repository are documented here.
   empty, and `update_assembly` deep-merges changes and rebuilds.
 - Animation and rigging primitives: `keyframe_object` and `create_armature`
   with optional automatic weights.
-- BlenderMCP-Bench runner with 46 deterministic tasks covering all 11 requested
-  categories plus terrain, water, vegetation, materials/UV, physics and
-  lighting; published raw artifacts and 3 local runs at 20/20.
+- BlenderMCP-Bench runner with 46 deterministic tasks covering the 11 core
+  categories and domain packs. See the [release results](docs/releases/v4.9.0-alpha.2.md).
 - Blender 5.2.4 LTS compatibility: EEVEE engine fallback, face-contact helper
   portability, CI matrix for 4.5.4 and 5.2.4.
 - Release checklist documenting the remaining stable-release gates.
@@ -138,8 +140,8 @@ All notable changes to this repository are documented here.
   meshes, then reimport the file into the scene and compare dimensions.
 - Baseline harness with real Blender 4.5 LTS: headless import/geometry test
   and GUI socket round-trip under `xvfb-run`.
-- Contract test that verifies 1:1 parity between the 61 FastMCP tools and the
-  add-on command table.
+- Contract tests for FastMCP schemas, add-on handlers and bridge-only
+  discovery tools.
 - `SECURITY.md` threat model, `ARCHITECTURE.md`, `CONTRIBUTING.md`,
   `docs/compatibility.md`, `docs/benchmark.md` and
   `docs/migration-v3-v4.md`.

@@ -39,21 +39,35 @@ BlenderMCP-Bench:
 BLENDER_BIN=/path/to/blender ./scripts/run_bench.sh --runs 3 --output bench/results/latest
 ```
 
-Extension build and validation:
+Build and validate the extension with Bash and host Python 3.11+.
 
 ```bash
-BLENDER_BIN=/path/to/blender ./scripts/build_extension.sh
-"$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.0.0.zip
+export BLENDER_BIN=/path/to/blender
+./scripts/build_extension.sh
+"$BLENDER_BIN" --factory-startup --command extension validate build/blender_mcp_pro-4.9.0.zip
 ```
 
 The GUI test needs an event loop. On Linux without `DISPLAY`, the script uses
-`xvfb-run`. `blender --background` does not pump timers and is only used for
-import/geometry tests.
+`xvfb-run`. Background Blender runs geometry, export, rendering, and
+benchmark scripts that call the add-on directly. The socket dispatcher uses
+the GUI event loop.
 
 Lint:
 
 ```bash
 .venv/bin/ruff check tests scripts bench
+```
+
+## Tool reference
+
+After registering a tool or changing its arguments, description, or profile,
+regenerate the [tool reference](docs/tools.md) and
+[JSON catalog](docs/tool-schemas.json). CI checks both files against the
+registry from the same checkout.
+
+```bash
+.venv/bin/python scripts/generate_tool_reference.py
+.venv/bin/python scripts/generate_tool_reference.py --check
 ```
 
 ## Rules
@@ -86,7 +100,6 @@ extraction or `execute_code` need a security review and a test in
 
 ## Blender add-on install
 
-`pro/blender_mcp.py` is a single-file add-on. Use
-`pro/sync_addon.sh` to copy it into Blender's add-ons directory, or install it
-with **Edit -> Preferences -> Add-ons -> Install from Disk**. Only one edition
-(legacy or Pro) may be enabled because both bind `localhost:9876`.
+Build the Pro extension ZIP to include the add-on and its domain packs. Install
+the ZIP in **Edit → Preferences → Get Extensions → Install from Disk**. Enable
+one edition at a time because both bind `localhost:9876`.

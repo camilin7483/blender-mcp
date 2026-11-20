@@ -2,15 +2,15 @@
 
 ## Status
 
-**Draft. v4 is not released.** This document describes the intended breaking
-changes and the compatibility wrappers. It will be updated before each v4
-release candidate.
+The published [v4.9.0-alpha.2 build](releases/v4.9.0-alpha.2.md) includes
+the v4 bridge and extension. Follow the
+[stable-release checklist](release-checklist.md) for remaining validation.
 
 ## What changes
 
-| Area | v3 baseline | v4 target | Compatibility |
+| Area | v3 baseline | v4 behavior | Compatibility |
 |---|---|---|---|
-| Tool names | 53 tools | Same 53 names plus 260 tools (anchors, constraints, assemblies, animation, rigging, domain packs, discovery) | Old names keep working until v4.1 |
+| Tool names | 53 tools in the original Pro baseline | 313 in the full MCP profile, including anchors, constraints, assemblies, animation, rigging and domain packs | Check the active tool's schema before migrating an existing client call. |
 | Anchors | AABB words only | `list_semantic_anchors` + `anchor_operation` | `snap_to_semantic_anchor` preserved |
 | Constraints | None | `validate_constraints` + `apply_constraints` | Validation is read-only; apply moves align/mate/offset/ground/center/distance |
 | Assemblies | Manual primitives | `create_assembly` + `update_assembly` from a declarative spec | Rebuild from stored spec; desk template and custom components |
@@ -26,21 +26,22 @@ release candidate.
 | Export | Format-only write | `godot`/`unity`/`unreal`/`generic-gltf` profiles validate and reimport | `force=True` bypasses validation errors |
 | Downloads | Provider URL followed | HTTPS allowlist, private-IP block, size caps, safe ZIP | No legacy bypass |
 | Render | Perspective quad in a temp dir | Ortho FRONT/RIGHT/TOP + ISO, modes, metadata, hash output dir | Same `quad_image_path`; new `mode`/`include_overlays` |
-| Tool discovery | All tools always | `BLENDER_MCP_PROFILE`: `nano` (13), `guided` (34), `core` (19), `modeling`, `materials`, `animation`, `rigging`, `geometry_nodes`, `inspection`, `export`, `assets`, `full` (313) | `full` preserves the v3 surface; unknown profiles fail open |
-| Blender support | 4.5.4 tested | 4.5 LTS required, 5.2 LTS secondary | ADR-0002 |
+| Tool discovery | All tools always | `BLENDER_MCP_PROFILE` selects one of [29 profiles](tools.md#profiles) | The default is `full`. Unknown names fall back to `core`. |
+| Blender support | 4.5.4 tested | 4.5.4 and 5.2.4 tested on Linux | See the [platform matrix](compatibility.md). |
 
 ## Migration steps
 
-1. Update the bridge and the add-on together. A v4 bridge can talk to a v3
-   add-on only through the compatibility parser; a v4 add-on can serve v3
-   messages.
+1. Update the bridge and the add-on together. Install the Pro extension ZIP
+   and configure the bridge from the matching source.
+   [Installation guide](../README.md#installation)
 2. On first start, the add-on creates a token file. Point the bridge at the
    same file, or set `BLENDER_AUTH_TOKEN` on both sides.
 3. If your automation uses `execute_code`, enable it explicitly in the add-on
    preferences or with `BLENDER_MCP_ALLOW_EXECUTE_CODE=1`. Do not enable it for
    untrusted clients.
-4. Review calls to `clear_scene`, `delete_object`, `boolean_operation` and
-   `rollback_checkpoint`. Add `confirm=true` or use the dry-run response.
+4. Review calls to `clear_scene`, `delete_object`, `rollback_checkpoint` and
+   `setup_studio_lighting`. Use the dry-run response and add `confirm=true`
+   when the intended change is ready.
 5. Move exports under `BLENDER_MCP_OUTPUT_DIR`, or set
    `BLENDER_MCP_ALLOW_ANY_PATH=1` for trusted automation. Inspection renders
    also write under that directory (`inspection/<render_id>/`); update scripts
@@ -50,15 +51,13 @@ release candidate.
    AABB collision heuristic or on blueprint warnings that never affected
    `passed`.
 
-## Deprecation timeline
+## Planned stable milestones
 
 | Release | Behavior |
 |---|---|
-| `v4.0.0-alpha` | Compatibility parser, old keys, `full` profile. Auth and `execute_code` defaults change. |
-| `v4.0.0-beta` | Structured audit failures; legacy keys derived. |
-| `v4.0.0-rc` | Wrappers frozen; only bug fixes. |
-| `v4.0.0` | Stable contract. |
-| `v4.1.0` | Legacy wrappers may be removed after a deprecation notice. |
+| Beta | Complete the native platform checks. |
+| Release candidate | Freeze the compatibility contract and resolve critical defects. |
+| Stable | Meet all items in the release checklist. |
 
 v4 stable is not published until the global acceptance criteria are met,
 including real Blender CI and published benchmark artifacts.
